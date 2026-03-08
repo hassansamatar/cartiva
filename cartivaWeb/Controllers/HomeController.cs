@@ -1,8 +1,8 @@
-using cartivaWeb.Models;
+using CartivaWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
-namespace cartivaWeb.Controllers
+namespace CartivaWeb.Controllers
 {
     public class HomeController : Controller
     {
@@ -10,8 +10,7 @@ namespace cartivaWeb.Controllers
         {
             return View();
         }
-
-        public IActionResult Privacy()
+                public IActionResult Privacy()
         {
             return View();
         }

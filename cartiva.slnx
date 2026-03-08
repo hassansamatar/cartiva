@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="cartivaWeb/cartivaWeb.csproj" />
+  <Project Path="CartivaWeb/CartivaWeb.csproj" />
+  <Project Path="Cartiva_Razor/Cartiva_Razor.csproj" Id="d798fd7b-5578-4599-9dc0-3bb7515be9ac" />
 </Solution>

@@ -1,4 +1,4 @@
-namespace cartivaWeb.Models
+namespace CartivaWeb.Models
 {
     public class ErrorViewModel
     {
