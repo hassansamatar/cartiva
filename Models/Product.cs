@@ -26,7 +26,10 @@ namespace Models
             [Range(1, 1000)]
             public double Price { get; set; }
             public string ImageUrl { get; set; }
-        
+        public int  CategoryId { get; set; }
+        [ForeignKey("CategoryId")]
+        public Category Category { get; set; }
+
     }
 
 }

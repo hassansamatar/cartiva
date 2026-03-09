@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace CartivaWeb.Migrations
+namespace DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -44,21 +44,15 @@ namespace CartivaWeb.Migrations
                     b.HasData(
                         new
                         {
-                            Id = 1,
+                            Id = 15,
                             DisplayOrder = 1,
                             Name = "Electronics"
                         },
                         new
                         {
-                            Id = 2,
+                            Id = 19,
                             DisplayOrder = 2,
                             Name = "Books"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DisplayOrder = 3,
-                            Name = "Clothing"
                         });
                 });
 
@@ -69,6 +63,9 @@ namespace CartivaWeb.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Colour")
                         .IsRequired()
@@ -95,12 +92,15 @@ namespace CartivaWeb.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.ToTable("Producties");
 
                     b.HasData(
                         new
                         {
-                            Id = 1,
+                            Id = 10,
+                            CategoryId = 15,
                             Colour = "White",
                             Description = "Good Quality",
                             ImageUrl = "\root/shart.png",
@@ -110,7 +110,8 @@ namespace CartivaWeb.Migrations
                         },
                         new
                         {
-                            Id = 2,
+                            Id = 20,
+                            CategoryId = 19,
                             Colour = "Black",
                             Description = "Good Quality",
                             ImageUrl = "\root/Tshart.png",
@@ -118,6 +119,17 @@ namespace CartivaWeb.Migrations
                             Price = 299.0,
                             Size = "L"
                         });
+                });
+
+            modelBuilder.Entity("Models.Product", b =>
+                {
+                    b.HasOne("Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 #pragma warning restore 612, 618
         }
