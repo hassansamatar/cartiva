@@ -3,8 +3,9 @@ using Models;
 using Microsoft.AspNetCore.Mvc;
 using DataAccess;
 
-namespace CartivaWeb.Controllers
+namespace CartivaWeb.Areas.Admin.Controllers
 {
+    [Area("Admin")]
     public class CategoryController : Controller
     {
         private readonly ApplicationDbContext _db;

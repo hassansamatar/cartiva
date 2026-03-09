@@ -2,8 +2,9 @@ using Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
-namespace CartivaWeb.Controllers
+namespace CartivaWeb.Areas.Customer.Controllers
 {
+    [Area("Customer")]
     public class HomeController : Controller
     {
         public IActionResult Index()
