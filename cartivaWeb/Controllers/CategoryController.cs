@@ -1,6 +1,7 @@
-﻿using CartivaWeb.Data;
-using CartivaWeb.Models;
+﻿
+using Models;
 using Microsoft.AspNetCore.Mvc;
+using DataAccess;
 
 namespace CartivaWeb.Controllers
 {

@@ -1,5 +1,10 @@
-namespace CartivaWeb.Models
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Models
 {
+
     public class ErrorViewModel
     {
         public string? RequestId { get; set; }
