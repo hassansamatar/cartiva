@@ -1,6 +1,8 @@
 ﻿using DataAccess;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Models;
+using Models.ViewModels;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {
@@ -15,26 +17,37 @@ namespace CartivaWeb.Areas.Admin.Controllers
         public IActionResult Index()
         {
             List<Product> productList = _db.Producties.ToList();
+          
+
             return View(productList);
         }
         public IActionResult Create()
         {
+            ProductVM productVM = new ProductVM()
+            {
+                Product = new Product(),
+                CategoryList = _db.Categories.Select(u => new SelectListItem
+                {
+                    Text = u.Name,
+                    Value = u.Id.ToString()
+                })
+            };
 
-
-            return View();
+          
+            return View(productVM);
         }
         [HttpPost]
-        public IActionResult Create(Product obj)
+        public IActionResult Create(ProductVM obj)
         {
             if (ModelState.IsValid)
             {
                 // defensive: ensure EF will let the database generate the identity value
-                obj.Id = 0;
-                _db.Producties.Add(obj);
+                //obj.Id = 0;
+                _db.Producties.Add(obj.Product);
                 _db.SaveChanges();
                 return RedirectToAction("Index");
             }
-            return View(obj);
+            return View();
         }
 
         public IActionResult Edit(int? id)
