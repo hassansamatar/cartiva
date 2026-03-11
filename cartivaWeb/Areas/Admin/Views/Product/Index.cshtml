@@ -47,7 +47,10 @@
                 @Html.DisplayFor(modelItem => item.Price)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.ImageUrl)
+               
+                    <div>
+                        <img src="ModelItem =>item.ImageUrl" width="25%" />
+                    </div>
             </td>
             <td>
                <a asp-action="Upsert" asp-route-id="@item.Id">Create</a> |
