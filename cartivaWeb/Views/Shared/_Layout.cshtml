@@ -4,52 +4,113 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - CartivaWeb</title>
-    <script type="importmap"></script>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CartivaWeb.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
+    <style>
+        /* Navbar: dark background with white text */
+        .navbar-dark { background-color: #212529; }
+        .navbar-dark .navbar-brand, 
+        .navbar-dark .nav-link { color: #ffffff; }
+        .navbar-dark .nav-link:hover,
+        .navbar-dark .nav-item.dropdown:hover > .nav-link { color: #ffc107; }
+
+        .dropdown-menu { border-radius: 0.5rem; }
+
+        /* Footer: neutral */
+        footer.footer {
+            padding: 1.5rem 0;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        footer.footer a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        footer.footer a:hover { text-decoration: underline; }
+
+        /* Main content */
+        main.pb-3 { padding-top: 1rem; }
+
+        /* Buttons */
+        .btn-primary { background-color: #0d6efd; border-color: #0d6efd; }
+        .btn-primary:hover { background-color: #0b5ed7; border-color: #0a58ca; }
+
+        .btn-dark { background-color: #343a40; border-color: #343a40; color: #ffffff; }
+        .btn-dark:hover { background-color: #23272b; border-color: #23272b; color: #ffffff; }
+
+        /* Cards & tables spacing */
+        .card, .table { margin-bottom: 1.5rem; }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-primary border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CartivaWeb</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-cart4 me-2"></i> CartivaWeb
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link " asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-area="Customer" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-house-door me-1"></i> Home
+                            </a>
                         </li>
-                                           
+
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Content Management</a>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">Category</a>
-                    
-                                <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">Product</a>
-            
-                            </div>
+                            <a class="nav-link dropdown-toggle" href="#" id="contentDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-pencil-square me-1"></i> Content Management
+                            </a>
+                            <ul class="dropdown-menu shadow" aria-labelledby="contentDropdown">
+                                <li>
+                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">
+                                        <i class="bi bi-tags me-1"></i> Category
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">
+                                        <i class="bi bi-box-seam me-1"></i> Product
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
+                                <i class="bi bi-shield-lock me-1"></i> Privacy
+                            </a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
+
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer bg-primary text-muted">
+    <footer class="footer text-center border-top">
         <div class="container">
-            &copy; 2026 - CartivaWeb - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2026 - CartivaWeb - 
+            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

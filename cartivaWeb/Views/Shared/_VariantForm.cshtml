@@ -1,0 +1,22 @@
+﻿@using Models
+<tr class="variant-row">
+    <td>
+        <input type="hidden" name="Variants.Index" value="@Guid.NewGuid()" />
+        <input type="hidden" name="Variants[@(ViewData["Index"])].Id" value="@Model.Id" />
+        <input type="hidden" name="Variants[@(ViewData["Index"])].ProductId" value="@Model.ProductId" />
+        
+        <input type="text" name="Variants[@(ViewData["Index"])].Color" value="@Model.Color" class="form-control" required />
+    </td>
+    <td>
+        <input type="text" name="Variants[@(ViewData["Index"])].Size" value="@Model.Size" class="form-control" required />
+    </td>
+    <td>
+        <input type="number" name="Variants[@(ViewData["Index"])].Price" value="@Model.Price" class="form-control" step="0.01" required />
+    </td>
+    <td>
+        <input type="number" name="Variants[@(ViewData["Index"])].Stock" value="@Model.Stock" class="form-control" required />
+    </td>
+    <td>
+        <button type="button" class="btn btn-danger btn-sm remove-variant">Remove</button>
+    </td>
+</tr>

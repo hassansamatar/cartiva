@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260309214042_AddProductAndCategoryTablesToDB")]
-    partial class AddProductAndCategoryTablesToDB
+    [Migration("20260311183707_AddTablesToDatabase")]
+    partial class AddTablesToDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -42,21 +42,7 @@ namespace DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 15,
-                            DisplayOrder = 1,
-                            Name = "Electronics"
-                        },
-                        new
-                        {
-                            Id = 19,
-                            DisplayOrder = 2,
-                            Name = "Books"
-                        });
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("Models.Product", b =>
@@ -67,18 +53,18 @@ namespace DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Colour")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ImageUrl")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -86,42 +72,43 @@ namespace DataAccess.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<double>("Price")
-                        .HasColumnType("float");
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("Products", (string)null);
+                });
+
+            modelBuilder.Entity("ProductVariant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Size")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("ProductId");
 
-                    b.ToTable("Producties");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 10,
-                            CategoryId = 15,
-                            Colour = "White",
-                            Description = "Good Quality",
-                            ImageUrl = "\root/shart.png",
-                            Name = "Shirt",
-                            Price = 799.0,
-                            Size = "M"
-                        },
-                        new
-                        {
-                            Id = 20,
-                            CategoryId = 19,
-                            Colour = "Black",
-                            Description = "Good Quality",
-                            ImageUrl = "\root/Tshart.png",
-                            Name = "T-Shirt",
-                            Price = 299.0,
-                            Size = "L"
-                        });
+                    b.ToTable("ProductVariants", (string)null);
                 });
 
             modelBuilder.Entity("Models.Product", b =>
@@ -133,6 +120,22 @@ namespace DataAccess.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("ProductVariant", b =>
+                {
+                    b.HasOne("Models.Product", "Product")
+                        .WithMany("Variants")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Models.Product", b =>
+                {
+                    b.Navigation("Variants");
                 });
 #pragma warning restore 612, 618
         }

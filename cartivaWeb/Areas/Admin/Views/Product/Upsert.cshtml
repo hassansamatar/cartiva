@@ -1,117 +1,137 @@
 ﻿@model Models.ViewModels.ProductVM
 
-<div class="card shadow border-0 my-4">
+@{
+    ViewData["Title"] = @Model.Product.Id == 0 ? "Create Product" : "Edit Product";
+}
+
+<form method="post" asp-action="Upsert" enctype="multipart/form-data">
+    <input asp-for="Product.Id" hidden />
     
-    <div class="card-header bg-secondary bg-gradient py-3">
-        <div class="text-center">
-            <h2 class="text-white">
-                @(Model.Product.Id != 0 ? "Update" : "Create") Product
-            </h2>
-        </div>
-    </div>
-
-    <div class="card-body p-4">
-        <form method="post" enctype="multipart/form-data">
-
-            <input asp-for="Product.Id" hidden />
-            <input asp-for="Product.ImageUrl" hidden />
-
-            <div class="row">
-
-                <div class="col-md-8">
-
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-                    <div class="form-floating py-2">
-                        <input asp-for="Product.Name" class="form-control border-0 shadow" />
-                        <label asp-for="Product.Name"></label>
-                        <span asp-validation-for="Product.Name" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-floating py-2">
-                        <textarea asp-for="Product.Description" class="form-control border-0 shadow"></textarea>
-                        <label asp-for="Product.Description"></label>
-                        <span asp-validation-for="Product.Description" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-floating py-2">
-                        <input asp-for="Product.Colour" class="form-control border-0 shadow" />
-                        <label asp-for="Product.Colour"></label>
-                        <span asp-validation-for="Product.Colour" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-floating py-2">
-                        <input asp-for="Product.Size" class="form-control border-0 shadow" />
-                        <label asp-for="Product.Size"></label>
-                        <span asp-validation-for="Product.Size" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-floating py-2">
-                        <input asp-for="Product.Price" class="form-control border-0 shadow" />
-                        <label asp-for="Product.Price"></label>
-                        <span asp-validation-for="Product.Price" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-floating py-2">
-                        <select asp-for="Product.CategoryId"
-                                asp-items="Model.CategoryList"
-                                class="form-select border-0 shadow">
-
-                            <option value="">-- Select Category --</option>
-
-                        </select>
-
-                        <label asp-for="Product.CategoryId"></label>
-                        <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
-                    </div>
-
-                    <div class="py-2">
-                        <label class="form-label">Upload Image</label>
-                        <input type="file" name="file" class="form-control border-0 shadow" />
-                    </div>
-
+    <div class="row">
+        <div class="col-10">
+            <div class="border p-3 mt-4 row">
+                <div class="col-12 pb-2">
+                    <h2 class="text-primary">@(Model.Product.Id == 0 ? "Create" : "Edit") Product</h2>
+                    <hr />
                 </div>
-
-
-                <div class="col-md-4 text-center">
-
-                    @if (!string.IsNullOrEmpty(Model.Product.ImageUrl))
+                
+                <div class="mb-3 col-6">
+                    <label asp-for="Product.Name"></label>
+                    <input asp-for="Product.Name" class="form-control" />
+                    <span asp-validation-for="Product.Name" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3 col-6">
+                    <label asp-for="Product.Brand"></label>
+                    <input asp-for="Product.Brand" class="form-control" />
+                    <span asp-validation-for="Product.Brand" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3 col-6">
+                    <label asp-for="Product.CategoryId"></label>
+                    <select asp-for="Product.CategoryId" asp-items="@Model.CategoryList" class="form-select">
+                        <option disabled selected>--Select Category--</option>
+                    </select>
+                    <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3 col-6">
+                    <label asp-for="Product.ImageUrl"></label>
+                    <input type="file" name="file" class="form-control" />
+                </div>
+                
+                <div class="mb-3 col-12">
+                    <label asp-for="Product.Description"></label>
+                    <textarea asp-for="Product.Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Product.Description" class="text-danger"></span>
+                </div>
+                
+                <div class="col-12">
+                    @if (Model.Product.Id == 0)
                     {
-                        <img src="@Model.Product.ImageUrl"
-                             class="img-fluid rounded shadow"
-                             style="max-height:250px;" />
+                        <button type="submit" class="btn btn-primary" style="width:150px">Create</button>
                     }
-
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary" style="width:150px">Update</button>
+                    }
+                    <a asp-action="Index" class="btn btn-secondary" style="width:150px">Back to List</a>
                 </div>
-
             </div>
-
-            <div class="row pt-4">
-
-                <div class="col-6 col-md-3">
-                    <button type="submit" class="btn btn-primary form-control">
-
-                        @(Model.Product.Id != 0 ? "Update" : "Create")
-
-                    </button>
-                </div>
-
-                <div class="col-6 col-md-3">
-                    <a asp-controller="Product"
-                           asp-action="Index"
-                           class="btn btn-outline-secondary form-control">
-
-                        Back to List
-
-                    </a>
-                </div>
-
+        </div>
+        
+        <!-- Image Preview Column -->
+        @if (!string.IsNullOrEmpty(Model.Product.ImageUrl))
+        {
+            <div class="col-2">
+                <img src="@Model.Product.ImageUrl" width="100%" style="border-radius:5px; border:1px solid #bbb9b9" />
             </div>
-
-        </form>
+        }
     </div>
-</div>
+    
+    <!-- Variants Section - FIXED -->
+    @if (Model.Product.Id == 0)
+    {
+        <div class="alert alert-info mt-3">
+            Save the product first to add variants.
+        </div>
+    }
+    else
+    {
+        <hr />
+        <h3>Variants</h3>
+
+        <a asp-action="VariantCreate"
+               asp-route-productId="@Model.Product.Id"
+               class="btn btn-info mb-2">
+            <i class="bi bi-plus-circle"></i> Add Variant
+        </a>
+
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Color</th>
+                    <th>Size</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Variants != null && Model.Variants.Any())
+                {
+                    @foreach (var v in Model.Variants)
+                    {
+                        <tr>
+                            <td>@v.Color</td>
+                            <td>@v.Size</td>
+                            <td>@v.Price.ToString("C")</td>
+                            <td>@v.Stock</td>
+                            <td>
+                                <a asp-action="VariantEdit" asp-route-id="@v.Id" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <a asp-action="VariantDelete" asp-route-id="@v.Id" class="btn btn-danger btn-sm"
+                                       onclick="return confirm('Are you sure you want to delete this variant?')">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center">No variants added yet. Click "Add Variant" to create one.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</form>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
 }

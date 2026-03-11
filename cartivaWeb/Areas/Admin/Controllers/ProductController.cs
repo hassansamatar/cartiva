@@ -11,158 +11,302 @@ namespace CartivaWeb.Areas.Admin.Controllers
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _db;
-        private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly IWebHostEnvironment _environment;
 
-        public ProductController(ApplicationDbContext db, IWebHostEnvironment hostEnvironment)
+        public ProductController(ApplicationDbContext db, IWebHostEnvironment environment)
         {
             _db = db;
-            _hostEnvironment = hostEnvironment;
+            _environment = environment;
         }
 
-        // ======================
-        // GET: Product List
-        // ======================
-        public IActionResult Index()
+        #region PRODUCT
+
+        // =========================
+        // Product List
+        // =========================
+        public async Task<IActionResult> Index()
         {
-            List<Product> productList = _db.Producties
+            var products = await _db.Products
                 .Include(p => p.Category)
+                .Include(p => p.Variants)
                 .AsNoTracking()
-                .ToList();
+                .ToListAsync();
 
-            return View(productList);
+            return View(products);
         }
 
-        // ======================
-        // GET: Upsert
-        // ======================
-        public IActionResult Upsert(int? id)
+        // =========================
+        // Upsert GET
+        // =========================
+        public async Task<IActionResult> Upsert(int? id)
         {
-            ProductVM productVM = new()
+            ProductVM vm = new()
             {
                 Product = new Product(),
-                CategoryList = _db.Categories
-                    .Select(u => new SelectListItem
+                Variants = new List<ProductVariant>(),
+                CategoryList = await _db.Categories
+                    .Select(c => new SelectListItem
                     {
-                        Text = u.Name,
-                        Value = u.Id.ToString()
-                    })
+                        Text = c.Name,
+                        Value = c.Id.ToString()
+                    }).ToListAsync()
             };
 
             if (id == null || id == 0)
-            {
-                return View(productVM);
-            }
+                return View(vm);
 
-            productVM.Product = _db.Producties
-                .Include(p => p.Category)
-                .FirstOrDefault(p => p.Id == id);
+            var product = await _db.Products
+                .Include(p => p.Variants)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (productVM.Product == null)
-            {
+            if (product == null)
                 return NotFound();
-            }
 
-            return View(productVM);
+            vm.Product = product;
+            vm.Variants = product.Variants.ToList();
+
+            return View(vm);
         }
 
-        // ======================
-        // POST: Upsert
-        // ======================
+        // =========================
+        // Upsert POST
+        // =========================
         [HttpPost]
-        public IActionResult Upsert(ProductVM productVM, IFormFile? file)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Upsert(ProductVM vm, IFormFile? file)
         {
-            if (ModelState.IsValid)
+            ModelState.Remove("Product.Category");
+            ModelState.Remove("Product.Variants");
+
+            if (!ModelState.IsValid)
             {
-                string wwwRootPath = _hostEnvironment.WebRootPath;
-
-                if (file != null)
-                {
-                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                    string productPath = Path.Combine(wwwRootPath, "images/products");
-
-                    // delete old image
-                    if (!string.IsNullOrEmpty(productVM.Product.ImageUrl))
+                vm.CategoryList = await _db.Categories
+                    .Select(c => new SelectListItem
                     {
-                        var oldImagePath = Path.Combine(wwwRootPath, productVM.Product.ImageUrl.TrimStart('\\'));
+                        Text = c.Name,
+                        Value = c.Id.ToString()
+                    }).ToListAsync();
 
-                        if (System.IO.File.Exists(oldImagePath))
-                        {
-                            System.IO.File.Delete(oldImagePath);
-                        }
-                    }
-
-                    // upload new image
-                    using (var fileStream = new FileStream(Path.Combine(productPath, fileName), FileMode.Create))
-                    {
-                        file.CopyTo(fileStream);
-                    }
-
-                    productVM.Product.ImageUrl = @"\images\products\" + fileName;
-                }
-
-                if (productVM.Product.Id == 0)
-                {
-                    _db.Producties.Add(productVM.Product);
-                }
-                else
-                {
-                    _db.Producties.Update(productVM.Product);
-                }
-
-                _db.SaveChanges();
-
-                return RedirectToAction(nameof(Index));
+                return View(vm);
             }
 
-            productVM.CategoryList = _db.Categories
-                .Select(u => new SelectListItem
-                {
-                    Text = u.Name,
-                    Value = u.Id.ToString()
-                });
+            if (file != null)
+                vm.Product.ImageUrl = await SaveImage(file);
 
-            return View(productVM);
+            if (vm.Product.Id == 0)
+            {
+                await _db.Products.AddAsync(vm.Product);
+                TempData["success"] = "Product created successfully";
+            }
+            else
+            {
+                var productFromDb = await _db.Products.FindAsync(vm.Product.Id);
+
+                if (productFromDb == null)
+                    return NotFound();
+
+                productFromDb.Name = vm.Product.Name;
+                productFromDb.Brand = vm.Product.Brand;
+                productFromDb.Description = vm.Product.Description;
+                productFromDb.CategoryId = vm.Product.CategoryId;
+
+                if (!string.IsNullOrEmpty(vm.Product.ImageUrl))
+                    productFromDb.ImageUrl = vm.Product.ImageUrl;
+
+                _db.Products.Update(productFromDb);
+
+                TempData["success"] = "Product updated successfully";
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
-        // ======================
-        // GET: Delete
-        // ======================
-        public IActionResult Delete(int? id)
+        // =========================
+        // Delete
+        // =========================
+        public async Task<IActionResult> Delete(int id)
         {
-            if (id == null || id == 0)
-            {
-                return NotFound();
-            }
-
-            Product? productFromDb = _db.Producties
+            var product = await _db.Products
                 .Include(p => p.Category)
-                .FirstOrDefault(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (productFromDb == null)
-            {
+            if (product == null)
                 return NotFound();
-            }
 
-            return View(productFromDb);
+            return View(product);
         }
 
-        // ======================
-        // POST: Delete
-        // ======================
         [HttpPost, ActionName("Delete")]
-        public IActionResult DeletePOST(int? id)
+        public async Task<IActionResult> DeletePost(int id)
         {
-            Product? obj = _db.Producties.Find(id);
+            var product = await _db.Products.FindAsync(id);
 
-            if (obj == null)
-            {
+            if (product == null)
                 return NotFound();
-            }
 
-            _db.Producties.Remove(obj);
-            _db.SaveChanges();
+            DeleteImage(product.ImageUrl);
+
+            _db.Products.Remove(product);
+            await _db.SaveChangesAsync();
+
+            TempData["success"] = "Product deleted";
 
             return RedirectToAction(nameof(Index));
         }
+
+        #endregion
+
+
+        #region VARIANTS
+
+        // =========================
+        // Variant List
+        // =========================
+        public async Task<IActionResult> VariantIndex(int productId)
+        {
+            var product = await _db.Products.FindAsync(productId);
+
+            if (product == null)
+                return NotFound();
+
+            var variants = await _db.ProductVariants
+                .Where(v => v.ProductId == productId)
+                .ToListAsync();
+
+            ViewBag.ProductName = product.Name;
+            ViewBag.ProductId = productId;
+
+            return View(variants);
+        }
+
+        // =========================
+        // Create Variant
+        // =========================
+        public async Task<IActionResult> VariantCreate(int productId)
+        {
+            var product = await _db.Products.FindAsync(productId);
+
+            if (product == null)
+                return NotFound();
+
+            ViewBag.ProductName = product.Name;
+
+            return View(new ProductVariant
+            {
+                ProductId = productId
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VariantCreate(ProductVariant variant)
+        {
+            ModelState.Remove("Product"); // FIX NOT NULL ERROR
+
+            if (!ModelState.IsValid)
+                return View(variant);
+
+            await _db.ProductVariants.AddAsync(variant);
+            await _db.SaveChangesAsync();
+
+            TempData["success"] = "Variant added";
+
+            return RedirectToAction(nameof(VariantIndex),
+                new { productId = variant.ProductId });
+        }
+
+        // =========================
+        // Edit Variant
+        // =========================
+        public async Task<IActionResult> VariantEdit(int id)
+        {
+            var variant = await _db.ProductVariants.FindAsync(id);
+
+            if (variant == null)
+                return NotFound();
+
+            return View(variant);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VariantEdit(ProductVariant variant)
+        {
+            ModelState.Remove("Product");
+
+            if (!ModelState.IsValid)
+                return View(variant);
+
+            _db.ProductVariants.Update(variant);
+
+            await _db.SaveChangesAsync();
+
+            TempData["success"] = "Variant updated";
+
+            return RedirectToAction(nameof(VariantIndex),
+                new { productId = variant.ProductId });
+        }
+
+        // =========================
+        // Delete Variant
+        // =========================
+        public async Task<IActionResult> VariantDelete(int id)
+        {
+            var variant = await _db.ProductVariants.FindAsync(id);
+
+            if (variant == null)
+                return NotFound();
+
+            int productId = variant.ProductId;
+
+            _db.ProductVariants.Remove(variant);
+
+            await _db.SaveChangesAsync();
+
+            TempData["success"] = "Variant deleted";
+
+            return RedirectToAction(nameof(VariantIndex),
+                new { productId });
+        }
+
+        #endregion
+
+
+        #region IMAGE HELPERS
+
+        private async Task<string> SaveImage(IFormFile file)
+        {
+            string root = _environment.WebRootPath;
+            string fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
+
+            string folder = Path.Combine(root, "images/products");
+
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            string filePath = Path.Combine(folder, fileName);
+
+            using var stream = new FileStream(filePath, FileMode.Create);
+
+            await file.CopyToAsync(stream);
+
+            return "/images/products/" + fileName;
+        }
+
+        private void DeleteImage(string? imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl))
+                return;
+
+            string root = _environment.WebRootPath;
+
+            string path = Path.Combine(root, imageUrl.TrimStart('/'));
+
+            if (System.IO.File.Exists(path))
+                System.IO.File.Delete(path);
+        }
+
+        #endregion
     }
 }

@@ -1,41 +1,63 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Models;
-using Models;
-using Models;
-
-using System;
-using System.Collections.Generic;
-using System.Reflection.Emit;
-using System.Text;
+using Models.ViewModels;
 
 namespace DataAccess
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
         {
-
         }
+
+        // ======================
+        // DbSets
+        // ======================
         public DbSet<Category> Categories { get; set; }
-        public DbSet<Product> Producties { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<ProductVariant> ProductVariants { get; set; }
 
-
+        // ======================
+        // Configure relationships
+        // ======================
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Ensure EF treats Product.Id as database-generated (IDENTITY)
+            base.OnModelCreating(modelBuilder);
+
+            // Map table names explicitly (optional)
+            modelBuilder.Entity<Category>().ToTable("Categories");
+            modelBuilder.Entity<Product>().ToTable("Products");
+            modelBuilder.Entity<ProductVariant>().ToTable("ProductVariants");
+
+            // Product → ProductVariants (one-to-many)
+            modelBuilder.Entity<ProductVariant>()
+                .HasOne(v => v.Product)
+                .WithMany(p => p.Variants)
+                .HasForeignKey(v => v.ProductId)
+                .OnDelete(DeleteBehavior.Cascade); // delete variants if product is deleted
+
+            // Optional: set string lengths & required fields
             modelBuilder.Entity<Product>()
-                .Property(p => p.Id)
-                .ValueGeneratedOnAdd();
+                .Property(p => p.Name)
+                .HasMaxLength(30)
+                .IsRequired();
 
-            modelBuilder.Entity<Category>().HasData(
-                new Category { Id = 15, Name = "Electronics", DisplayOrder = 1 },
-                new Category { Id = 19, Name = "Books", DisplayOrder = 2 }
-                );
-            modelBuilder.Entity<Product>().HasData(
-                new Product { Id = 10, Name = "Shirt", Colour="White" , Size ="M", Description="Good Quality", Price = 799, ImageUrl ="\root/shart.png", CategoryId =15},
-               new Product { Id = 20, Name = "T-Shirt", Colour = "Black", Size = "L", Description = "Good Quality", Price = 299, ImageUrl = "\root/Tshart.png", CategoryId =19 }
-                );
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Brand)
+                .IsRequired();
+
+            modelBuilder.Entity<ProductVariant>()
+                .Property(v => v.Color)
+                .IsRequired();
+
+            modelBuilder.Entity<ProductVariant>()
+                .Property(v => v.Size)
+                .IsRequired();
+
+            modelBuilder.Entity<Category>()
+                .Property(c => c.Name)
+                .IsRequired();
         }
-
     }
 }

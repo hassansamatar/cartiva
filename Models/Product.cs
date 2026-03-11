@@ -5,6 +5,7 @@ using System.Text;
 namespace Models
 {
     using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+    using Models.ViewModels;
     using System.ComponentModel;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
@@ -19,19 +20,20 @@ namespace Models
             [MaxLength(30)]
             public string Name { get; set; }
             [Required]
-            public string Colour { get; set; }
+            public string Brand { get; set; }
             [Required]
-            public string Size { get; set; }
+            
 
             public string? Description { get; set; }
             [Range(1, 1000)]
-            public double Price { get; set; }
+           
             public string? ImageUrl { get; set; }
         
         public int  CategoryId { get; set; }
         [ForeignKey("CategoryId")]
         [ValidateNever]
         public Category Category { get; set; }
+        public ICollection<ProductVariant> Variants { get; set; }
 
     }
 
