@@ -1,6 +1,7 @@
 ﻿using DataAccess;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.ViewModels;
 
@@ -10,9 +11,11 @@ namespace CartivaWeb.Areas.Admin.Controllers
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _db;
-        public ProductController(ApplicationDbContext db)
+        private readonly IWebHostEnvironment _hostEnvironment;
+        public ProductController(ApplicationDbContext db, IWebHostEnvironment webHostEnvironment)
         {
             _db = db;
+              _hostEnvironment = webHostEnvironment;
         }
         public IActionResult Index()
         {
@@ -21,64 +24,76 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             return View(productList);
         }
-        public IActionResult Create()
+        public IActionResult Upsert(int? id)
         {
-            ProductVM productVM = new ProductVM()
+
+            ProductVM productVM = new()
             {
-                Product = new Product(),
+                
                 CategoryList = _db.Categories.Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
-                })
+                }),
+                Product = new Product()
             };
 
-          
-            return View(productVM);
-        }
-        [HttpPost]
-        public IActionResult Create(ProductVM obj)
-        {
-            if (ModelState.IsValid)
-            {
-                // defensive: ensure EF will let the database generate the identity value
-                //obj.Id = 0;
-                _db.Producties.Add(obj.Product);
-                _db.SaveChanges();
-                return RedirectToAction("Index");
-            }
-            return View();
-        }
 
-        public IActionResult Edit(int? id)
-        {
             if (id == null || id == 0)
             {
-                return NotFound();
+                //create
+                return View(productVM);
             }
-            Product? productFromDb = _db.Producties.Find(id);
-
-
-            if (productFromDb == null)
+            else
             {
-                return NotFound();
+                //update
+                productVM.Product = _db.Producties.FirstOrDefault(u => u.Id == id);
+                return View(productVM);
             }
-            return View(productFromDb);
+            
         }
         [HttpPost]
-        public IActionResult Edit(Product obj)
+        public IActionResult Upsert(ProductVM productVM, IFormFile? file)
         {
-
-
             if (ModelState.IsValid)
             {
-                _db.Producties.Update(obj);
+                string wwwRootPath = _hostEnvironment.WebRootPath;
+
+                if (file != null)
+                {
+                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                    string productPath = Path.Combine(wwwRootPath, @"images\products");
+
+                    using (var fileStream = new FileStream(Path.Combine(productPath, fileName), FileMode.Create))
+                    {
+                        file.CopyTo(fileStream);
+                    }
+
+                    productVM.Product.ImageUrl = @"\images\products\" + fileName;
+                }
+
+                if (productVM.Product.Id == 0)
+                {
+                    _db.Producties.Add(productVM.Product);
+                }
+                else
+                {
+                    _db.Producties.Update(productVM.Product);
+                }
+
                 _db.SaveChanges();
                 return RedirectToAction("Index");
             }
-            return View(obj);
 
+            productVM.CategoryList = _db.Categories.Select(u => new SelectListItem
+            {
+                Text = u.Name,
+                Value = u.Id.ToString()
+            });
+
+            return View(productVM);
         }
+
         public IActionResult Delete(int? id)
         {
             if (id == null || id == 0)
