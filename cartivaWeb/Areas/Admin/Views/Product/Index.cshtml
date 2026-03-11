@@ -1,63 +1,97 @@
 ﻿@model IEnumerable<Models.Product>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Product List";
 }
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Colour)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Size)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Price)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ImageUrl)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Colour)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Size)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Price)
-            </td>
-            <td>
-               
-                    <div>
-                        <img src="ModelItem =>item.ImageUrl" width="25%" />
-                    </div>
-            </td>
-            <td>
-               <a asp-action="Upsert" asp-route-id="@item.Id">Create</a> |
-                <a asp-action="Upsert" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+<div class="container p-3">
+
+    <div class="row pb-3">
+        <div class="col-6">
+            <h2 class="text-primary">Product List</h2>
+        </div>
+
+        <div class="col-6 text-end">
+            <a asp-controller="Product"
+                   asp-action="Upsert"
+                   class="btn btn-primary">
+
+                Create New Product
+            </a>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped">
+
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Colour</th>
+                <th>Size</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Image</th>
+                <th></th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+
+                    <td>@item.Name</td>
+
+                    <td>@item.Colour</td>
+
+                    <td>@item.Size</td>
+
+                    <td>@item.Description</td>
+
+                    <td>@item.Price</td>
+
+                    <td>@item.Category?.Name</td>
+
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl"
+                                 style="width:80px; height:80px; object-fit:cover;"
+                                 class="rounded shadow" />
+                        }
+                    </td>
+
+                    <td>
+
+                        <div class="btn-group">
+
+                            <a asp-controller="Product"
+                                   asp-action="Upsert"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-primary">
+
+                                Edit
+                            </a>
+
+                            <a asp-controller="Product"
+                                   asp-action="Delete"
+                                   asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-danger">
+
+                                Delete
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+            }
+
+        </tbody>
+
+    </table>
+
+</div>

@@ -12,46 +12,62 @@ namespace CartivaWeb.Areas.Admin.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly IWebHostEnvironment _hostEnvironment;
-        public ProductController(ApplicationDbContext db, IWebHostEnvironment webHostEnvironment)
+
+        public ProductController(ApplicationDbContext db, IWebHostEnvironment hostEnvironment)
         {
             _db = db;
-              _hostEnvironment = webHostEnvironment;
+            _hostEnvironment = hostEnvironment;
         }
+
+        // ======================
+        // GET: Product List
+        // ======================
         public IActionResult Index()
         {
-            List<Product> productList = _db.Producties.ToList();
-          
+            List<Product> productList = _db.Producties
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .ToList();
 
             return View(productList);
         }
+
+        // ======================
+        // GET: Upsert
+        // ======================
         public IActionResult Upsert(int? id)
         {
-
             ProductVM productVM = new()
             {
-                
-                CategoryList = _db.Categories.Select(u => new SelectListItem
-                {
-                    Text = u.Name,
-                    Value = u.Id.ToString()
-                }),
-                Product = new Product()
+                Product = new Product(),
+                CategoryList = _db.Categories
+                    .Select(u => new SelectListItem
+                    {
+                        Text = u.Name,
+                        Value = u.Id.ToString()
+                    })
             };
-
 
             if (id == null || id == 0)
             {
-                //create
                 return View(productVM);
             }
-            else
+
+            productVM.Product = _db.Producties
+                .Include(p => p.Category)
+                .FirstOrDefault(p => p.Id == id);
+
+            if (productVM.Product == null)
             {
-                //update
-                productVM.Product = _db.Producties.FirstOrDefault(u => u.Id == id);
-                return View(productVM);
+                return NotFound();
             }
-            
+
+            return View(productVM);
         }
+
+        // ======================
+        // POST: Upsert
+        // ======================
         [HttpPost]
         public IActionResult Upsert(ProductVM productVM, IFormFile? file)
         {
@@ -62,8 +78,9 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 if (file != null)
                 {
                     string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                    string productPath = Path.Combine(wwwRootPath, @"images\products");
+                    string productPath = Path.Combine(wwwRootPath, "images/products");
 
+                    // delete old image
                     if (!string.IsNullOrEmpty(productVM.Product.ImageUrl))
                     {
                         var oldImagePath = Path.Combine(wwwRootPath, productVM.Product.ImageUrl.TrimStart('\\'));
@@ -74,6 +91,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
                         }
                     }
 
+                    // upload new image
                     using (var fileStream = new FileStream(Path.Combine(productPath, fileName), FileMode.Create))
                     {
                         file.CopyTo(fileStream);
@@ -92,46 +110,59 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 }
 
                 _db.SaveChanges();
-                return RedirectToAction("Index");
+
+                return RedirectToAction(nameof(Index));
             }
 
-            productVM.CategoryList = _db.Categories.Select(u => new SelectListItem
-            {
-                Text = u.Name,
-                Value = u.Id.ToString()
-            });
+            productVM.CategoryList = _db.Categories
+                .Select(u => new SelectListItem
+                {
+                    Text = u.Name,
+                    Value = u.Id.ToString()
+                });
 
             return View(productVM);
         }
 
+        // ======================
+        // GET: Delete
+        // ======================
         public IActionResult Delete(int? id)
         {
             if (id == null || id == 0)
             {
                 return NotFound();
             }
-            Product? productFromDb = _db.Producties.Find(id);
 
+            Product? productFromDb = _db.Producties
+                .Include(p => p.Category)
+                .FirstOrDefault(p => p.Id == id);
 
             if (productFromDb == null)
             {
                 return NotFound();
             }
+
             return View(productFromDb);
         }
+
+        // ======================
+        // POST: Delete
+        // ======================
         [HttpPost, ActionName("Delete")]
         public IActionResult DeletePOST(int? id)
         {
-           Product? obj = _db.Producties.Find(id);
+            Product? obj = _db.Producties.Find(id);
+
             if (obj == null)
             {
                 return NotFound();
             }
+
             _db.Producties.Remove(obj);
             _db.SaveChanges();
-            return RedirectToAction("Index");
+
+            return RedirectToAction(nameof(Index));
         }
-
-
     }
 }
