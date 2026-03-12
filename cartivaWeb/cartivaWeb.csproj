@@ -11,7 +11,7 @@
     <Content Remove="Controllers\**" />
     <EmbeddedResource Remove="Controllers\**" />
     <None Remove="Controllers\**" />
-	  <FrameworkReference Include="Microsoft.AspNetCore.App" />
+	  
   </ItemGroup>
 
   <ItemGroup>
@@ -34,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\Identity\Data\" />
     <Folder Include="wwwroot\images\product\" />
   </ItemGroup>
 
