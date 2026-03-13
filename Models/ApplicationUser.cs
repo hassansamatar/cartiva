@@ -9,8 +9,8 @@ namespace Models
     {
         // Basic profile info
         // ======================
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
+        public string Name { get; set; }
+      
 
         // ======================
         // Address information
@@ -18,6 +18,6 @@ namespace Models
         public string? StreetAddress { get; set; }
         public string? City { get; set; }
         public string? PostalCode { get; set; }
-        public string? Country { get; set; }
+        public string? State { get; set; }
     }
 }
