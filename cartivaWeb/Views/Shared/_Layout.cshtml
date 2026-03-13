@@ -66,24 +66,24 @@
                             </a>
                         </li>
 
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="contentDropdown" role="button" 
-                               data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-pencil-square me-1"></i> Content Management
-                            </a>
-                            <ul class="dropdown-menu shadow" aria-labelledby="contentDropdown">
-                                <li>
-                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">
-                                        <i class="bi bi-tags me-1"></i> Category
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">
-                                        <i class="bi bi-box-seam me-1"></i> Product
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
+                           @if (User.IsInRole(SD.Role_Admin))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Content Managment
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li class="nav-item">
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">Category</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">Product</a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+
+                                </ul>
+                            </li>
+                        }
                     </ul>
 
                     <ul class="navbar-nav ms-auto">

@@ -1,11 +1,14 @@
 ﻿
-using Models;
-using Microsoft.AspNetCore.Mvc;
 using DataAccess;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Models;
+using MyUtility;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = SD.Role_Admin)]
     public class CategoryController : Controller
     {
         private readonly ApplicationDbContext _db;
