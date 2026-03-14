@@ -1,8 +1,10 @@
 using DataAccess;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace CartivaWeb.Areas.Customer.Controllers
 {
@@ -10,50 +12,133 @@ namespace CartivaWeb.Areas.Customer.Controllers
     public class HomeController : Controller
     {
         private readonly ApplicationDbContext _db;
-       
 
         public HomeController(ApplicationDbContext db)
         {
             _db = db;
-            
         }
 
+        // List all products
         public IActionResult Index()
         {
             var products = _db.Products
-       .Include(p => p.Category)
-       .ToList();
-          
+                .Include(p => p.Category)
+                .ToList();
 
             return View(products);
-           
         }
 
-        // Details action
+        // Product details with variants
         public IActionResult Details(int id)
         {
             var product = _db.Products
                 .Include(p => p.Category)
-                .Include(p => p.Variants) // load variants
+                .Include(p => p.Variants)
                 .FirstOrDefault(p => p.Id == id);
 
             if (product == null)
-            {
                 return NotFound();
-            }
 
             return View(product);
         }
 
+        // Add a product variant to shopping cart
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> AddToCart(int productVariantId, int count = 1)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return RedirectToAction("Login", "Account");
+
+            var variant = await _db.ProductVariants.FindAsync(productVariantId);
+            if (variant == null)
+                return NotFound();
+
+            if (count > variant.Stock)
+                return BadRequest("Not enough stock available.");
+
+            var cartItem = await _db.ShoppingCarts
+                .FirstOrDefaultAsync(c => c.ApplicationUserId == userId && c.ProductVariantId == productVariantId);
+
+            if (cartItem != null)
+                cartItem.Count += count;
+            else
+            {
+                cartItem = new ShoppingCart
+                {
+                    ApplicationUserId = userId,
+                    ProductVariantId = productVariantId,
+                    Count = count
+                };
+                _db.ShoppingCarts.Add(cartItem);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction("Details", new { id = variant.ProductId });
+        }
+
+        // Show shopping cart
+        [Authorize]
+        public async Task<IActionResult> Cart()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var cartItems = await _db.ShoppingCarts
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.Product)
+                .Where(c => c.ApplicationUserId == userId)
+                .ToListAsync();
+
+            return View(cartItems);
+        }
+
+        // Update cart item quantity
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> UpdateCount(int id, int count)
+        {
+            var cartItem = await _db.ShoppingCarts.FindAsync(id);
+            if (cartItem != null)
+            {
+                if (count <= 0)
+                    _db.ShoppingCarts.Remove(cartItem);
+                else
+                    cartItem.Count = count;
+
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction("Cart");
+        }
+
+        // Remove cart item
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> Remove(int id)
+        {
+            var cartItem = await _db.ShoppingCarts.FindAsync(id);
+            if (cartItem != null)
+            {
+                _db.ShoppingCarts.Remove(cartItem);
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction("Cart");
+        }
+
+        // Privacy page
         public IActionResult Privacy()
         {
             return View();
         }
 
+        // Error page
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View(new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            });
         }
     }
 }

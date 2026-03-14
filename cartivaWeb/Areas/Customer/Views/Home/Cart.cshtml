@@ -1,0 +1,81 @@
+﻿@model IEnumerable<Models.ShoppingCart>
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "My Shopping Cart";
+    var culture = CultureInfo.GetCultureInfo("en-US"); // Change to your desired currency/culture
+}
+
+<div class="container mt-4">
+    <h2>My Cart</h2>
+
+    @* Display success message if present *@
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <p>Your cart is empty.</p>
+        <a asp-area="Customer" asp-controller="Home" asp-action="Index" class="btn btn-primary">
+            Back to Products
+        </a>
+    }
+    else
+    {
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Product</th>
+                    <th>Variant</th>
+                    <th>Price</th>
+                    <th>Count</th>
+                    <th>Subtotal</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.ProductVariant.Product.Name</td>
+                        <td>@item.ProductVariant.Color / @item.ProductVariant.Size</td>
+                        <td>@item.ProductVariant.Price.ToString("C", culture)</td>
+                        <td>
+                            <form asp-area="Customer" asp-controller="Home" asp-action="UpdateCount" method="post" class="d-inline-block">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="number" name="count" value="@item.Count" min="1" max="@item.ProductVariant.Stock" class="form-control d-inline-block" style="width:70px;" />
+                                <button type="submit" class="btn btn-sm btn-primary mt-1">Update</button>
+                            </form>
+                        </td>
+                        <td>@((item.ProductVariant.Price * item.Count).ToString("C", culture))</td>
+                        <td>
+                            <form asp-area="Customer" asp-controller="Home" asp-action="Remove" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <h4>Total: @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)</h4>
+
+            <div>
+                <a asp-area="Customer" asp-controller="Home" asp-action="Index" class="btn btn-secondary me-2">
+                    Continue Shopping
+                </a>
+                <a asp-area="Customer" asp-controller="Order" asp-action="Checkout" class="btn btn-success">
+                    Proceed to Checkout
+                </a>
+            </div>
+        </div>
+    }
+</div>

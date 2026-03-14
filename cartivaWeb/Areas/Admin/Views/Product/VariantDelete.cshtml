@@ -1,4 +1,6 @@
 ﻿@model Models.ViewModels.ProductVariant
+   
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Delete Variant";
@@ -24,7 +26,9 @@
                 <dd class="col-sm-8">@Model.Size</dd>
 
                 <dt class="col-sm-4">Price</dt>
-                <dd class="col-sm-8">@Model.Price.ToString("C")</dd>
+             
+
+<dd class="col-sm-8">@(@Model.Price.ToString("C", CultureInfo.GetCultureInfo("en-US")))</dd>
 
                 <dt class="col-sm-4">Stock</dt>
                 <dd class="col-sm-8">@Model.Stock</dd>
