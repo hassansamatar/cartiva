@@ -1,7 +1,10 @@
-﻿@model IEnumerable<Models.ViewModels.ProductVariant>
+﻿@using System.Globalization
+@model IEnumerable<Models.ViewModels.ProductVariant>
+;
 
 @{
     ViewData["Title"] = "Product Variants";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
     var productId = ViewBag.ProductId;
     var productName = ViewBag.ProductName ?? "Product";
 }
@@ -40,7 +43,7 @@
                     <tr>
                         <td>@variant.Color</td>
                         <td>@variant.Size</td>
-                        <td>@variant.Price.ToString("C")</td>
+                        <td>@variant.Price.ToString("C", culture)</td>
                         <td>@variant.Stock</td>
                         <td>
                             <a asp-action="VariantEdit" asp-route-id="@variant.Id" class="btn btn-warning btn-sm">

@@ -3,19 +3,19 @@
 
 @{
     ViewData["Title"] = "My Shopping Cart";
-    var culture = CultureInfo.GetCultureInfo("en-US"); // Change to your desired currency/culture
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
 
 <div class="container mt-4">
     <h2>My Cart</h2>
-
-    @* Display success message if present *@
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success">
-            @TempData["Success"]
-        </div>
-    }
 
     @if (!Model.Any())
     {

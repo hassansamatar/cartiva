@@ -1,7 +1,9 @@
-﻿@model Models.Product
+﻿@using System.Globalization
+@model Models.Product
 
 @{
     ViewData["Title"] = "Product Details";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
 <div class="container mt-4">
@@ -37,7 +39,7 @@
                         <li class="mb-2 p-2 border rounded">
                             <span class="badge bg-primary me-1">Color: @v.Color</span>
                             <span class="badge bg-secondary me-1">Size: @v.Size</span>
-                            <span class="badge bg-success me-1">Price: @v.Price.ToString("C")</span>
+                            <span class="badge bg-success me-1">Price: @v.Price.ToString("C", culture)</span>
                             <span class="badge bg-warning me-1">Stock: @v.Stock</span>
 
                             @if (v.Stock > 0)

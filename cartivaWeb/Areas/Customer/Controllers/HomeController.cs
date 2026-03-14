@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace CartivaWeb.Areas.Customer.Controllers
@@ -51,7 +52,10 @@ namespace CartivaWeb.Areas.Customer.Controllers
             if (userId == null)
                 return RedirectToAction("Login", "Account");
 
-            var variant = await _db.ProductVariants.FindAsync(productVariantId);
+            var variant = await _db.ProductVariants
+                .Include(v => v.Product) // Ensure Product is loaded
+                .FirstOrDefaultAsync(v => v.Id == productVariantId);
+
             if (variant == null)
                 return NotFound();
 
@@ -75,6 +79,9 @@ namespace CartivaWeb.Areas.Customer.Controllers
             }
 
             await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"{variant.Product.Name} ({variant.Color}/{variant.Size}) added to your cart!";
+
             return RedirectToAction("Details", new { id = variant.ProductId });
         }
 
@@ -98,16 +105,27 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateCount(int id, int count)
         {
-            var cartItem = await _db.ShoppingCarts.FindAsync(id);
+            var cartItem = await _db.ShoppingCarts
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (cartItem != null)
             {
                 if (count <= 0)
+                {
                     _db.ShoppingCarts.Remove(cartItem);
+                    TempData["Success"] = $"{cartItem.ProductVariant.Product.Name} removed from your cart.";
+                }
                 else
+                {
                     cartItem.Count = count;
+                    TempData["Success"] = $"Updated quantity of {cartItem.ProductVariant.Product.Name} to {count}.";
+                }
 
                 await _db.SaveChangesAsync();
             }
+
             return RedirectToAction("Cart");
         }
 
@@ -116,12 +134,18 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [Authorize]
         public async Task<IActionResult> Remove(int id)
         {
-            var cartItem = await _db.ShoppingCarts.FindAsync(id);
+            var cartItem = await _db.ShoppingCarts
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (cartItem != null)
             {
                 _db.ShoppingCarts.Remove(cartItem);
                 await _db.SaveChangesAsync();
+                TempData["Success"] = $"{cartItem.ProductVariant.Product.Name} removed from your cart.";
             }
+
             return RedirectToAction("Cart");
         }
 
