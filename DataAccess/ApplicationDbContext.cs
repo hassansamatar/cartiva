@@ -22,6 +22,7 @@ namespace DataAccess
         public DbSet<ProductVariant> ProductVariants { get; set; }
 
         public DbSet<ApplicationUser> ApplicationUsers { get; set; }
+        public DbSet<Company> Companies { get; set; }
         // ======================
         // Configure relationships
         // ======================

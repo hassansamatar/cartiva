@@ -12,8 +12,10 @@ namespace CartivaWeb.Areas.Admin.Controllers
     public class CategoryController : Controller
     {
         private readonly ApplicationDbContext _db;
-        public CategoryController(ApplicationDbContext db) {
+        private readonly ILogger<CompanyController> _logger;
+        public CategoryController(ApplicationDbContext db, ILogger<CompanyController> logger) {
         _db = db;
+            _logger = logger;
         }
         public IActionResult Index()
         {
@@ -31,8 +33,11 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [HttpPost]
         public IActionResult Create(Category obj)
         {
+            var name = obj.Name;
+
             if (ModelState.IsValid)
             {
+               
                 _db.Categories.Add(obj);
                 _db.SaveChanges();
                 return RedirectToAction("Index");

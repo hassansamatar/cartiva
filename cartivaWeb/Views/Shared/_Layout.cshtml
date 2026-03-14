@@ -11,28 +11,31 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 
     <style>
-        /* Navbar: dark background with white text */
+        /* Navbar */
         .navbar-dark { background-color: #212529; }
-        .navbar-dark .navbar-brand, 
+        .navbar-dark .navbar-brand,
         .navbar-dark .nav-link { color: #ffffff; }
+
         .navbar-dark .nav-link:hover,
         .navbar-dark .nav-item.dropdown:hover > .nav-link { color: #ffc107; }
 
         .dropdown-menu { border-radius: 0.5rem; }
 
-        /* Footer: neutral */
+        /* Footer */
         footer.footer {
             padding: 1.5rem 0;
             background-color: #f8f9fa;
             color: #343a40;
         }
+
         footer.footer a {
             color: #0d6efd;
             text-decoration: none;
         }
+
         footer.footer a:hover { text-decoration: underline; }
 
-        /* Main content */
+        /* Content */
         main.pb-3 { padding-top: 1rem; }
 
         /* Buttons */
@@ -40,81 +43,110 @@
         .btn-primary:hover { background-color: #0b5ed7; border-color: #0a58ca; }
 
         .btn-dark { background-color: #343a40; border-color: #343a40; color: #ffffff; }
-        .btn-dark:hover { background-color: #23272b; border-color: #23272b; color: #ffffff; }
+        .btn-dark:hover { background-color: #23272b; border-color: #23272b; }
 
-        /* Cards & tables spacing */
         .card, .table { margin-bottom: 1.5rem; }
     </style>
 </head>
+
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    <i class="bi bi-cart4 me-2"></i> CartivaWeb
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
-                        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
 
-                <div class="collapse navbar-collapse" id="navbarContent">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="Customer" asp-controller="Home" asp-action="Index">
-                                <i class="bi bi-house-door me-1"></i> Home
+<header>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-cart4 me-2"></i> CartivaWeb
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+
+                <!-- LEFT MENU -->
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="Customer" asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-house-door me-1"></i> Home
+                        </a>
+                    </li>
+
+                    @if (User.IsInRole(SD.Role_Admin))
+                    {
+                        <li class="nav-item dropdown">
+
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-gear me-1"></i> Content Management
                             </a>
+
+                            <ul class="dropdown-menu">
+
+                                <li>
+                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">
+                                        <i class="bi bi-tags me-2"></i> Category
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">
+                                        <i class="bi bi-box-seam me-2"></i> Product
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Company" asp-action="Index">
+                                        <i class="bi bi-building me-2"></i> Company
+                                    </a>
+                                </li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                            </ul>
+
                         </li>
+                    }
 
-                           @if (User.IsInRole(SD.Role_Admin))
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Content Managment
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li class="nav-item">
-                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">Category</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">Product</a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
+                </ul>
 
-                                </ul>
-                            </li>
-                        }
-                    </ul>
+                <!-- RIGHT MENU -->
+                <ul class="navbar-nav ms-auto">
 
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
-                                <i class="bi bi-shield-lock me-1"></i> Privacy
-                            </a>
-                        </li>
-                    </ul>
-                    <partial name="_LoginPartial" />
-                </div>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
+                            <i class="bi bi-shield-lock me-1"></i> Privacy
+                        </a>
+                    </li>
+
+                </ul>
+
+                <partial name="_LoginPartial" />
+
             </div>
-        </nav>
-    </header>
-
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="footer text-center border-top">
-        <div class="container">
-            &copy; 2026 - CartivaWeb - 
-            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
-    </footer>
+    </nav>
+</header>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+<div class="container">
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+</div>
+
+<footer class="footer text-center border-top">
+    <div class="container">
+        &copy; 2026 - CartivaWeb -
+        <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    </div>
+</footer>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+@await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>
