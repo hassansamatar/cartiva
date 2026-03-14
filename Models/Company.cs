@@ -28,7 +28,7 @@ namespace Models
         [Display(Name = "Phone Number")]
         public string PhoneNumber { get; set; }
 
-        [EmailAddress]
-        public string Email { get; set; }
+       
+       
     }
 }
