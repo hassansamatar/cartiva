@@ -57,35 +57,31 @@
 
                     <!-- Confirm Password -->
                     <div class="form-floating col-md-6">
-                        <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" placeholder="Confirm Password" />
+                        <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" />
                         <label asp-for="Input.ConfirmPassword">Confirm Password</label>
                         <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
                     </div>
 
-                    <!-- Address -->
+                    <!-- Street Address -->
                     <div class="form-floating col-md-6">
-                        <input asp-for="Input.StreetAddress" class="form-control" placeholder="Street Address" />
+                        <input asp-for="Input.StreetAddress" id="street" class="form-control" placeholder="Street Address" />
                         <label asp-for="Input.StreetAddress">Street Address</label>
                         <span asp-validation-for="Input.StreetAddress" class="text-danger"></span>
                     </div>
 
-                    <!-- City -->
-                    <div class="form-floating col-md-6">
-                        <input asp-for="Input.City" class="form-control" placeholder="City" />
-                        <label asp-for="Input.City">City</label>
-                        <span asp-validation-for="Input.City" class="text-danger"></span>
-                    </div>
+                    <!-- Suggestions Container -->
+                    <div id="addressSuggestions" class="list-group col-md-6 mb-3"></div>
 
-                    <!-- State -->
+                    <!-- City (stored in State column) -->
                     <div class="form-floating col-md-6">
-                        <input asp-for="Input.State" class="form-control" placeholder="State" />
-                        <label asp-for="Input.State">State</label>
+                        <input asp-for="Input.State" id="city" class="form-control" readonly />
+                        <label asp-for="Input.State">City</label>
                         <span asp-validation-for="Input.State" class="text-danger"></span>
                     </div>
 
                     <!-- Postal Code -->
                     <div class="form-floating col-md-6">
-                        <input asp-for="Input.PostalCode" class="form-control" placeholder="Postal Code" />
+                        <input asp-for="Input.PostalCode" id="postalCode" class="form-control" readonly />
                         <label asp-for="Input.PostalCode">Postal Code</label>
                         <span asp-validation-for="Input.PostalCode" class="text-danger"></span>
                     </div>
@@ -97,12 +93,14 @@
                             <option disabled selected>- Select Role -</option>
                         </select>
                     </div>
-                      <div class="col-md-6">
+
+                    <div class="col-md-6">
                         <label class="form-label text-muted"></label>
                         <select asp-for="Input.CompanyId" style="display:none;" asp-items="@Model.Input.CompanyList" class="form-select">
                             <option disabled selected>- Select Company -</option>
                         </select>
                     </div>
+
                     <!-- Register Button -->
                     <div class="col-12 mt-3">
                         <button id="registerSubmit" type="submit" class="w-100 btn btn-dark btn-lg">
@@ -116,9 +114,7 @@
 
                 <!-- External Login -->
                 <div class="text-center">
-
                     <p class="text-muted mb-3">Or register with</p>
-
                     @{
                         if ((Model.ExternalLogins?.Count ?? 0) == 0)
                         {
@@ -132,7 +128,6 @@
                                   asp-page="./ExternalLogin"
                                   asp-route-returnUrl="@Model.ReturnUrl"
                                   method="post">
-
                                 <div class="d-grid gap-2">
                                     @foreach (var provider in Model.ExternalLogins!)
                                     {
@@ -144,11 +139,9 @@
                                         </button>
                                     }
                                 </div>
-
                             </form>
                         }
                     }
-
                 </div>
 
             </div>
@@ -159,17 +152,19 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/register.js"></script>
+
     <script>
         $(document).ready(function () {
-            $('#Input_Role').change(function(){
-                var selection = $('#Input_Role Option:Selected').text();
-                if(selection=='Company'){
+            $('#Input_Role').change(function () {
+                var selection = $('#Input_Role option:selected').text();
+                if (selection == 'Company') {
                     $('#Input_CompanyId').show();
-                }
-                else{
+                } else {
                     $('#Input_CompanyId').hide();
                 }
-            })
+            });
         })
     </script>
 }

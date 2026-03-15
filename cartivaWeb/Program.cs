@@ -1,10 +1,11 @@
-using DataAccess;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Routing;
 using CartivaWeb.Routing;
+using DataAccess;
 using Microsoft.AspNetCore.Identity;
-using MyUtility;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Models;
+using MyUtility;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ builder.Services.ConfigureApplicationCookie(options => {
 });
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
+builder.Services.AddHttpClient<AddressLookupService>();
 
 
 var app = builder.Build();
