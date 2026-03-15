@@ -1,0 +1,154 @@
+﻿@model IEnumerable<Models.ShoppingCart>
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "My Shopping Cart";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="container mt-4">
+
+    <h2 class="mb-3">My Cart</h2>
+
+    @if (!Model.Any())
+    {
+        <p>Your cart is empty.</p>
+        <a asp-area="Customer" asp-controller="Home" asp-action="Index" class="btn btn-primary">
+            Back to Products
+        </a>
+    }
+    else
+    {
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-hover align-middle text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-start">Product</th>
+                        <th>Variant</th>
+                        <th>Price</th>
+                        <th>Count</th>
+                        <th>Subtotal</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td class="d-flex align-items-center text-start">
+                                @if (!string.IsNullOrEmpty(item.ProductVariant.Product.ImageUrl))
+                                {
+                                    <img src="@item.ProductVariant.Product.ImageUrl"
+                                         alt="@item.ProductVariant.Product.Name"
+                                         class="img-thumbnail me-2"
+                                         style="width:60px;height:60px;object-fit:cover;" />
+                                }
+
+                                <span>@item.ProductVariant.Product.Name</span>
+                            </td>
+
+                            <td>@item.ProductVariant.Color / @item.ProductVariant.Size</td>
+
+                            <td>@item.ProductVariant.Price.ToString("C", culture)</td>
+
+                            <td>
+                                <div class="d-flex justify-content-center align-items-center gap-1">
+
+                                    <form asp-area="Customer"
+                                          asp-controller="Cart"
+                                          asp-action="Decrement"
+                                          method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">-</button>
+                                    </form>
+
+                                    <span class="px-2">@item.Count</span>
+
+                                    <form asp-area="Customer"
+                                          asp-controller="Cart"
+                                          asp-action="Increment"
+                                          method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">+</button>
+                                    </form>
+
+                                </div>
+                            </td>
+
+                            <td>
+                                @((item.ProductVariant.Price * item.Count).ToString("C", culture))
+                            </td>
+
+                            <td>
+                                <form asp-area="Customer"
+                                      asp-controller="Cart"
+                                      asp-action="Remove"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <hr />
+
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+
+            <h4 class="mb-3 mb-md-0">
+                Total: @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)
+            </h4>
+
+            <div class="d-flex gap-2">
+
+                <a asp-area="Customer"
+                       asp-controller="Home"
+                       asp-action="Index"
+                       class="btn btn-secondary">
+                    Continue Shopping
+                </a>
+
+                <a asp-area="Customer"
+                       asp-controller="Order"
+                       asp-action="Checkout"
+                       class="btn btn-success">
+                    Proceed to Checkout
+                </a>
+
+            </div>
+
+        </div>
+    }
+
+</div>
