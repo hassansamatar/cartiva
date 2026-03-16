@@ -8,4 +8,7 @@
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="Xamarin.FFImageLoading" Version="2.4.11.982" />
+	</ItemGroup>
 </Project>

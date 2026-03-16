@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.ViewModels;
+using Models.Interfaces;
 using MyUtility;
 
 namespace CartivaWeb.Areas.Admin.Controllers
@@ -14,19 +15,16 @@ namespace CartivaWeb.Areas.Admin.Controllers
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _db;
-        private readonly IWebHostEnvironment _environment;
+        private readonly IImageService _imageService;
 
-        public ProductController(ApplicationDbContext db, IWebHostEnvironment environment)
+        public ProductController(ApplicationDbContext db, IImageService imageService)
         {
             _db = db;
-            _environment = environment;
+            _imageService = imageService;
         }
 
         #region PRODUCT
 
-        // =========================
-        // Product List
-        // =========================
         public async Task<IActionResult> Index()
         {
             var products = await _db.Products
@@ -38,9 +36,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return View(products);
         }
 
-        // =========================
-        // Upsert GET
-        // =========================
         public async Task<IActionResult> Upsert(int? id)
         {
             ProductVM vm = new()
@@ -71,9 +66,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return View(vm);
         }
 
-        // =========================
-        // Upsert POST
-        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upsert(ProductVM vm, IFormFile? file)
@@ -94,7 +86,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             }
 
             if (file != null)
-                vm.Product.ImageUrl = await SaveImage(file);
+                vm.Product.ImageUrl = await _imageService.SaveImage(file);
 
             if (vm.Product.Id == 0)
             {
@@ -125,9 +117,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // =========================
-        // Delete
-        // =========================
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _db.Products
@@ -148,7 +137,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             if (product == null)
                 return NotFound();
 
-            DeleteImage(product.ImageUrl);
+            _imageService.DeleteImage(product.ImageUrl);
 
             _db.Products.Remove(product);
             await _db.SaveChangesAsync();
@@ -163,9 +152,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         #region VARIANTS
 
-        // =========================
-        // Variant List
-        // =========================
         public async Task<IActionResult> VariantIndex(int productId)
         {
             var product = await _db.Products.FindAsync(productId);
@@ -183,9 +169,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return View(variants);
         }
 
-        // =========================
-        // Create Variant
-        // =========================
         public async Task<IActionResult> CreateProductVariant(int productId)
         {
             var product = await _db.Products.FindAsync(productId);
@@ -205,7 +188,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateProductVariant(ProductVariant variant)
         {
-            ModelState.Remove("Product"); // FIX NOT NULL ERROR
+            ModelState.Remove("Product");
 
             if (!ModelState.IsValid)
                 return View(variant);
@@ -219,9 +202,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 new { productId = variant.ProductId });
         }
 
-        // =========================
-        // Edit Variant
-        // =========================
         public async Task<IActionResult> EditProductVariant(int id)
         {
             var variant = await _db.ProductVariants.FindAsync(id);
@@ -251,9 +231,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 new { productId = variant.ProductId });
         }
 
-        // =========================
-        // Delete Variant
-        // =========================
         public async Task<IActionResult> DeleteProductVariant(int id)
         {
             var variant = await _db.ProductVariants.FindAsync(id);
@@ -271,43 +248,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             return RedirectToAction(nameof(VariantIndex),
                 new { productId });
-        }
-
-        #endregion
-
-
-        #region IMAGE HELPERS
-
-        private async Task<string> SaveImage(IFormFile file)
-        {
-            string root = _environment.WebRootPath;
-            string fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-
-            string folder = Path.Combine(root, "images/products");
-
-            if (!Directory.Exists(folder))
-                Directory.CreateDirectory(folder);
-
-            string filePath = Path.Combine(folder, fileName);
-
-            using var stream = new FileStream(filePath, FileMode.Create);
-
-            await file.CopyToAsync(stream);
-
-            return "/images/products/" + fileName;
-        }
-
-        private void DeleteImage(string? imageUrl)
-        {
-            if (string.IsNullOrEmpty(imageUrl))
-                return;
-
-            string root = _environment.WebRootPath;
-
-            string path = Path.Combine(root, imageUrl.TrimStart('/'));
-
-            if (System.IO.File.Exists(path))
-                System.IO.File.Delete(path);
         }
 
         #endregion

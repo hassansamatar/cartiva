@@ -1,3 +1,4 @@
+using CartivaWeb.Areas.Admin.Controllers;
 using CartivaWeb.Routing;
 using DataAccess;
 using Microsoft.AspNetCore.Identity;
@@ -5,7 +6,9 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Models;
+using Models.Interfaces;
 using MyUtility;
+using Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +26,7 @@ builder.Services.ConfigureApplicationCookie(options => {
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddHttpClient<AddressLookupService>();
-
+builder.Services.AddScoped<IImageService, ImageService>();
 
 var app = builder.Build();
 // ======================
