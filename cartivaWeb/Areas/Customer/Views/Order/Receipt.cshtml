@@ -1,0 +1,82 @@
+﻿@model OrderHeader
+@using System.Globalization
+@using MyUtility
+@using Models
+@{
+    ViewData["Title"] = "Order Receipt";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+var estimatedDeliveryStart = DateTime.Now.AddDays(3).ToString("dd MMM yyyy");
+var estimatedDeliveryEnd = DateTime.Now.AddDays(5).ToString("dd MMM yyyy");
+}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4 text-center">Order Receipt</h2>
+
+    <div class="row">
+
+        <!-- SHIPPING INFORMATION -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><h5>Shipping Information</h5></div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> @Model.Name</p>
+                    <p><strong>Phone:</strong> @Model.PhoneNumber</p>
+                    <p><strong>Address:</strong> @Model.StreetAddress</p>
+                    <p><strong>City / State:</strong> @Model.City, @Model.State</p>
+                    <p><strong>Postal Code:</strong> @Model.PostalCode</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDER SUMMARY -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><h5>Order Summary</h5></div>
+                <div class="card-body">
+                    <table class="table table-bordered table-hover mb-3">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Product</th>
+                                <th>Qty</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrderDetails)
+                            {
+                                var subtotal = item.Price * item.Count;
+                                <tr>
+                                    <td>
+                                        @item.ProductVariant.Product.Name
+                                        <br />
+                                        <small>@item.ProductVariant.Color / @item.ProductVariant.Size</small>
+                                    </td>
+                                    <td class="text-center">@item.Count</td>
+                                    <td class="text-end">@subtotal.ToString("C", culture)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <h5 class="text-end">
+                        Total: <strong>@Model.OrderTotal.ToString("C", culture)</strong>
+                    </h5>
+
+                    <hr />
+
+                    <p class="text-success mt-3">
+                        Payment Status: @Model.PaymentStatus <br />
+                        Estimated Delivery: @estimatedDeliveryStart – @estimatedDeliveryEnd
+                    </p>
+
+                    <a asp-action="Index" asp-controller="Home" class="btn btn-primary w-100 mt-3">
+                        Back to Products
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>

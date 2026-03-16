@@ -1,0 +1,134 @@
+﻿@model CheckoutVM
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Checkout";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">Checkout</h2>
+
+    <div class="row">
+
+        <!-- CUSTOMER / SHIPPING INFO -->
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Shipping Details</h5>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- POST TO ConfirmOrder -->
+                    <form asp-action="ConfirmOrder" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <input asp-for="OrderHeader.ApplicationUserId" type="hidden" />
+
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.Name" class="form-label"></label>
+                            <input asp-for="OrderHeader.Name" class="form-control" />
+                            <span asp-validation-for="OrderHeader.Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.PhoneNumber" class="form-label"></label>
+                            <input asp-for="OrderHeader.PhoneNumber" class="form-control" />
+                            <span asp-validation-for="OrderHeader.PhoneNumber" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.StreetAddress" class="form-label"></label>
+                            <input asp-for="OrderHeader.StreetAddress" class="form-control" />
+                            <span asp-validation-for="OrderHeader.StreetAddress" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.City" class="form-label"></label>
+                            <input asp-for="OrderHeader.City" class="form-control" />
+                            <span asp-validation-for="OrderHeader.City" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.State" class="form-label"></label>
+                            <input asp-for="OrderHeader.State" class="form-control" />
+                            <span asp-validation-for="OrderHeader.State" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.PostalCode" class="form-label"></label>
+                            <input asp-for="OrderHeader.PostalCode" class="form-control" />
+                            <span asp-validation-for="OrderHeader.PostalCode" class="text-danger"></span>
+                        </div>
+
+                        <!-- SUBMIT BUTTON -->
+                        <button type="submit" class="btn btn-success w-100">
+                            Review Order
+                        </button>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDER SUMMARY -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Order Summary</h5>
+                </div>
+
+                <div class="card-body">
+
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th>Qty</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in Model.ShoppingCartList)
+                            {
+                                var subtotal = item.ProductVariant.Price * item.Count;
+
+                                <tr>
+                                    <td>
+                                        @item.ProductVariant.Product.Name
+                                        <br />
+                                        <small>
+                                            @item.ProductVariant.Color / @item.ProductVariant.Size
+                                        </small>
+                                    </td>
+
+                                    <td>@item.Count</td>
+
+                                    <td>@subtotal.ToString("C", culture)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <hr />
+
+                    <h5 class="text-end">
+                        Total:
+                        <strong>@Model.OrderTotal.ToString("C", culture)</strong>
+                    </h5>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

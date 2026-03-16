@@ -31,7 +31,7 @@ namespace CartivaWeb.Areas.Customer.Controllers
 
             return View(cartItems);
         }
-
+     
         // Add item to cart
         [HttpPost]
         public async Task<IActionResult> AddToCart(int productVariantId, int count = 1)
