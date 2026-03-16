@@ -1,21 +1,21 @@
-﻿@model Models.ViewModels.ProductVariant
+﻿
+@model Models.ProductVariant
 
 @{
-    ViewData["Title"] = "Edit Variant";
+    ViewData["Title"] = "Create Variant";
 }
 
 <div class="container p-3">
     <div class="row pt-4">
         <div class="col-12">
-            <h2 class="text-primary">Edit Variant</h2>
+            <h2 class="text-primary">Create New Variant</h2>
             <hr />
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-6">
-            <form asp-action="VariantEdit" method="post">
-                <input type="hidden" asp-for="Id" />
+            <form asp-action="CreateProductVariant" method="post">
                 <input type="hidden" asp-for="ProductId" />
                 
                 <div class="mb-3">
@@ -43,7 +43,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
                     <a asp-action="VariantIndex" asp-route-productId="@Model.ProductId" class="btn btn-secondary">Back to List</a>
                 </div>
             </form>

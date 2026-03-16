@@ -186,7 +186,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // =========================
         // Create Variant
         // =========================
-        public async Task<IActionResult> VariantCreate(int productId)
+        public async Task<IActionResult> CreateProductVariant(int productId)
         {
             var product = await _db.Products.FindAsync(productId);
 
@@ -203,7 +203,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> VariantCreate(ProductVariant variant)
+        public async Task<IActionResult> CreateProductVariant(ProductVariant variant)
         {
             ModelState.Remove("Product"); // FIX NOT NULL ERROR
 
@@ -222,7 +222,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // =========================
         // Edit Variant
         // =========================
-        public async Task<IActionResult> VariantEdit(int id)
+        public async Task<IActionResult> EditProductVariant(int id)
         {
             var variant = await _db.ProductVariants.FindAsync(id);
 
@@ -234,7 +234,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> VariantEdit(ProductVariant variant)
+        public async Task<IActionResult> EditProductVariant(ProductVariant variant)
         {
             ModelState.Remove("Product");
 
@@ -254,7 +254,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // =========================
         // Delete Variant
         // =========================
-        public async Task<IActionResult> VariantDelete(int id)
+        public async Task<IActionResult> DeleteProductVariant(int id)
         {
             var variant = await _db.ProductVariants.FindAsync(id);
 
