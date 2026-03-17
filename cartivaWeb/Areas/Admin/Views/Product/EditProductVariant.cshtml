@@ -18,10 +18,22 @@
                 <input type="hidden" asp-for="Variant.Id" />
                 <input type="hidden" asp-for="Variant.ProductId" />
                 <input type="hidden" name="sizeGroup" value="@ViewBag.SizeGroup" />
+                <input type="hidden" name="sizeType" value="@ViewBag.SizeType" />
 
                 <!-- Display Size Group Info -->
                 <div class="alert alert-info mb-3">
-                    <strong>Size Group:</strong> @(ViewBag.SizeGroup == "Kid" ? "Kids Sizes (2-5 Years)" : "Adult Sizes (S, M, L, XL, XXL)")
+                    <strong>Size Group:</strong>
+                    @if (ViewBag.SizeGroup == "Kid")
+                    {
+                        <span>Kids Sizes (2-5 Years)</span>
+                    }
+                    else
+                    {
+                        <span>
+                            Adult @(ViewBag.SizeType == "Suit" ? "Suit" : "Regular") Sizes
+                            (@(ViewBag.SizeType == "Suit" ? "36-46" : "S, M, L, XL, XXL"))
+                        </span>
+                    }
                 </div>
 
                 <!-- Color -->
@@ -47,7 +59,14 @@
                     }
                     else
                     {
-                        <small class="text-info">Available adult sizes: S, M, L, XL, XXL</small>
+                        if (ViewBag.SizeType == "Suit")
+                        {
+                            <small class="text-info">Available suit sizes: 36, 38, 40, 42, 44, 46</small>
+                        }
+                        else
+                        {
+                            <small class="text-info">Available regular sizes: S, M, L, XL, XXL</small>
+                        }
                     }
                 </div>
 

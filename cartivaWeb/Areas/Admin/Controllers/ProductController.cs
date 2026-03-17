@@ -153,7 +153,9 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         public async Task<IActionResult> VariantIndex(int productId)
         {
-            var product = await _db.Products.FindAsync(productId);
+            var product = await _db.Products
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Id == productId);
 
             if (product == null)
                 return NotFound();
@@ -164,12 +166,13 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             ViewBag.ProductName = product.Name;
             ViewBag.ProductId = productId;
+            ViewBag.CategoryName = product.Category?.Name ?? "";
 
             return View(variants);
         }
 
         // GET: Create Product Variant
-        public async Task<IActionResult> CreateProductVariant(int productId)
+        public async Task<IActionResult> CreateProductVariant(int productId, string sizeType = "Regular")
         {
             var product = await _db.Products
                 .Include(p => p.Category)
@@ -179,15 +182,24 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             // Determine size group based on category
             string sizeGroup = "Adult"; // default
-
             if (product.Category.Name.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
                 product.Category.Name.Contains("Children", StringComparison.OrdinalIgnoreCase))
             {
                 sizeGroup = "Kid";
             }
 
-            // Choose sizes based on sizeGroup
-            var sizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes;
+            // Choose sizes based on sizeGroup and sizeType
+            List<SelectListItem> sizes;
+            if (sizeGroup == "Kid")
+            {
+                sizes = ProductVariantOptions.KidSizes;
+            }
+            else // Adult
+            {
+                sizes = sizeType == "Suit"
+                    ? ProductVariantOptions.AdultSuitSizes
+                    : ProductVariantOptions.AdultSizes;
+            }
 
             var vm = new ProductVariantVM
             {
@@ -198,6 +210,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             ViewBag.ProductName = product.Name;
             ViewBag.SizeGroup = sizeGroup;
+            ViewBag.SizeType = sizeType;
             ViewBag.CategoryName = product.Category.Name;
 
             return View(vm);
@@ -206,7 +219,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: Create Product Variant
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateProductVariant(ProductVariantVM vm, string sizeGroup)
+        public async Task<IActionResult> CreateProductVariant(ProductVariantVM vm, string sizeGroup, string sizeType)
         {
             ModelState.Remove("Variant.Product");
 
@@ -216,9 +229,18 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 sizeGroup = "Adult";
             }
 
-            // Get valid sizes based on sizeGroup
-            var validSizes = (sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes)
-                .Select(s => s.Value).ToList();
+            // Get valid sizes based on sizeGroup and sizeType
+            List<string> validSizes;
+            if (sizeGroup == "Kid")
+            {
+                validSizes = ProductVariantOptions.KidSizes.Select(s => s.Value).ToList();
+            }
+            else // Adult
+            {
+                validSizes = sizeType == "Suit"
+                    ? ProductVariantOptions.AdultSuitSizes.Select(s => s.Value).ToList()
+                    : ProductVariantOptions.AdultSizes.Select(s => s.Value).ToList();
+            }
 
             var validColors = ProductVariantOptions.Colors.Select(c => c.Value).ToList();
 
@@ -248,11 +270,22 @@ namespace CartivaWeb.Areas.Admin.Controllers
             {
                 // Repopulate the dropdowns
                 vm.AvailableColors = ProductVariantOptions.Colors;
-                vm.AvailableSizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes;
+
+                if (sizeGroup == "Kid")
+                {
+                    vm.AvailableSizes = ProductVariantOptions.KidSizes;
+                }
+                else
+                {
+                    vm.AvailableSizes = sizeType == "Suit"
+                        ? ProductVariantOptions.AdultSuitSizes
+                        : ProductVariantOptions.AdultSizes;
+                }
 
                 var product = await _db.Products.FindAsync(vm.Variant.ProductId);
                 ViewBag.ProductName = product?.Name;
                 ViewBag.SizeGroup = sizeGroup;
+                ViewBag.SizeType = sizeType;
 
                 return View(vm);
             }
@@ -264,7 +297,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return RedirectToAction(nameof(VariantIndex), new { productId = vm.Variant.ProductId });
         }
 
-        //// GET: Edit Product Variant
+        // GET: Edit Product Variant
         public async Task<IActionResult> EditProductVariant(int id)
         {
             var variant = await _db.ProductVariants
@@ -277,21 +310,45 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             // Determine size group based on category
             string sizeGroup = "Adult";
+            string sizeType = "Regular"; // Default
+
             if (variant.Product.Category.Name.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
                 variant.Product.Category.Name.Contains("Children", StringComparison.OrdinalIgnoreCase))
             {
                 sizeGroup = "Kid";
+            }
+            else
+            {
+                // Determine sizeType based on the variant's size value
+                if (ProductVariantOptions.AdultSuitSizes.Any(s => s.Value == variant.Size))
+                {
+                    sizeType = "Suit";
+                }
+            }
+
+            // Choose sizes based on sizeGroup and sizeType
+            List<SelectListItem> sizes;
+            if (sizeGroup == "Kid")
+            {
+                sizes = ProductVariantOptions.KidSizes;
+            }
+            else // Adult
+            {
+                sizes = sizeType == "Suit"
+                    ? ProductVariantOptions.AdultSuitSizes
+                    : ProductVariantOptions.AdultSizes;
             }
 
             var vm = new ProductVariantVM
             {
                 Variant = variant,
                 AvailableColors = ProductVariantOptions.Colors,
-                AvailableSizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes
+                AvailableSizes = sizes
             };
 
             ViewBag.ProductName = variant.Product?.Name;
             ViewBag.SizeGroup = sizeGroup;
+            ViewBag.SizeType = sizeType;
 
             return View(vm);
         }
@@ -299,7 +356,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: Edit Product Variant
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditProductVariant(ProductVariantVM vm, string sizeGroup)
+        public async Task<IActionResult> EditProductVariant(ProductVariantVM vm, string sizeGroup, string sizeType)
         {
             ModelState.Remove("Variant.Product");
             ModelState.Remove("AvailableColors");
@@ -311,9 +368,18 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 sizeGroup = "Adult";
             }
 
-            // Get valid sizes based on sizeGroup
-            var validSizes = (sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes)
-                .Select(s => s.Value).ToList();
+            // Get valid sizes based on sizeGroup and sizeType
+            List<string> validSizes;
+            if (sizeGroup == "Kid")
+            {
+                validSizes = ProductVariantOptions.KidSizes.Select(s => s.Value).ToList();
+            }
+            else // Adult
+            {
+                validSizes = sizeType == "Suit"
+                    ? ProductVariantOptions.AdultSuitSizes.Select(s => s.Value).ToList()
+                    : ProductVariantOptions.AdultSizes.Select(s => s.Value).ToList();
+            }
 
             var validColors = ProductVariantOptions.Colors.Select(c => c.Value).ToList();
 
@@ -344,11 +410,22 @@ namespace CartivaWeb.Areas.Admin.Controllers
             {
                 // Repopulate the dropdowns
                 vm.AvailableColors = ProductVariantOptions.Colors;
-                vm.AvailableSizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes;
+
+                if (sizeGroup == "Kid")
+                {
+                    vm.AvailableSizes = ProductVariantOptions.KidSizes;
+                }
+                else
+                {
+                    vm.AvailableSizes = sizeType == "Suit"
+                        ? ProductVariantOptions.AdultSuitSizes
+                        : ProductVariantOptions.AdultSizes;
+                }
 
                 var product = await _db.Products.FindAsync(vm.Variant.ProductId);
                 ViewBag.ProductName = product?.Name;
                 ViewBag.SizeGroup = sizeGroup;
+                ViewBag.SizeType = sizeType;
 
                 return View(vm);
             }

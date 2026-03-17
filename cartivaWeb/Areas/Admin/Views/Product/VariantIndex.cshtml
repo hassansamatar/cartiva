@@ -23,18 +23,33 @@
                     <!-- Only show Kids button for kids categories -->
                     <a asp-action="CreateProductVariant"
                            asp-route-productId="@productId"
+                           asp-route-sizeType="Regular"
                            class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Add Kid Variant (2-5 Years)
                     </a>
                 }
                 else
                 {
-                    <!-- Only show Adult button for all other categories -->
-                    <a asp-action="CreateProductVariant"
-                           asp-route-productId="@productId"
-                           class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Adult Variant 
-                    </a>
+                    <!-- Dropdown for Adult variants -->
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-plus-circle"></i> Add Adult Variant
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" asp-action="CreateProductVariant"
+                                   asp-route-productId="@productId"
+                                   asp-route-sizeType="Regular">
+                                <i class="bi bi-person"></i> Regular (S, M, L, XL, XXL)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" asp-action="CreateProductVariant"
+                                   asp-route-productId="@productId"
+                                   asp-route-sizeType="Suit">
+                                <i class="bi bi-person-badge"></i> Suit (36, 38, 40, 42, 44, 46)
+                            </a>
+                        </li>
+                    </ul>
                 }
                 
                 <a asp-action="Upsert" asp-route-id="@productId" class="btn btn-secondary">
@@ -66,7 +81,19 @@
                                 @variant.Color
                             </span>
                         </td>
-                        <td>@variant.Size</td>
+                        <td>
+                            @if (categoryName.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
+                                 categoryName.Contains("Children", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <!-- Display kid sizes with "Years" suffix -->
+                                <span>@variant.Size Years</span>
+                            }
+                            else
+                            {
+                                <!-- Display adult sizes as is -->
+                                <span>@variant.Size</span>
+                            }
+                        </td>
                         <td>@variant.Price.ToString("C", culture)</td>
                         <td>
                             @if (variant.Stock > 0)
@@ -99,6 +126,16 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        // Initialize Bootstrap dropdowns
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'))
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl)
+        });
+    </script>
+}
 
 @functions {
     public string GetColorCode(string color)
