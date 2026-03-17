@@ -11,4 +11,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Xamarin.FFImageLoading" Version="2.4.11.982" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\MyUtility\MyUtility.csproj" />
+	</ItemGroup>
 </Project>

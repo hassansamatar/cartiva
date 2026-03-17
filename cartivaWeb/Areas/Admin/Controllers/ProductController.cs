@@ -149,7 +149,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         #endregion
 
-
         #region VARIANTS
 
         public async Task<IActionResult> VariantIndex(int productId)
@@ -169,68 +168,199 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return View(variants);
         }
 
+        // GET: Create Product Variant
         public async Task<IActionResult> CreateProductVariant(int productId)
         {
-            var product = await _db.Products.FindAsync(productId);
+            var product = await _db.Products
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Id == productId);
 
-            if (product == null)
-                return NotFound();
+            if (product == null) return NotFound();
+
+            // Determine size group based on category
+            string sizeGroup = "Adult"; // default
+
+            if (product.Category.Name.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
+                product.Category.Name.Contains("Children", StringComparison.OrdinalIgnoreCase))
+            {
+                sizeGroup = "Kid";
+            }
+
+            // Choose sizes based on sizeGroup
+            var sizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes;
+
+            var vm = new ProductVariantVM
+            {
+                Variant = new ProductVariant { ProductId = productId },
+                AvailableColors = ProductVariantOptions.Colors,
+                AvailableSizes = sizes
+            };
 
             ViewBag.ProductName = product.Name;
+            ViewBag.SizeGroup = sizeGroup;
+            ViewBag.CategoryName = product.Category.Name;
 
-            return View(new ProductVariant
-            {
-                ProductId = productId
-            });
+            return View(vm);
         }
 
+        // POST: Create Product Variant
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateProductVariant(ProductVariant variant)
+        public async Task<IActionResult> CreateProductVariant(ProductVariantVM vm, string sizeGroup)
         {
-            ModelState.Remove("Product");
+            ModelState.Remove("Variant.Product");
+
+            // If sizeGroup is null or empty, default to Adult
+            if (string.IsNullOrEmpty(sizeGroup))
+            {
+                sizeGroup = "Adult";
+            }
+
+            // Get valid sizes based on sizeGroup
+            var validSizes = (sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes)
+                .Select(s => s.Value).ToList();
+
+            var validColors = ProductVariantOptions.Colors.Select(c => c.Value).ToList();
+
+            // Validate the selected size and color
+            if (!validColors.Contains(vm.Variant.Color))
+            {
+                ModelState.AddModelError("Variant.Color", "Please select a valid color.");
+            }
+
+            if (!validSizes.Contains(vm.Variant.Size))
+            {
+                ModelState.AddModelError("Variant.Size", "Please select a valid size.");
+            }
+
+            // Check if variant with same size and color already exists
+            bool variantExists = await _db.ProductVariants
+                .AnyAsync(v => v.ProductId == vm.Variant.ProductId
+                            && v.Size == vm.Variant.Size
+                            && v.Color == vm.Variant.Color);
+
+            if (variantExists)
+            {
+                ModelState.AddModelError("", "A variant with this size and color already exists for this product.");
+            }
 
             if (!ModelState.IsValid)
-                return View(variant);
+            {
+                // Repopulate the dropdowns
+                vm.AvailableColors = ProductVariantOptions.Colors;
+                vm.AvailableSizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes;
 
-            await _db.ProductVariants.AddAsync(variant);
+                var product = await _db.Products.FindAsync(vm.Variant.ProductId);
+                ViewBag.ProductName = product?.Name;
+                ViewBag.SizeGroup = sizeGroup;
+
+                return View(vm);
+            }
+
+            await _db.ProductVariants.AddAsync(vm.Variant);
             await _db.SaveChangesAsync();
 
-            TempData["success"] = "Variant added";
-
-            return RedirectToAction(nameof(VariantIndex),
-                new { productId = variant.ProductId });
+            TempData["success"] = "Variant added successfully";
+            return RedirectToAction(nameof(VariantIndex), new { productId = vm.Variant.ProductId });
         }
 
+        //// GET: Edit Product Variant
         public async Task<IActionResult> EditProductVariant(int id)
         {
-            var variant = await _db.ProductVariants.FindAsync(id);
+            var variant = await _db.ProductVariants
+                .Include(v => v.Product)
+                .ThenInclude(p => p.Category)
+                .FirstOrDefaultAsync(v => v.Id == id);
 
             if (variant == null)
                 return NotFound();
 
-            return View(variant);
+            // Determine size group based on category
+            string sizeGroup = "Adult";
+            if (variant.Product.Category.Name.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
+                variant.Product.Category.Name.Contains("Children", StringComparison.OrdinalIgnoreCase))
+            {
+                sizeGroup = "Kid";
+            }
+
+            var vm = new ProductVariantVM
+            {
+                Variant = variant,
+                AvailableColors = ProductVariantOptions.Colors,
+                AvailableSizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes
+            };
+
+            ViewBag.ProductName = variant.Product?.Name;
+            ViewBag.SizeGroup = sizeGroup;
+
+            return View(vm);
         }
 
+        // POST: Edit Product Variant
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditProductVariant(ProductVariant variant)
+        public async Task<IActionResult> EditProductVariant(ProductVariantVM vm, string sizeGroup)
         {
-            ModelState.Remove("Product");
+            ModelState.Remove("Variant.Product");
+            ModelState.Remove("AvailableColors");
+            ModelState.Remove("AvailableSizes");
+
+            // If sizeGroup is null or empty, default to Adult
+            if (string.IsNullOrEmpty(sizeGroup))
+            {
+                sizeGroup = "Adult";
+            }
+
+            // Get valid sizes based on sizeGroup
+            var validSizes = (sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes)
+                .Select(s => s.Value).ToList();
+
+            var validColors = ProductVariantOptions.Colors.Select(c => c.Value).ToList();
+
+            // Validate the selected size and color
+            if (!validColors.Contains(vm.Variant.Color))
+            {
+                ModelState.AddModelError("Variant.Color", "Please select a valid color.");
+            }
+
+            if (!validSizes.Contains(vm.Variant.Size))
+            {
+                ModelState.AddModelError("Variant.Size", "Please select a valid size.");
+            }
+
+            // Check if another variant with same size and color already exists (excluding current variant)
+            bool variantExists = await _db.ProductVariants
+                .AnyAsync(v => v.ProductId == vm.Variant.ProductId
+                            && v.Size == vm.Variant.Size
+                            && v.Color == vm.Variant.Color
+                            && v.Id != vm.Variant.Id);
+
+            if (variantExists)
+            {
+                ModelState.AddModelError("", "A variant with this size and color already exists for this product.");
+            }
 
             if (!ModelState.IsValid)
-                return View(variant);
+            {
+                // Repopulate the dropdowns
+                vm.AvailableColors = ProductVariantOptions.Colors;
+                vm.AvailableSizes = sizeGroup == "Kid" ? ProductVariantOptions.KidSizes : ProductVariantOptions.AdultSizes;
 
-            _db.ProductVariants.Update(variant);
+                var product = await _db.Products.FindAsync(vm.Variant.ProductId);
+                ViewBag.ProductName = product?.Name;
+                ViewBag.SizeGroup = sizeGroup;
 
+                return View(vm);
+            }
+
+            _db.ProductVariants.Update(vm.Variant);
             await _db.SaveChangesAsync();
 
-            TempData["success"] = "Variant updated";
-
-            return RedirectToAction(nameof(VariantIndex),
-                new { productId = variant.ProductId });
+            TempData["success"] = "Variant updated successfully";
+            return RedirectToAction(nameof(VariantIndex), new { productId = vm.Variant.ProductId });
         }
 
+        // POST: Delete Product Variant
         public async Task<IActionResult> DeleteProductVariant(int id)
         {
             var variant = await _db.ProductVariants.FindAsync(id);
@@ -241,13 +371,11 @@ namespace CartivaWeb.Areas.Admin.Controllers
             int productId = variant.ProductId;
 
             _db.ProductVariants.Remove(variant);
-
             await _db.SaveChangesAsync();
 
             TempData["success"] = "Variant deleted";
 
-            return RedirectToAction(nameof(VariantIndex),
-                new { productId });
+            return RedirectToAction(nameof(VariantIndex), new { productId });
         }
 
         #endregion
