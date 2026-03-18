@@ -19,20 +19,21 @@ using Microsoft.AspNetCore.Mvc.Rendering;
        
         public static List<SelectListItem> AdultSuitSizes { get; } = new()
     {
-        new SelectListItem { Text = "36", Value = "36" },
-        new SelectListItem { Text = "38", Value = "38" },
-        new SelectListItem { Text = "40", Value = "40" },
-        new SelectListItem { Text = "42", Value = "42" },
-        new SelectListItem { Text = "44", Value = "44" },
-        new SelectListItem { Text = "46", Value = "46" }
+        new SelectListItem { Text = "44 XS - 34 chest", Value = "44 XS - 34 chest" },
+        new SelectListItem { Text = "46 S - 36 chest", Value = "46 S - 36 chest" },
+        new SelectListItem { Text = "48 M - 38 chest", Value = "48 M - 38 chest" },
+        new SelectListItem { Text = "50 L - 40 chest", Value = "50 L - 40 chest" },
+        new SelectListItem { Text = "52 XL - 42 chest", Value = "52 XL - 42 chest" }
+        
     };
 
         public static List<SelectListItem> KidSizes { get; } = new()
     {
-        new SelectListItem { Text = "2 Years", Value = "2" },
-        new SelectListItem { Text = "3 Years", Value = "3" },
-        new SelectListItem { Text = "4 Years", Value = "4" },
-        new SelectListItem { Text = "5 Years", Value = "5" }
+        new SelectListItem { Text = "104 cm | 2 years", Value = "104 cm | 2 years" },
+        new SelectListItem { Text = "68 cm | 0-6 months", Value = "68 cm | 0-6 months" },
+        new SelectListItem { Text = "80 cm | 6-12 months", Value = "80 cm | 6-12 months" },
+        new SelectListItem { Text = "140 cm | 9-10 years", Value = " 140 cm | 9-10 years" },
+         new SelectListItem { Text = "160 cm | 12-14 years", Value = " 160 cm | 12-14 years" }
     };
 
         public static List<SelectListItem> Colors { get; } = new()

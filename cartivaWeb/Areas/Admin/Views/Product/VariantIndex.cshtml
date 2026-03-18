@@ -7,6 +7,17 @@
     var productId = ViewBag.ProductId;
     var productName = ViewBag.ProductName ?? "Product";
     var categoryName = ViewBag.CategoryName ?? "";
+    
+    // Determine category type
+    var isKidsCategory = categoryName.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
+                        categoryName.Contains("Children", StringComparison.OrdinalIgnoreCase);
+    
+    var isSuitCategory = categoryName.Contains("Suit", StringComparison.OrdinalIgnoreCase) ||
+                         categoryName.Contains("Formal", StringComparison.OrdinalIgnoreCase) ||
+                         categoryName.Contains("Blazer", StringComparison.OrdinalIgnoreCase) ||
+                         categoryName.Contains("Dress Shirt", StringComparison.OrdinalIgnoreCase);
+    
+    var isAdultRegularCategory = !isKidsCategory && !isSuitCategory;
 }
 
 <div class="container p-3">
@@ -17,39 +28,35 @@
         </div>
         <div class="col-6 text-end">
             <div class="btn-group" role="group">
-                @if (categoryName.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
-                     categoryName.Contains("Children", StringComparison.OrdinalIgnoreCase))
+                @if (isKidsCategory)
                 {
-                    <!-- Only show Kids button for kids categories -->
+                    <!-- KIDS CATEGORY - Direct button -->
                     <a asp-action="CreateProductVariant"
                            asp-route-productId="@productId"
-                           asp-route-sizeType="Regular"
+                           asp-route-sizeType="Kids"
                            class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Kid Variant (2-5 Years)
+                        <i class="bi bi-plus-circle"></i> Add Kid Variant 
+                    </a>
+                }
+                else if (isSuitCategory)
+                {
+                    <!-- SUIT CATEGORY - Direct button with number sizes -->
+                    <a asp-action="CreateProductVariant"
+                           asp-route-productId="@productId"
+                           asp-route-sizeType="Suit"
+                           class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Suit Variant
                     </a>
                 }
                 else
                 {
-                    <!-- Dropdown for Adult variants -->
-                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-plus-circle"></i> Add Adult Variant
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a class="dropdown-item" asp-action="CreateProductVariant"
-                                   asp-route-productId="@productId"
-                                   asp-route-sizeType="Regular">
-                                <i class="bi bi-person"></i> Regular (S, M, L, XL, XXL)
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" asp-action="CreateProductVariant"
-                                   asp-route-productId="@productId"
-                                   asp-route-sizeType="Suit">
-                                <i class="bi bi-person-badge"></i> Suit (36, 38, 40, 42, 44, 46)
-                            </a>
-                        </li>
-                    </ul>
+                    <!-- REGULAR ADULT CATEGORY - Direct button with letter sizes -->
+                    <a asp-action="CreateProductVariant"
+                           asp-route-productId="@productId"
+                           asp-route-sizeType="Regular"
+                           class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Adult Variant 
+                    </a>
                 }
                 
                 <a asp-action="Upsert" asp-route-id="@productId" class="btn btn-secondary">
@@ -82,15 +89,19 @@
                             </span>
                         </td>
                         <td>
-                            @if (categoryName.Contains("Kids", StringComparison.OrdinalIgnoreCase) ||
-                                 categoryName.Contains("Children", StringComparison.OrdinalIgnoreCase))
+                            @if (isKidsCategory)
                             {
-                                <!-- Display kid sizes with "Years" suffix -->
-                                <span>@variant.Size Years</span>
+                                <!-- Kid sizes - numbers with "Years" -->
+                                <span>@variant.Size </span>
+                            }
+                            else if (isSuitCategory)
+                            {
+                                <!-- SUIT SIZES - JUST NUMBERS (no prefix) -->
+                                <span>@variant.Size</span>
                             }
                             else
                             {
-                                <!-- Display adult sizes as is -->
+                                <!-- Regular adult sizes - letters as-is -->
                                 <span>@variant.Size</span>
                             }
                         </td>
@@ -122,18 +133,28 @@
     else
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No variants found for this product. Click "Add New Variant" to create one.
+            <i class="bi bi-info-circle"></i> No variants found for this product. Click
+            "@if (isKidsCategory)
+            {
+                <text>Add Kid Variant</text>
+            }
+             else if (isSuitCategory)
+            {
+                <text>Add Suit Variant</text>
+            }
+            else
+            {
+                <text>Add Regular Variant</text>
+            }
+            "
+            to create one.
         </div>
     }
 </div>
 
 @section Scripts {
     <script>
-        // Initialize Bootstrap dropdowns
-        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'))
-        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
-            return new bootstrap.Dropdown(dropdownToggleEl)
-        });
+        console.log('Variant page loaded - category type: @(isKidsCategory ? "Kids" : isSuitCategory ? "Suit" : "Regular")');
     </script>
 }
 
@@ -148,6 +169,11 @@
             "black" => "#000000",
             "white" => "#ffffff",
             "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "gray" or "grey" => "#6c757d",
             _ => "#6c757d"
         };
     }

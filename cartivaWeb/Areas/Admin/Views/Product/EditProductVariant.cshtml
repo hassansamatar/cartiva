@@ -1,42 +1,45 @@
-﻿@model Models.ViewModels.ProductVariantVM
+﻿@using System.Globalization
+@model Models.ViewModels.ProductVariantVM
 
 @{
     ViewData["Title"] = "Edit Variant";
+    var sizeGroup = ViewBag.SizeGroup as string;
+    var sizeType = ViewBag.SizeType as string;
+    
+    // Determine size display info
+    var sizeDisplayInfo = sizeGroup == "Kid"
+        ? "Kids Sizes"
+        : sizeType == "Suit"
+            ? "Suit Sizes"
+            : "Regular Sizes";
 }
 
 <div class="container p-3">
     <div class="row pt-4">
         <div class="col-12">
-            <h2 class="text-primary">Edit Variant for @ViewBag.ProductName</h2>
+            <h2 class="text-primary">
+                <i class="bi @(sizeGroup == "Kid" ? "bi-emoji-smile" : sizeType == "Suit" ? "bi-person-badge" : "bi-person")"></i>
+                Edit @sizeGroup @(sizeType != null && sizeGroup != "Kid" ? sizeType : "") Variant for @ViewBag.ProductName
+            </h2>
             <hr />
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <form asp-action="EditProductVariant" method="post">
                 <input type="hidden" asp-for="Variant.Id" />
                 <input type="hidden" asp-for="Variant.ProductId" />
-                <input type="hidden" name="sizeGroup" value="@ViewBag.SizeGroup" />
-                <input type="hidden" name="sizeType" value="@ViewBag.SizeType" />
+                <input type="hidden" name="sizeGroup" value="@sizeGroup" />
+                <input type="hidden" name="sizeType" value="@sizeType" />
 
-                <!-- Display Size Group Info -->
-                <div class="alert alert-info mb-3">
-                    <strong>Size Group:</strong>
-                    @if (ViewBag.SizeGroup == "Kid")
-                    {
-                        <span>Kids Sizes (2-5 Years)</span>
-                    }
-                    else
-                    {
-                        <span>
-                            Adult @(ViewBag.SizeType == "Suit" ? "Suit" : "Regular") Sizes
-                            (@(ViewBag.SizeType == "Suit" ? "36-46" : "S, M, L, XL, XXL"))
-                        </span>
-                    }
+                <!-- Size Group Info Banner -->
+                <div class="alert @(sizeGroup == "Kid" ? "alert-success" : sizeType == "Suit" ? "alert-primary" : "alert-info") mb-4">
+                    <i class="bi @(sizeGroup == "Kid" ? "bi-emoji-smile" : sizeType == "Suit" ? "bi-person-badge" : "bi-person") me-2"></i>
+                    <strong>@sizeDisplayInfo</strong>
                 </div>
 
-                <!-- Color -->
+                <!-- Color Selection -->
                 <div class="mb-3">
                     <label asp-for="Variant.Color" class="form-label fw-bold"></label>
                     <select asp-for="Variant.Color" class="form-select" asp-items="Model.AvailableColors">
@@ -45,59 +48,102 @@
                     <span asp-validation-for="Variant.Color" class="text-danger"></span>
                 </div>
 
-                <!-- Size -->
+                <!-- Size Selection -->
                 <div class="mb-3">
                     <label asp-for="Variant.Size" class="form-label fw-bold"></label>
                     <select asp-for="Variant.Size" class="form-select" asp-items="Model.AvailableSizes">
                         <option value="">-- Select Size --</option>
                     </select>
                     <span asp-validation-for="Variant.Size" class="text-danger"></span>
-                    
-                    @if (ViewBag.SizeGroup == "Kid")
-                    {
-                        <small class="text-info">Available kid sizes: 2 Years, 3 Years, 4 Years, 5 Years</small>
-                    }
-                    else
-                    {
-                        if (ViewBag.SizeType == "Suit")
-                        {
-                            <small class="text-info">Available suit sizes: 36, 38, 40, 42, 44, 46</small>
-                        }
-                        else
-                        {
-                            <small class="text-info">Available regular sizes: S, M, L, XL, XXL</small>
-                        }
-                    }
                 </div>
 
                 <!-- Price -->
                 <div class="mb-3">
                     <label asp-for="Variant.Price" class="form-label fw-bold"></label>
-                    <input asp-for="Variant.Price" class="form-control" type="number" step="0.01" min="0" />
+                    <div class="input-group">
+                        <span class="input-group-text">kr</span>
+                        <input asp-for="Variant.Price" class="form-control" type="number" step="0.01" min="0" />
+                    </div>
                     <span asp-validation-for="Variant.Price" class="text-danger"></span>
                 </div>
 
                 <!-- Stock -->
                 <div class="mb-3">
                     <label asp-for="Variant.Stock" class="form-label fw-bold"></label>
-                    <input asp-for="Variant.Stock" class="form-control" type="number" min="0" />
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-box"></i>
+                        </span>
+                        <input asp-for="Variant.Stock" class="form-control" type="number" min="0" />
+                    </div>
                     <span asp-validation-for="Variant.Stock" class="text-danger"></span>
                 </div>
 
-                <!-- Buttons -->
-                <div class="mb-3">
+                <!-- Form Actions -->
+                <div class="mb-3 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save"></i> Update Variant
                     </button>
-                    <a asp-action="VariantIndex" asp-route-productId="@Model.Variant.ProductId" class="btn btn-secondary">
+                    <a asp-action="VariantIndex" asp-route-productId="@Model.Variant.ProductId"
+                           class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Back to List
                     </a>
                 </div>
             </form>
+        </div>
+
+        <!-- Optional: Preview Column -->
+        <div class="col-md-4">
+            @if (!string.IsNullOrEmpty(ViewBag.PreviewImageUrl))
+            {
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-image me-2"></i>
+                            Current Variant
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="@ViewBag.PreviewImageUrl" class="img-fluid rounded" style="max-height: 200px;" />
+                        <p class="mt-2 mb-0 fw-bold">@ViewBag.ProductName</p>
+                        <div class="mt-2">
+                            <span class="badge" style="background-color: @(GetColorCode(Model.Variant.Color)); color: white;">
+                                @Model.Variant.Color
+                            </span>
+                            <span class="badge bg-secondary ms-1">@Model.Variant.Size</span>
+                        </div>
+                        <p class="mt-2 mb-0">
+                            <strong>@Model.Variant.Price.ToString("C", CultureInfo.GetCultureInfo("nb-NO"))</strong>
+                            <span class="text-muted ms-2">Stock: @Model.Variant.Stock</span>
+                        </p>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+}
+
+@functions {
+    public string GetColorCode(string color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#000000",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "gray" or "grey" => "#6c757d",
+            _ => "#6c757d"
+        };
+    }
 }

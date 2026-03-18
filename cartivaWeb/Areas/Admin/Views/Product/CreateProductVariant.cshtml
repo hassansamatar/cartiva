@@ -2,12 +2,24 @@
 
 @{
     ViewData["Title"] = "Create Variant";
+    var sizeGroup = ViewBag.SizeGroup as string;
+    var sizeType = ViewBag.SizeType as string;
+    
+    // Determine size display info
+    var sizeDisplayInfo = sizeGroup == "Kid"
+        ? "Kids Sizes (50-176 cm)"
+        : sizeType == "Suit"
+            ? "Suit Sizes (44-56 EU)"
+            : "Regular Sizes (XS-XXL)";
 }
 
 <div class="container p-3">
     <div class="row pt-4">
         <div class="col-12">
-            <h2 class="text-primary">Create New Variant for @ViewBag.ProductName</h2>
+            <h2 class="text-primary">
+                <i class="bi @(sizeGroup == "Kid" ? "bi-emoji-smile" : sizeType == "Suit" ? "bi-person-badge" : "bi-person")"></i>
+                Create @sizeGroup @(sizeType != null && sizeGroup != "Kid" ? sizeType : "") Variant for @ViewBag.ProductName
+            </h2>
             <hr />
         </div>
     </div>
@@ -16,26 +28,16 @@
         <div class="col-md-6">
             <form asp-action="CreateProductVariant" method="post">
                 <input type="hidden" asp-for="Variant.ProductId" />
-                <input type="hidden" name="sizeGroup" value="@ViewBag.SizeGroup" />
-                <input type="hidden" name="sizeType" value="@ViewBag.SizeType" />
+                <input type="hidden" name="sizeGroup" value="@sizeGroup" />
+                <input type="hidden" name="sizeType" value="@sizeType" />
 
-                <!-- Display Size Group Info -->
-                <div class="alert alert-info mb-3">
-                    <strong>Size Group:</strong>
-                    @if (ViewBag.SizeGroup == "Kid")
-                    {
-                        <span>Kids Sizes (2-5 Years)</span>
-                    }
-                    else
-                    {
-                        <span>
-                            Adult @(ViewBag.SizeType == "Suit" ? "Suit" : "Regular") Sizes
-                            (@(ViewBag.SizeType == "Suit" ? "36-46" : "S, M, L, XL, XXL"))
-                        </span>
-                    }
+                <!-- Size Group Info Banner -->
+                <div class="alert @(sizeGroup == "Kid" ? "alert-success" : sizeType == "Suit" ? "alert-primary" : "alert-info") mb-4">
+                    <i class="bi @(sizeGroup == "Kid" ? "bi-emoji-smile" : sizeType == "Suit" ? "bi-person-badge" : "bi-person") me-2"></i>
+                    <strong>@sizeDisplayInfo</strong>
                 </div>
 
-                <!-- Color -->
+                <!-- Color Selection -->
                 <div class="mb-3">
                     <label asp-for="Variant.Color" class="form-label fw-bold"></label>
                     <select asp-for="Variant.Color" class="form-select" asp-items="Model.AvailableColors">
@@ -44,7 +46,7 @@
                     <span asp-validation-for="Variant.Color" class="text-danger"></span>
                 </div>
 
-                <!-- Size -->
+                <!-- Size Selection -->
                 <div class="mb-3">
                     <label asp-for="Variant.Size" class="form-label fw-bold"></label>
                     <select asp-for="Variant.Size" class="form-select" asp-items="Model.AvailableSizes">
@@ -52,47 +54,101 @@
                     </select>
                     <span asp-validation-for="Variant.Size" class="text-danger"></span>
                     
-                    @if (ViewBag.SizeGroup == "Kid")
-                    {
-                        <small class="text-info">Available kid sizes: 2 Years, 3 Years, 4 Years, 5 Years</small>
-                    }
-                    else
-                    {
-                        if (ViewBag.SizeType == "Suit")
-                        {
-                            <small class="text-info">Available suit sizes: 36, 38, 40, 42, 44, 46</small>
-                        }
-                        else
-                        {
-                            <small class="text-info">Available regular sizes: S, M, L, XL, XXL</small>
-                        }
-                    }
+                    <!-- Size helper text -->
+                    <small class="text-muted">
+                        @(sizeGroup == "Kid"
+                            ? "Select size in cm (height)"
+                            : sizeType == "Suit"
+                                ? "EU chest measurement"
+                                : "Standard letter size")
+                    </small>
                 </div>
 
                 <!-- Price -->
                 <div class="mb-3">
                     <label asp-for="Variant.Price" class="form-label fw-bold"></label>
-                    <input asp-for="Variant.Price" class="form-control" type="number" step="0.01" min="0" />
+                    <div class="input-group">
+                        <span class="input-group-text">kr</span>
+                        <input asp-for="Variant.Price" class="form-control" type="number" step="0.01" min="0" />
+                    </div>
                     <span asp-validation-for="Variant.Price" class="text-danger"></span>
                 </div>
 
                 <!-- Stock -->
                 <div class="mb-3">
                     <label asp-for="Variant.Stock" class="form-label fw-bold"></label>
-                    <input asp-for="Variant.Stock" class="form-control" type="number" min="0" />
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-box"></i>
+                        </span>
+                        <input asp-for="Variant.Stock" class="form-control" type="number" min="0" />
+                    </div>
                     <span asp-validation-for="Variant.Stock" class="text-danger"></span>
                 </div>
 
-                <!-- Buttons -->
-                <div class="mb-3">
+                <!-- Form Actions -->
+                <div class="mb-3 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Create Variant
                     </button>
-                    <a asp-action="VariantIndex" asp-route-productId="@Model.Variant.ProductId" class="btn btn-secondary">
+                    <a asp-action="VariantIndex" asp-route-productId="@Model.Variant.ProductId"
+                           class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Back to List
                     </a>
                 </div>
             </form>
+        </div>
+
+        <!-- Optional: Preview/Info Column -->
+        <div class="col-md-5 offset-md-1">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Size Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (sizeGroup == "Kid")
+                    {
+                        <h6>Kids Size Guide (EU):</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-secondary me-2">50-68</span> 0-6 months</li>
+                            <li><span class="badge bg-secondary me-2">74-86</span> 6-18 months</li>
+                            <li><span class="badge bg-secondary me-2">92-104</span> 2-4 years</li>
+                            <li><span class="badge bg-secondary me-2">110-122</span> 5-7 years</li>
+                            <li><span class="badge bg-secondary me-2">128-140</span> 8-10 years</li>
+                            <li><span class="badge bg-secondary me-2">146-158</span> 11-13 years</li>
+                            <li><span class="badge bg-secondary me-2">164-176</span> 14-16 years</li>
+                        </ul>
+                    }
+                    else if (sizeType == "Suit")
+                    {
+                        <h6>Suit Size Guide (EU):</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-primary me-2">44</span> UK 34" / XS</li>
+                            <li><span class="badge bg-primary me-2">46</span> UK 36" / S</li>
+                            <li><span class="badge bg-primary me-2">48</span> UK 38" / M</li>
+                            <li><span class="badge bg-primary me-2">50</span> UK 40" / L</li>
+                            <li><span class="badge bg-primary me-2">52</span> UK 42" / XL</li>
+                            <li><span class="badge bg-primary me-2">54</span> UK 44" / XXL</li>
+                            <li><span class="badge bg-primary me-2">56</span> UK 46" / XXXL</li>
+                        </ul>
+                    }
+                    else
+                    {
+                        <h6>Regular Size Guide:</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-info me-2">XS</span> Extra Small</li>
+                            <li><span class="badge bg-info me-2">S</span> Small</li>
+                            <li><span class="badge bg-info me-2">M</span> Medium</li>
+                            <li><span class="badge bg-info me-2">L</span> Large</li>
+                            <li><span class="badge bg-info me-2">XL</span> Extra Large</li>
+                            <li><span class="badge bg-info me-2">XXL</span> Double Extra Large</li>
+                        </ul>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>
