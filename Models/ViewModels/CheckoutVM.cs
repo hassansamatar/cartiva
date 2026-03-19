@@ -1,14 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace Models.ViewModels
 {
     public class CheckoutVM
     {
-        public OrderHeader OrderHeader { get; set; }
-        public List<ShoppingCart> ShoppingCartList { get; set; }
+        public OrderHeader OrderHeader { get; set; } = new OrderHeader();
+
+        [ValidateNever]
+        public List<ShoppingCart> ShoppingCartList { get; set; } = new List<ShoppingCart>();
+
+        [Display(Name = "Order Total")]
+        [DataType(DataType.Currency)]
         public decimal OrderTotal { get; set; }
-        // Optional fields: ShippingMethod, PaymentMethod, Discounts, etc.
+
+        // For displaying size information in checkout
+        public string GetVariantDisplay(ProductVariant variant)
+        {
+            if (variant.SizeValue != null)
+            {
+                return $"{variant.Color} - {variant.SizeValue.DisplayText}";
+            }
+            return variant.Color;
+        }
     }
 }

@@ -26,7 +26,10 @@ public class OrderController : Controller
 
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
-            .ThenInclude(v => v.Product)
+                .ThenInclude(v => v.Product)
+            .Include(c => c.ProductVariant)
+                .ThenInclude(v => v.SizeValue)
+                    .ThenInclude(sv => sv.SizeSystem)
             .Where(c => c.ApplicationUserId == userId)
             .ToListAsync();
 
@@ -43,12 +46,12 @@ public class OrderController : Controller
         {
             OrderHeader = new OrderHeader
             {
-                Name = user.Name,
-                PhoneNumber = user.PhoneNumber,
-                StreetAddress = user.StreetAddress,
-                City = user.City,
-                State = user.State,
-                PostalCode = user.PostalCode
+                Name = user?.Name ?? string.Empty,
+                PhoneNumber = user?.PhoneNumber,
+                StreetAddress = user?.StreetAddress,
+                City = user?.City,
+                State = user?.State,
+                PostalCode = user?.PostalCode
             },
             ShoppingCartList = cartList,
             OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count)
@@ -56,8 +59,6 @@ public class OrderController : Controller
 
         return View(vm);
     }
-
-    
 
     // =============================
     // CONFIRM ORDER (POST)
@@ -71,7 +72,10 @@ public class OrderController : Controller
 
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
-            .ThenInclude(v => v.Product)
+                .ThenInclude(v => v.Product)
+            .Include(c => c.ProductVariant)
+                .ThenInclude(v => v.SizeValue)
+                    .ThenInclude(sv => sv.SizeSystem)
             .Where(c => c.ApplicationUserId == userId)
             .ToListAsync();
 
@@ -97,7 +101,9 @@ public class OrderController : Controller
 
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
-            .ThenInclude(v => v.Product)
+                .ThenInclude(v => v.Product)
+            .Include(c => c.ProductVariant)
+                .ThenInclude(v => v.SizeValue)
             .Where(c => c.ApplicationUserId == userId)
             .ToListAsync();
 
@@ -105,6 +111,21 @@ public class OrderController : Controller
         {
             TempData["Error"] = "Your cart is empty.";
             return RedirectToAction("Index", "Cart");
+        }
+
+        // Validate stock before placing order
+        foreach (var cart in cartList)
+        {
+            var variant = cart.ProductVariant;
+            if (variant.Stock < cart.Count)
+            {
+                string sizeDisplay = variant.SizeValue != null 
+                    ? variant.SizeValue.DisplayText 
+                    : "No Size";
+                    
+                TempData["Error"] = $"Not enough stock for {variant.Product?.Name} ({variant.Color}/{sizeDisplay}). Only {variant.Stock} left.";
+                return RedirectToAction("Checkout");
+            }
         }
 
         // Create OrderHeader
@@ -115,28 +136,36 @@ public class OrderController : Controller
         // Company vs Regular customer logic
         if (User.IsInRole(SD.Role_Company))
         {
-            model.OrderHeader.PaymentStatus = "Deferred";
-            model.OrderHeader.OrderStatus = "Approved";
+            model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
+            model.OrderHeader.OrderStatus = SD.StatusApproved;
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
         }
         else
         {
-            model.OrderHeader.PaymentStatus = "Pending";
-            model.OrderHeader.OrderStatus = "Pending";
+            model.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+            model.OrderHeader.OrderStatus = SD.StatusPending;
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
         }
 
         _db.OrderHeaders.Add(model.OrderHeader);
         await _db.SaveChangesAsync();
 
-        // Create OrderDetails
-        var orderDetails = cartList.Select(cart => new OrderDetail
+        // Create OrderDetails and update stock
+        var orderDetails = new List<OrderDetail>();
+        foreach (var cart in cartList)
         {
-            OrderHeaderId = model.OrderHeader.Id,
-            ProductVariantId = cart.ProductVariantId,
-            Count = cart.Count,
-            Price = cart.ProductVariant.Price
-        }).ToList();
+            var orderDetail = new OrderDetail
+            {
+                OrderHeaderId = model.OrderHeader.Id,
+                ProductVariantId = cart.ProductVariantId,
+                Count = cart.Count,
+                Price = cart.ProductVariant.Price
+            };
+            orderDetails.Add(orderDetail);
+            
+            // Update stock
+            cart.ProductVariant.Stock -= cart.Count;
+        }
 
         _db.OrderDetails.AddRange(orderDetails);
         await _db.SaveChangesAsync();
@@ -166,6 +195,93 @@ public class OrderController : Controller
             .Include(o => o.OrderDetails)
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.Product)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)
+                        .ThenInclude(sv => sv.SizeSystem)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (orderHeader == null)
+        {
+            return NotFound();
+        }
+
+        return View(orderHeader);
+    }
+
+    // =============================
+    // PAYMENT PAGE
+    // =============================
+    [HttpGet]
+    public async Task<IActionResult> Payment(int orderId)
+    {
+        var orderHeader = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (orderHeader == null)
+        {
+            return NotFound();
+        }
+
+        return View(orderHeader);
+    }
+
+    // =============================
+    // PROCESS PAYMENT (Mock)
+    // =============================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ProcessPayment(int orderId)
+    {
+        var orderHeader = await _db.OrderHeaders
+            .FindAsync(orderId);
+
+        if (orderHeader == null)
+        {
+            return NotFound();
+        }
+
+        orderHeader.PaymentStatus = SD.PaymentStatusApproved;
+        orderHeader.OrderStatus = SD.StatusApproved;
+        orderHeader.PaymentDate = DateTime.Now;
+
+        await _db.SaveChangesAsync();
+
+        return RedirectToAction("Receipt", new { id = orderId });
+    }
+
+    // =============================
+    // ORDER HISTORY
+    // =============================
+    [HttpGet]
+    public async Task<IActionResult> History()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var orders = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+            .Where(o => o.ApplicationUserId == userId)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+
+        return View(orders);
+    }
+
+    // =============================
+    // ORDER DETAILS
+    // =============================
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        var orderHeader = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.Product)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)
+                        .ThenInclude(sv => sv.SizeSystem)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (orderHeader == null)

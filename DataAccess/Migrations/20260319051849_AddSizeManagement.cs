@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class AddallTables : Migration
+    public partial class AddSizeManagement : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -23,19 +23,6 @@ namespace DataAccess.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetRoles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Categories",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Categories", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -57,6 +44,23 @@ namespace DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SizeSystems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    SizeType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IconClass = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    AlertClass = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SizeSystems", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -73,29 +77,6 @@ namespace DataAccess.Migrations
                         name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Products",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    Brand = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CategoryId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Products", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Products_Categories_CategoryId",
-                        column: x => x.CategoryId,
-                        principalTable: "Categories",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -134,28 +115,49 @@ namespace DataAccess.Migrations
                         name: "FK_AspNetUsers_Companies_CompanyId",
                         column: x => x.CompanyId,
                         principalTable: "Companies",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProductVariants",
+                name: "Categories",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Color = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Size = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Stock = table.Column<int>(type: "int", nullable: false),
-                    ProductId = table.Column<int>(type: "int", nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    SizeSystemId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProductVariants", x => x.Id);
+                    table.PrimaryKey("PK_Categories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ProductVariants_Products_ProductId",
-                        column: x => x.ProductId,
-                        principalTable: "Products",
+                        name: "FK_Categories_SizeSystems_SizeSystemId",
+                        column: x => x.SizeSystemId,
+                        principalTable: "SizeSystems",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SizeValues",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SizeSystemId = table.Column<int>(type: "int", nullable: false),
+                    Value = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    DisplayText = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SizeValues", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SizeValues_SizeSystems_SizeSystemId",
+                        column: x => x.SizeSystemId,
+                        principalTable: "SizeSystems",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -281,30 +283,55 @@ namespace DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ShoppingCarts",
+                name: "Products",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Count = table.Column<int>(type: "int", nullable: false),
-                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProductVariantId = table.Column<int>(type: "int", nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    Brand = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CategoryId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ShoppingCarts", x => x.Id);
+                    table.PrimaryKey("PK_Products", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ShoppingCarts_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
-                        principalTable: "AspNetUsers",
+                        name: "FK_Products_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductVariants",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Color = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    SizeValueId = table.Column<int>(type: "int", nullable: true),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Stock = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductVariants", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProductVariants_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ShoppingCarts_ProductVariants_ProductVariantId",
-                        column: x => x.ProductVariantId,
-                        principalTable: "ProductVariants",
+                        name: "FK_ProductVariants_SizeValues_SizeValueId",
+                        column: x => x.SizeValueId,
+                        principalTable: "SizeValues",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -329,6 +356,33 @@ namespace DataAccess.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_OrderDetails_ProductVariants_ProductVariantId",
+                        column: x => x.ProductVariantId,
+                        principalTable: "ProductVariants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ShoppingCarts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Count = table.Column<int>(type: "int", nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProductVariantId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ShoppingCarts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ShoppingCarts_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ShoppingCarts_ProductVariants_ProductVariantId",
                         column: x => x.ProductVariantId,
                         principalTable: "ProductVariants",
                         principalColumn: "Id",
@@ -380,6 +434,11 @@ namespace DataAccess.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Categories_SizeSystemId",
+                table: "Categories",
+                column: "SizeSystemId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OrderDetails_OrderHeaderId",
                 table: "OrderDetails",
                 column: "OrderHeaderId");
@@ -400,9 +459,16 @@ namespace DataAccess.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductVariants_ProductId",
+                name: "IX_ProductVariants_ProductId_SizeValueId_Color",
                 table: "ProductVariants",
-                column: "ProductId");
+                columns: new[] { "ProductId", "SizeValueId", "Color" },
+                unique: true,
+                filter: "[SizeValueId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductVariants_SizeValueId",
+                table: "ProductVariants",
+                column: "SizeValueId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShoppingCarts_ApplicationUserId",
@@ -413,6 +479,16 @@ namespace DataAccess.Migrations
                 name: "IX_ShoppingCarts_ProductVariantId",
                 table: "ShoppingCarts",
                 column: "ProductVariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SizeValues_SizeSystemId_SortOrder",
+                table: "SizeValues",
+                columns: new[] { "SizeSystemId", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SizeValues_Value",
+                table: "SizeValues",
+                column: "Value");
         }
 
         /// <inheritdoc />
@@ -455,10 +531,16 @@ namespace DataAccess.Migrations
                 name: "Products");
 
             migrationBuilder.DropTable(
+                name: "SizeValues");
+
+            migrationBuilder.DropTable(
                 name: "Companies");
 
             migrationBuilder.DropTable(
                 name: "Categories");
+
+            migrationBuilder.DropTable(
+                name: "SizeSystems");
         }
     }
 }

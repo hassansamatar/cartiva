@@ -11,12 +11,29 @@
 }
 
 <div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Products</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
+        </ol>
+    </nav>
 
     @* Success message *@
     @if (TempData["Success"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["Success"]
+            <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @* Error message *@
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -24,90 +41,226 @@
     <div class="row">
         <!-- Product Image -->
         <div class="col-md-6 text-center mb-3 mb-md-0">
-            <div style="max-height:400px; overflow:hidden;">
-                <img src="@(Model.ImageUrl ?? "/images/no-image.png")"
-                     class="img-fluid rounded shadow-sm"
-                     style="width:auto; max-width:100%; object-fit:contain;"
-                     alt="@Model.Name" />
+            <div class="card">
+                <div class="card-body p-2">
+                    <div style="max-height:400px; overflow:hidden;">
+                        <img src="@(Model.ImageUrl ?? "/images/no-image.png")"
+                             class="img-fluid rounded"
+                             style="width:auto; max-width:100%; object-fit:contain;"
+                             alt="@Model.Name" />
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Product Details -->
         <div class="col-md-6">
-            <h2>@Model.Name</h2>
-            <h5 class="text-muted">@Model.Brand</h5>
-            <p><strong>Category:</strong> @(Model.Category?.Name ?? "No Category")</p>
-            <p>@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</p>
-
-            @if (Model.Variants != null && Model.Variants.Any())
-            {
-                <h5>Variants:</h5>
-                <ul class="list-unstyled">
-                    @foreach (var v in Model.Variants)
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="text-primary">@Model.Name</h2>
+                    <h5 class="text-muted">
+                        <i class="bi bi-building"></i> @Model.Brand
+                    </h5>
+                    
+                    <hr />
+                    
+                    <p>
+                        <strong><i class="bi bi-folder"></i> Category:</strong>
+                        @(Model.Category?.Name ?? "No Category")
+                    </p>
+                    
+                    @if (Model.Category?.DefaultSizeSystem != null)
                     {
-                        var inCart = 0;
-                        if (userId != null)
-                        {
-                            // get quantity in cart
-                            var cartItem = _db.ShoppingCarts
-                                              .AsNoTracking()
-                                              .FirstOrDefault(c => c.ApplicationUserId == userId && c.ProductVariantId == v.Id);
-                            inCart = cartItem?.Count ?? 0;
-                        }
-
-                        var availableStock = v.Stock - inCart;
-
-                        <li class="mb-2 p-2 border rounded d-flex flex-wrap align-items-center">
-                            <span class="badge bg-primary me-1 mb-1">Color: @v.Color</span>
-                            <span class="badge bg-secondary me-1 mb-1">Size: @v.Size</span>
-                            <span class="badge bg-success me-1 mb-1">Price: @v.Price.ToString("C", culture)</span>
-                            <span class="badge bg-warning me-1 mb-1">Available: @availableStock</span>
-
-                            @if (availableStock > 0)
+                        <p>
+                            <strong><i class="bi @(Model.Category.DefaultSizeSystem.IconClass ?? "bi-rulers")"></i> Size System:</strong>
+                            <span class="badge bg-info">@Model.Category.DefaultSizeSystem.Name</span>
+                            <small class="text-muted">(@Model.Category.DefaultSizeSystem.SizeType)</small>
+                            @if (!string.IsNullOrEmpty(Model.Category.DefaultSizeSystem.Description))
                             {
-                                <form asp-area="Customer"
-                                      asp-controller="Cart"
-                                      asp-action="AddToCart"
-                                      method="post"
-                                      class="d-flex align-items-center ms-2 mb-1">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="productVariantId" value="@v.Id" />
-                                    <input type="number" name="count" value="1" min="1" max="@availableStock"
-                                           class="form-control d-inline-block me-1" style="width:70px;" />
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        <i class="bi bi-cart-plus"></i> Add to Cart
-                                    </button>
-                                </form>
+                                <br />
+                                <small class="text-muted">@Model.Category.DefaultSizeSystem.Description</small>
                             }
-                            else
-                            {
-                                <span class="text-danger ms-2 mb-1">Out of stock</span>
-                            }
-                        </li>
+                        </p>
                     }
-                </ul>
-            }
-            else
-            {
-                <p>No variants available.</p>
-            }
+                    
+                    <div class="mt-3">
+                        <h6><i class="bi bi-card-text"></i> Description:</h6>
+                        <p class="text-muted">@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</p>
+                    </div>
 
-            <div class="mt-3 d-flex flex-wrap">
-                <a asp-area="Customer"
-                       asp-controller="Cart"
-                       asp-action="Index"
-                       class="btn btn-warning me-2 mb-2">
-                    <i class="bi bi-cart"></i> View Cart
-                </a>
+                    @if (Model.Variants != null && Model.Variants.Any())
+                    {
+                        <hr />
+                        <h5 class="mb-3">
+                            <i class="bi bi-boxes"></i> Available Variants
+                            <span class="badge bg-secondary ms-2">@Model.Variants.Count</span>
+                        </h5>
+                        
+                        <div class="row">
+                            @foreach (var v in Model.Variants.OrderBy(v => v.Color).ThenBy(v => v.SizeValue?.SortOrder ?? 0))
+                            {
+                                var inCart = 0;
+                                if (userId != null)
+                                {
+                                    // get quantity in cart
+                                    var cartItem = _db.ShoppingCarts
+                                                      .AsNoTracking()
+                                                      .FirstOrDefault(c => c.ApplicationUserId == userId && c.ProductVariantId == v.Id);
+                                    inCart = cartItem?.Count ?? 0;
+                                }
 
-                <a asp-area="Customer"
-                       asp-controller="Home"
-                       asp-action="Index"
-                       class="btn btn-primary mb-2">
-                    <i class="bi bi-arrow-left"></i> Back to Products
-                </a>
+                                var availableStock = v.Stock - inCart;
+
+                                <div class="col-12 mb-3">
+                                    <div class="card @(availableStock <= 0 ? "bg-light" : "")">
+                                        <div class="card-body p-3">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-3">
+                                                    <span class="badge d-block p-2" style="background-color: @GetColorCode(v.Color); color: @GetTextColor(v.Color);">
+                                                        <i class="bi bi-droplet"></i> @v.Color
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    @if (v.SizeValue != null)
+                                                    {
+                                                        <span class="badge bg-secondary d-block p-2">
+                                                            <i class="bi bi-rulers"></i> @v.SizeValue.DisplayText
+                                                        </span>
+                                                        @if (!string.IsNullOrEmpty(v.SizeValue.Description))
+                                                        {
+                                                            <small class="text-muted d-block mt-1">@v.SizeValue.Description</small>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary d-block p-2">
+                                                            <i class="bi bi-dash"></i> No size
+                                                        </span>
+                                                    }
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <strong class="text-primary">@v.Price.ToString("C", culture)</strong>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    @if (v.Stock > 10)
+                                                    {
+                                                        <span class="badge bg-success d-block p-2">
+                                                            <i class="bi bi-check-circle"></i> @availableStock available
+                                                        </span>
+                                                    }
+                                                    else if (v.Stock > 0)
+                                                    {
+                                                        <span class="badge bg-warning text-dark d-block p-2">
+                                                            <i class="bi bi-exclamation-triangle"></i> Only @availableStock left
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger d-block p-2">
+                                                            <i class="bi bi-x-circle"></i> Out of stock
+                                                        </span>
+                                                    }
+                                                </div>
+                                                <div class="col-md-2 text-end">
+                                                    @if (availableStock > 0)
+                                                    {
+                                                        <form asp-area="Customer"
+                                                              asp-controller="Cart"
+                                                              asp-action="AddToCart"
+                                                              method="post"
+                                                              class="d-flex justify-content-end">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="productVariantId" value="@v.Id" />
+                                                            <div class="input-group input-group-sm" style="width: 120px;">
+                                                                <input type="number" name="count" value="1" min="1" max="@availableStock"
+                                                                       class="form-control text-center" />
+                                                                <button type="submit" class="btn btn-success">
+                                                                    <i class="bi bi-cart-plus"></i>
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-danger">
+                                                            <i class="bi bi-cart-x"></i> Unavailable
+                                                        </span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info text-center py-4">
+                            <i class="bi bi-box" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">No variants available for this product.</p>
+                        </div>
+                    }
+
+                    <div class="mt-4 d-flex flex-wrap gap-2">
+                        <a asp-area="Customer"
+                               asp-controller="Cart"
+                               asp-action="Index"
+                               class="btn btn-warning">
+                            <i class="bi bi-cart"></i> View Cart
+                        </a>
+
+                        <a asp-area="Customer"
+                               asp-controller="Home"
+                               asp-action="Index"
+                               class="btn btn-primary">
+                            <i class="bi bi-arrow-left"></i> Back to Products
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Optional: Add any client-side functionality
+            console.log('Product details loaded');
+        });
+    </script>
+}
+
+@functions {
+    public string GetColorCode(string color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+    
+    public string GetTextColor(string color)
+    {
+        // Return white for dark colors, black for light colors
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
+}

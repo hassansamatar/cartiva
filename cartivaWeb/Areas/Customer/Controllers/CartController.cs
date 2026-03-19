@@ -26,12 +26,16 @@ namespace CartivaWeb.Areas.Customer.Controllers
             var cartItems = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
+                        .ThenInclude(p => p.Category)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)
+                        .ThenInclude(sv => sv.SizeSystem)
                 .Where(c => c.ApplicationUserId == userId)
                 .ToListAsync();
 
             return View(cartItems);
         }
-     
+
         // Add item to cart
         [HttpPost]
         public async Task<IActionResult> AddToCart(int productVariantId, int count = 1)
@@ -40,6 +44,7 @@ namespace CartivaWeb.Areas.Customer.Controllers
 
             var variant = await _db.ProductVariants
                 .Include(v => v.Product)
+                .Include(v => v.SizeValue)  // Add this to load size info
                 .FirstOrDefaultAsync(v => v.Id == productVariantId);
 
             if (variant == null) return NotFound();
@@ -70,7 +75,14 @@ namespace CartivaWeb.Areas.Customer.Controllers
             }
 
             await _db.SaveChangesAsync();
-            TempData["Success"] = $"{variant.Product.Name} ({variant.Color}/{variant.Size}) added to your cart!";
+
+            // Fix: Use DisplayText instead of SizeValue object
+            string sizeDisplay = variant.SizeValue != null
+                ? variant.SizeValue.DisplayText
+                : "No Size";
+
+            TempData["Success"] = $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay}) added to your cart!";
+
             return RedirectToAction("Details", "Home", new { id = variant.ProductId });
         }
 
@@ -81,6 +93,8 @@ namespace CartivaWeb.Areas.Customer.Controllers
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)  // Add this for size display
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cartItem != null)
@@ -89,7 +103,12 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 {
                     cartItem.Count++;
                     await _db.SaveChangesAsync();
-                    TempData["Success"] = $"Increased quantity of {cartItem.ProductVariant.Product.Name} to {cartItem.Count}.";
+
+                    string sizeDisplay = cartItem.ProductVariant.SizeValue != null
+                        ? cartItem.ProductVariant.SizeValue.DisplayText
+                        : "No Size";
+
+                    TempData["Success"] = $"Increased quantity of {cartItem.ProductVariant.Product?.Name} ({cartItem.ProductVariant.Color}/{sizeDisplay}) to {cartItem.Count}.";
                 }
                 else
                 {
@@ -107,19 +126,23 @@ namespace CartivaWeb.Areas.Customer.Controllers
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)  // Add this for size display
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cartItem != null)
             {
+                string productInfo = GetProductInfo(cartItem.ProductVariant);
+
                 cartItem.Count--;
                 if (cartItem.Count <= 0)
                 {
                     _db.ShoppingCarts.Remove(cartItem);
-                    TempData["Success"] = $"{cartItem.ProductVariant.Product.Name} removed from your cart.";
+                    TempData["Success"] = $"{productInfo} removed from your cart.";
                 }
                 else
                 {
-                    TempData["Success"] = $"Decreased quantity of {cartItem.ProductVariant.Product.Name} to {cartItem.Count}.";
+                    TempData["Success"] = $"Decreased quantity of {productInfo} to {cartItem.Count}.";
                 }
 
                 await _db.SaveChangesAsync();
@@ -135,14 +158,18 @@ namespace CartivaWeb.Areas.Customer.Controllers
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)  // Add this for size display
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cartItem != null)
             {
+                string productInfo = GetProductInfo(cartItem.ProductVariant);
+
                 if (count <= 0)
                 {
                     _db.ShoppingCarts.Remove(cartItem);
-                    TempData["Success"] = $"{cartItem.ProductVariant.Product.Name} removed from your cart.";
+                    TempData["Success"] = $"{productInfo} removed from your cart.";
                 }
                 else if (count > cartItem.ProductVariant.Stock)
                 {
@@ -151,7 +178,7 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 else
                 {
                     cartItem.Count = count;
-                    TempData["Success"] = $"Updated quantity of {cartItem.ProductVariant.Product.Name} to {count}.";
+                    TempData["Success"] = $"Updated quantity of {productInfo} to {count}.";
                 }
 
                 await _db.SaveChangesAsync();
@@ -167,13 +194,17 @@ namespace CartivaWeb.Areas.Customer.Controllers
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)  // Add this for size display
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cartItem != null)
             {
+                string productInfo = GetProductInfo(cartItem.ProductVariant);
+
                 _db.ShoppingCarts.Remove(cartItem);
                 await _db.SaveChangesAsync();
-                TempData["Success"] = $"{cartItem.ProductVariant.Product.Name} removed from your cart.";
+                TempData["Success"] = $"{productInfo} removed from your cart.";
             }
 
             return RedirectToAction("Index");
@@ -193,6 +224,16 @@ namespace CartivaWeb.Areas.Customer.Controllers
             TempData["Success"] = "All items removed from your cart.";
 
             return RedirectToAction("Index");
+        }
+
+        // Helper method to get product info with size display
+        private string GetProductInfo(ProductVariant variant)
+        {
+            string sizeDisplay = variant.SizeValue != null
+                ? variant.SizeValue.DisplayText
+                : "No Size";
+
+            return $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay})";
         }
     }
 }

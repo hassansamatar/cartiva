@@ -22,6 +22,29 @@ namespace DataAccess.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("SizeSystemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SizeSystemId");
+
+                    b.ToTable("Categories");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -229,24 +252,6 @@ namespace DataAccess.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Models.Category", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Categories", (string)null);
-                });
-
             modelBuilder.Entity("Models.Company", b =>
                 {
                     b.Property<int>("Id")
@@ -402,7 +407,6 @@ namespace DataAccess.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ImageUrl")
@@ -418,38 +422,6 @@ namespace DataAccess.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("Products", (string)null);
-                });
-
-            modelBuilder.Entity("Models.ProductVariant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Size")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Stock")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("ProductVariants", (string)null);
                 });
 
             modelBuilder.Entity("Models.ShoppingCart", b =>
@@ -479,6 +451,116 @@ namespace DataAccess.Migrations
                     b.ToTable("ShoppingCarts");
                 });
 
+            modelBuilder.Entity("Models.SizeSystem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AlertClass")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("IconClass")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SizeType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SizeSystems", (string)null);
+                });
+
+            modelBuilder.Entity("Models.SizeValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DisplayText")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("SizeSystemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Value");
+
+                    b.HasIndex("SizeSystemId", "SortOrder");
+
+                    b.ToTable("SizeValues", (string)null);
+                });
+
+            modelBuilder.Entity("ProductVariant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SizeValueId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SizeValueId");
+
+                    b.HasIndex("ProductId", "SizeValueId", "Color")
+                        .IsUnique()
+                        .HasFilter("[SizeValueId] IS NOT NULL");
+
+                    b.ToTable("ProductVariants", (string)null);
+                });
+
             modelBuilder.Entity("Models.ApplicationUser", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityUser");
@@ -486,7 +568,7 @@ namespace DataAccess.Migrations
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("CompanyId")
+                    b.Property<int>("CompanyId")
                         .HasColumnType("int");
 
                     b.Property<string>("Name")
@@ -505,6 +587,16 @@ namespace DataAccess.Migrations
                     b.HasIndex("CompanyId");
 
                     b.HasDiscriminator().HasValue("ApplicationUser");
+                });
+
+            modelBuilder.Entity("Category", b =>
+                {
+                    b.HasOne("Models.SizeSystem", "DefaultSizeSystem")
+                        .WithMany("Categories")
+                        .HasForeignKey("SizeSystemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DefaultSizeSystem");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -566,7 +658,7 @@ namespace DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Models.ProductVariant", "ProductVariant")
+                    b.HasOne("ProductVariant", "ProductVariant")
                         .WithMany()
                         .HasForeignKey("ProductVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -590,24 +682,13 @@ namespace DataAccess.Migrations
 
             modelBuilder.Entity("Models.Product", b =>
                 {
-                    b.HasOne("Models.Category", "Category")
+                    b.HasOne("Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("Models.ProductVariant", b =>
-                {
-                    b.HasOne("Models.Product", "Product")
-                        .WithMany("Variants")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("Models.ShoppingCart", b =>
@@ -618,7 +699,7 @@ namespace DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Models.ProductVariant", "ProductVariant")
+                    b.HasOne("ProductVariant", "ProductVariant")
                         .WithMany()
                         .HasForeignKey("ProductVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -629,11 +710,42 @@ namespace DataAccess.Migrations
                     b.Navigation("ProductVariant");
                 });
 
+            modelBuilder.Entity("Models.SizeValue", b =>
+                {
+                    b.HasOne("Models.SizeSystem", "SizeSystem")
+                        .WithMany("SizeValues")
+                        .HasForeignKey("SizeSystemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SizeSystem");
+                });
+
+            modelBuilder.Entity("ProductVariant", b =>
+                {
+                    b.HasOne("Models.Product", "Product")
+                        .WithMany("Variants")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Models.SizeValue", "SizeValue")
+                        .WithMany("ProductVariants")
+                        .HasForeignKey("SizeValueId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SizeValue");
+                });
+
             modelBuilder.Entity("Models.ApplicationUser", b =>
                 {
                     b.HasOne("Models.Company", "Company")
                         .WithMany()
-                        .HasForeignKey("CompanyId");
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Company");
                 });
@@ -646,6 +758,18 @@ namespace DataAccess.Migrations
             modelBuilder.Entity("Models.Product", b =>
                 {
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Models.SizeSystem", b =>
+                {
+                    b.Navigation("Categories");
+
+                    b.Navigation("SizeValues");
+                });
+
+            modelBuilder.Entity("Models.SizeValue", b =>
+                {
+                    b.Navigation("ProductVariants");
                 });
 #pragma warning restore 612, 618
         }

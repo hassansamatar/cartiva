@@ -17,22 +17,30 @@ namespace CartivaWeb.Areas.Customer.Controllers
         }
 
         // List all products
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var products = _db.Products
+            var products = await _db.Products
                 .Include(p => p.Category)
-                .ToList();
+                    .ThenInclude(c => c.DefaultSizeSystem)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.SizeValue)
+                        .ThenInclude(sv => sv.SizeSystem)
+                .AsNoTracking()
+                .ToListAsync();
 
             return View(products);
         }
 
         // Product details with variants
-        public IActionResult Details(int id)
+        public async Task<IActionResult> Details(int id)
         {
-            var product = _db.Products
+            var product = await _db.Products
                 .Include(p => p.Category)
+                    .ThenInclude(c => c.DefaultSizeSystem)
                 .Include(p => p.Variants)
-                .FirstOrDefault(p => p.Id == id);
+                    .ThenInclude(v => v.SizeValue)
+                        .ThenInclude(sv => sv.SizeSystem)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
                 return NotFound();

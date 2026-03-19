@@ -1,48 +1,284 @@
-﻿@model Models.ProductVariant
+﻿@model ProductVariant
    
 @using System.Globalization
 
 @{
     ViewData["Title"] = "Delete Variant";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
 <div class="container p-3">
     <div class="row pt-4">
         <div class="col-12">
-            <h2 class="text-danger">Delete Variant</h2>
+            <h2 class="text-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i> Delete Variant
+            </h2>
             <hr />
         </div>
     </div>
 
+    @if (TempData["error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <div class="row">
-        <div class="col-md-6">
-            <h5>Are you sure you want to delete this variant?</h5>
+        <div class="col-md-8">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-circle-fill fs-4 me-2 align-middle"></i>
+                <strong>Warning:</strong> This action cannot be undone. The variant will be permanently deleted.
+            </div>
 
-            <dl class="row">
-                <dt class="col-sm-4">Color</dt>
-                <dd class="col-sm-8">@Model.Color</dd>
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Variant Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Product</dt>
+                        <dd class="col-sm-9">
+                            <i class="bi bi-tag text-primary me-1"></i>
+                            <strong>@ViewBag.ProductName</strong>
+                        </dd>
 
-                <dt class="col-sm-4">Size</dt>
-                <dd class="col-sm-8">@Model.Size</dd>
+                        <dt class="col-sm-3">Color</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge" style="background-color: @(GetColorCode(Model.Color)); color: @(GetTextColor(Model.Color)); padding: 0.5rem 1rem;">
+                                <i class="bi bi-droplet me-1"></i> @Model.Color
+                            </span>
+                        </dd>
 
-                <dt class="col-sm-4">Price</dt>
-             
+                        <dt class="col-sm-3">Size</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.SizeValue != null)
+                            {
+                                <div>
+                                    <span class="badge bg-secondary" style="padding: 0.5rem 1rem;">
+                                        <i class="bi bi-rulers me-1"></i> @Model.SizeValue.DisplayText
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(Model.SizeValue.Description))
+                                    {
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i> @Model.SizeValue.Description
+                                            </small>
+                                        </div>
+                                    }
+                                    @if (Model.SizeValue.SizeSystem != null)
+                                    {
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="bi @(Model.SizeValue.SizeSystem.IconClass ?? "bi-tag") me-1"></i>
+                                                System: @Model.SizeValue.SizeSystem.Name (@Model.SizeValue.SizeSystem.SizeType)
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-dash"></i> No size required (Accessory)
+                                </span>
+                            }
+                        </dd>
 
-<dd class="col-sm-8">@(@Model.Price.ToString("C", CultureInfo.GetCultureInfo("en-US")))</dd>
+                        <dt class="col-sm-3">Price</dt>
+                        <dd class="col-sm-9">
+                            <h5 class="text-primary mb-0">@Model.Price.ToString("C", culture)</h5>
+                        </dd>
 
-                <dt class="col-sm-4">Stock</dt>
-                <dd class="col-sm-8">@Model.Stock</dd>
-            </dl>
+                        <dt class="col-sm-3">Stock</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.Stock > 10)
+                            {
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> @Model.Stock in stock
+                                </span>
+                            }
+                            else if (Model.Stock > 0)
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle"></i> @Model.Stock left (low)
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle"></i> Out of stock
+                                </span>
+                            }
+                        </dd>
+                        
+                        <dt class="col-sm-3">Total Value</dt>
+                        <dd class="col-sm-9">
+                            <strong>@((Model.Price * Model.Stock).ToString("C", culture))</strong>
+                        </dd>
+                    </dl>
+                </div>
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="bi bi-clock-history"></i>
+                        Created: @(Model.Id > 0 ? "Recently" : "N/A")
+                    </small>
+                </div>
+            </div>
 
-            <form asp-action="VariantDelete" method="post">
+            <form asp-controller="Product" asp-action="DeleteProductVariantConfirmed" method="post" class="mt-4">
                 <input type="hidden" asp-for="Id" />
                 <input type="hidden" asp-for="ProductId" />
                 
-                <div class="mb-3">
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                    <a asp-action="VariantIndex" asp-route-productId="@Model.ProductId" class="btn btn-secondary">Cancel</a>
+                <div class="mb-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="bi bi-trash"></i> Confirm Delete
+                    </button>
+                    <a asp-controller="Product"
+                           asp-action="VariantIndex"
+                           asp-route-productId="@Model.ProductId"
+                           class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
                 </div>
             </form>
         </div>
+
+        <!-- Summary Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Deletion Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    
+                    <p class="mb-2">
+                        <strong>Product:</strong><br />
+                        <span class="badge bg-primary">@ViewBag.ProductName</span>
+                    </p>
+                    
+                    <p class="mb-2">
+                        <strong>Variant:</strong><br />
+                        <span class="badge" style="background-color: @(GetColorCode(Model.Color)); color: @(GetTextColor(Model.Color));">
+                            @Model.Color
+                        </span>
+                        @if (Model.SizeValue != null)
+                        {
+                            <span class="badge bg-secondary ms-1">
+                                @Model.SizeValue.DisplayText
+                            </span>
+                        }
+                    </p>
+                    
+                    <p class="mb-2">
+                        <strong>Financial Impact:</strong><br />
+                        <table class="table table-sm small">
+                            <tr>
+                                <td>Price:</td>
+                                <td class="text-end">@Model.Price.ToString("C", culture)</td>
+                            </tr>
+                            <tr>
+                                <td>Stock:</td>
+                                <td class="text-end">@Model.Stock</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total Value:</strong></td>
+                                <td class="text-end"><strong>@((Model.Price * Model.Stock).ToString("C", culture))</strong></td>
+                            </tr>
+                        </table>
+                    </p>
+                    
+                    <hr />
+                    
+                    <div class="alert alert-danger small py-2 mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>This action is permanent</strong> and cannot be reversed.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Alternative Products Card (Optional) -->
+            @if (ViewBag.HasOtherVariants != null && ViewBag.HasOtherVariants)
+            {
+                <div class="card mt-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="bi bi-boxes me-2"></i>
+                            Other Variants
+                        </h6>
+                    </div>
+                    <div class="card-body small">
+                        <p>This product has other variants available.</p>
+                        <a asp-controller="Product"
+                               asp-action="VariantIndex"
+                               asp-route-productId="@Model.ProductId"
+                               class="btn btn-sm btn-outline-primary w-100">
+                            <i class="bi bi-list"></i> View All Variants
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Double confirmation on delete button
+            $('#confirmDeleteBtn').click(function(e) {
+                if (!confirm('Are you absolutely sure you want to delete this variant? This action cannot be undone.')) {
+                    e.preventDefault();
+                    return false;
+                }
+                return true;
+            });
+            
+            // Log deletion attempt
+            console.log('Delete variant page loaded for ID: @Model.Id');
+        });
+    </script>
+}
+
+@functions {
+    public string GetColorCode(string color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+    
+    public string GetTextColor(string color)
+    {
+        // Return white for dark colors, black for light colors
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
+}

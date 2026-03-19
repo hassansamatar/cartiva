@@ -9,7 +9,7 @@
 @if (TempData["Success"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["Success"]
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
@@ -17,138 +17,270 @@
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["Error"]
+        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
 <div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Shopping Cart</li>
+        </ol>
+    </nav>
 
-    <h2 class="mb-3">My Cart</h2>
+    <h2 class="mb-4">
+        <i class="bi bi-cart"></i> My Shopping Cart
+        @if (Model.Any())
+        {
+            <span class="badge bg-primary ms-2">@Model.Count() items</span>
+        }
+    </h2>
 
     @if (!Model.Any())
     {
-        <p>Your cart is empty.</p>
-        <a asp-area="Customer" asp-controller="Home" asp-action="Index" class="btn btn-primary">
-            Back to Products
-        </a>
+        <div class="text-center py-5">
+            <i class="bi bi-cart-x" style="font-size: 4rem; color: #6c757d;"></i>
+            <h4 class="mt-3">Your cart is empty</h4>
+            <p class="text-muted">Looks like you haven't added any items to your cart yet.</p>
+            <a asp-area="Customer" asp-controller="Home" asp-action="Index" class="btn btn-primary mt-2">
+                <i class="bi bi-arrow-left"></i> Continue Shopping
+            </a>
+        </div>
     }
     else
     {
         <div class="table-responsive">
-
-            <table class="table table-bordered table-hover align-middle text-center">
+            <table class="table table-bordered table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th class="text-start">Product</th>
-                        <th>Variant</th>
-                        <th>Price</th>
-                        <th>Count</th>
-                        <th>Subtotal</th>
-                        <th>Actions</th>
+                        <th class="text-start" style="width: 35%">Product</th>
+                        <th style="width: 20%">Variant</th>
+                        <th style="width: 10%">Price</th>
+                        <th style="width: 15%">Quantity</th>
+                        <th style="width: 10%">Subtotal</th>
+                        <th style="width: 10%">Actions</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     @foreach (var item in Model)
                     {
                         <tr>
-
-                            <td class="d-flex align-items-center text-start">
-                                @if (!string.IsNullOrEmpty(item.ProductVariant.Product.ImageUrl))
-                                {
-                                    <img src="@item.ProductVariant.Product.ImageUrl"
-                                         alt="@item.ProductVariant.Product.Name"
-                                         class="img-thumbnail me-2"
-                                         style="width:60px;height:60px;object-fit:cover;" />
-                                }
-
-                                <span>@item.ProductVariant.Product.Name</span>
+                            <td class="text-start">
+                                <div class="d-flex align-items-center">
+                                    @if (!string.IsNullOrEmpty(item.ProductVariant.Product.ImageUrl))
+                                    {
+                                        <img src="@item.ProductVariant.Product.ImageUrl"
+                                             alt="@item.ProductVariant.Product.Name"
+                                             class="img-thumbnail me-3"
+                                             style="width:70px;height:70px;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="me-3 bg-light d-flex align-items-center justify-content-center"
+                                             style="width:70px;height:70px; border-radius:5px;">
+                                            <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                                        </div>
+                                    }
+                                    <div>
+                                        <strong>@item.ProductVariant.Product.Name</strong>
+                                        <br />
+                                        <small class="text-muted">@item.ProductVariant.Product.Brand</small>
+                                    </div>
+                                </div>
                             </td>
-
-                            <td>@item.ProductVariant.Color / @item.ProductVariant.Size</td>
-
-                            <td>@item.ProductVariant.Price.ToString("C", culture)</td>
-
                             <td>
-                                <div class="d-flex justify-content-center align-items-center gap-1">
-
+                                <div class="d-flex flex-column align-items-center">
+                                    <!-- Color Badge -->
+                                    <span class="badge mb-2"
+                                          style="background-color: @GetColorCode(item.ProductVariant.Color);
+                                        color: @GetTextColor(item.ProductVariant.Color);
+                                        padding: 0.5rem 1rem;">
+                                        <i class="bi bi-droplet me-1"></i> @item.ProductVariant.Color
+                                    </span>
+                                    
+                                    <!-- Size Display -->
+                                    @if (item.ProductVariant.SizeValue != null)
+                                    {
+                                        <span class="badge bg-secondary" style="padding: 0.5rem 1rem;">
+                                            <i class="bi bi-rulers me-1"></i>
+                                            @item.ProductVariant.SizeValue.DisplayText
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(item.ProductVariant.SizeValue.Description))
+                                        {
+                                            <small class="text-muted mt-1">@item.ProductVariant.SizeValue.Description</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary" style="padding: 0.5rem 1rem;">
+                                            <i class="bi bi-dash"></i> No Size
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <strong>@item.ProductVariant.Price.ToString("C", culture)</strong>
+                                @if (item.ProductVariant.Stock <= 5)
+                                {
+                                    <br />
+                                    <small class="text-danger">Only @item.ProductVariant.Stock left!</small>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center align-items-center gap-2">
                                     <form asp-area="Customer"
                                           asp-controller="Cart"
                                           asp-action="Decrement"
-                                          method="post">
+                                          method="post"
+                                          style="display: inline;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@item.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary">-</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                            @(item.Count <= 1 ? "disabled" : "")>
+                                            <i class="bi bi-dash"></i>
+                                        </button>
                                     </form>
 
-                                    <span class="px-2">@item.Count</span>
+                                    <span class="px-3 py-1 border rounded bg-light">@item.Count</span>
 
                                     <form asp-area="Customer"
                                           asp-controller="Cart"
                                           asp-action="Increment"
-                                          method="post">
+                                          method="post"
+                                          style="display: inline;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@item.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary">+</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                            @(item.Count >= item.ProductVariant.Stock ? "disabled" : "")>
+                                            <i class="bi bi-plus"></i>
+                                        </button>
                                     </form>
-
                                 </div>
+                                
+                                <!-- Update form for direct count input -->
+                                <form asp-area="Customer"
+                                      asp-controller="Cart"
+                                      asp-action="UpdateCount"
+                                      method="post"
+                                      class="mt-2 d-flex justify-content-center">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <div class="input-group input-group-sm" style="width: 120px;">
+                                        <input type="number" name="count" value="@item.Count"
+                                               min="1" max="@item.ProductVariant.Stock"
+                                               class="form-control text-center" />
+                                        <button type="submit" class="btn btn-outline-primary">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </div>
+                                </form>
                             </td>
-
                             <td>
-                                @((item.ProductVariant.Price * item.Count).ToString("C", culture))
+                                <strong class="text-primary">
+                                    @((item.ProductVariant.Price * item.Count).ToString("C", culture))
+                                </strong>
                             </td>
-
                             <td>
                                 <form asp-area="Customer"
                                       asp-controller="Cart"
                                       asp-action="Remove"
-                                      method="post">
+                                      method="post"
+                                      onsubmit="return confirm('Remove this item from your cart?');">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@item.Id" />
-
-                                    <button type="submit" class="btn btn-sm btn-danger">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
                             </td>
-
                         </tr>
                     }
                 </tbody>
-
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                        <td colspan="2">
+                            <h4 class="text-primary mb-0">
+                                @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)
+                            </h4>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
-
         </div>
 
-        <hr />
-
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
-
-            <h4 class="mb-3 mb-md-0">
-                Total: @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)
-            </h4>
-
-            <div class="d-flex gap-2">
-
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
+            <div>
                 <a asp-area="Customer"
                        asp-controller="Home"
                        asp-action="Index"
-                       class="btn btn-secondary">
-                    Continue Shopping
+                       class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Continue Shopping
                 </a>
-
-                <a asp-area="Customer"
-                       asp-controller="Order"
-                       asp-action="Checkout"
-                       class="btn btn-success">
-                    Proceed to Checkout
-                </a>
-
+                
+                <form asp-area="Customer"
+                      asp-controller="Cart"
+                      asp-action="RemoveAll"
+                      method="post"
+                      class="d-inline ms-2"
+                      onsubmit="return confirm('Remove all items from your cart?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Clear Cart
+                    </button>
+                </form>
             </div>
 
+            <a asp-area="Customer"
+                   asp-controller="Order"
+                   asp-action="Checkout"
+                   class="btn btn-success btn-lg mt-3 mt-md-0">
+                <i class="bi bi-credit-card"></i> Proceed to Checkout
+            </a>
         </div>
     }
-
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            console.log('Cart page loaded');
+        });
+    </script>
+}
+
+@functions {
+    public string GetColorCode(string color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+    
+    public string GetTextColor(string color)
+    {
+        // Return white for dark colors, black for light colors
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
+}

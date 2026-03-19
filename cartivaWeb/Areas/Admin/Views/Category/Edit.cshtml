@@ -1,37 +1,240 @@
-﻿@model Models.Category
+﻿@model Category
+@{
+    ViewData["Title"] = "Edit Category";
+}
 
-
-<form method="post">
-
-    @*<input asp-for="Id" hidden />*@
-    <div class="border p-3 mt-4">
-        <div class="row pb-2">
-            <h2 class="text-primary">Edit Category</h2>
-            <hr/>
+<div class="container">
+    <div class="row pt-4">
+        <div class="col-12">
+            <h2 class="text-primary">
+                <i class="bi bi-pencil-square"></i> Edit Category
+            </h2>
+            <hr />
         </div>
-        @*<div asp-validation-summary="ModelOnly"></div>*@
-       <div class="mb-3 row p-1">
-            <label asp-for="Name"  class="p-0"></label>
-            <input asp-for="Name" class="form-control"/>
-            <span asp-validation-for="Name" class="text-danger"></span>
-        </div>
-     
-
-        <div class="row">
-            <div class="col-6 col-md-3">
-                <button type="submit" class="btn btn-primary form-control" >Update</button>
-            </div>
-            <div class="col-6 col-md-3">
-                <a asp-controller="Category" asp-action="Index" class="btn btn-secondary border  form-control">
-                    Back to List
-                </a>
-            </div>
-        </div>
-
-
     </div>
-</form>
+
+    <div class="row">
+        <div class="col-md-8">
+            <form method="post" asp-controller="Category" asp-action="Edit">
+                <input type="hidden" asp-for="Id" />
+                
+                <div class="border p-3 mt-4">
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    
+                    <!-- Category Name -->
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label fw-bold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-tag"></i>
+                            </span>
+                            <input asp-for="Name" class="form-control" placeholder="Enter category name" />
+                        </div>
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Size System dropdown -->
+                    <div class="mb-3">
+                        <label asp-for="SizeSystemId" class="form-label fw-bold">Default Size System</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-rulers"></i>
+                            </span>
+                            <select asp-for="SizeSystemId" asp-items="@ViewBag.SizeSystemList" class="form-select" id="SizeSystemSelect">
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button" id="clearSizeSystem" title="Clear selection">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="SizeSystemId" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i>
+                            Select which size system this category typically uses (optional)
+                        </div>
+                        
+                        <!-- Current size system info -->
+                        @if (Model.DefaultSizeSystem != null)
+                        {
+                            <div class="mt-2 p-2 bg-light rounded border-start border-3 border-info">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi @(Model.DefaultSizeSystem.IconClass ?? "bi-tag") me-2 text-info fs-5"></i>
+                                    <div>
+                                        <strong>Currently using:</strong>
+                                        <span class="badge bg-info ms-2">@Model.DefaultSizeSystem.Name</span>
+                                        <span class="badge bg-light text-dark">@Model.DefaultSizeSystem.SizeType</span>
+                                        @if (!string.IsNullOrEmpty(Model.DefaultSizeSystem.Description))
+                                        {
+                                            <div class="small text-muted mt-1">
+                                                <i class="bi bi-info-circle"></i> @Model.DefaultSizeSystem.Description
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mt-2 p-2 bg-light rounded border-start border-3 border-secondary">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-dash-circle me-2 text-secondary"></i>
+                                    <span class="text-muted">No default size system currently selected</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="row mt-4">
+                        <div class="col-6 col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-save"></i> Update
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <a asp-controller="Category" asp-action="Index" class="btn btn-secondary w-100">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-question-circle"></i> About Size Systems
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <i class="bi bi-dot text-primary"></i>
+                        <strong>Size systems</strong> define what sizes are available for products in this category.
+                    </p>
+                    
+                    <hr class="my-2" />
+                    
+                    <h6 class="mt-2">Available Size Systems:</h6>
+                    @{
+                        var sizeSystems = ViewBag.SizeSystemList as IEnumerable<SelectListItem>;
+                        if (sizeSystems != null && sizeSystems.Count() > 1)
+                        {
+                            <ul class="list-unstyled small">
+                                @foreach (var item in sizeSystems.Skip(1)) // Skip the "-- None --" option
+                                {
+                                    <li class="mb-1">
+                                        <i class="bi bi-check-circle-fill text-success me-1" style="font-size: 0.8rem;"></i>
+                                        @item.Text
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                    
+                    <hr class="my-2" />
+                    
+                    <div class="alert alert-info small p-2 mb-0">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>Tip:</strong> Changing the size system will affect future product variants in this category.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preview Card -->
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye"></i> Live Preview
+                    </h6>
+                </div>
+                <div class="card-body text-center" id="previewCard">
+                    <div class="py-3">
+                        <i class="bi bi-folder display-4 text-primary"></i>
+                        <h5 class="mt-2" id="previewName">@Model.Name</h5>
+                        <div id="previewSizeSystem">
+                            @if (Model.DefaultSizeSystem != null)
+                            {
+                                <span class="badge bg-info">
+                                    @Model.DefaultSizeSystem.Name
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No size system</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage Stats Card -->
+            <div class="card mt-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-bar-chart"></i> Category Usage
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <strong>Products in this category:</strong>
+                        <span class="badge bg-primary float-end">@ViewBag.ProductCount</span>
+                    </p>
+                    <p class="mb-0">
+                        <strong>Variants:</strong>
+                        <span class="badge bg-info float-end">@ViewBag.VariantCount</span>
+                    </p>
+                    <hr />
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Editing category name won't affect existing products.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+    
+    <script>
+        $(document).ready(function() {
+            // Live preview on name change
+            $('#Name').on('input', function() {
+                var name = $(this).val();
+                $('#previewName').text(name || '@Model.Name');
+            });
+            
+            // Live preview on size system change
+            $('#SizeSystemSelect').change(function() {
+                var selectedOption = $(this).find('option:selected');
+                var selectedText = selectedOption.text();
+                var selectedValue = $(this).val();
+                
+                if (selectedValue) {
+                    $('#previewSizeSystem').html('<span class="badge bg-info">' + selectedText + '</span>');
+                } else {
+                    $('#previewSizeSystem').html('<span class="badge bg-secondary">No size system</span>');
+                }
+            });
+            
+            // Clear button functionality
+            $('#clearSizeSystem').click(function() {
+                $('#SizeSystemSelect').val('').trigger('change');
+            });
+            
+            // Focus on name field
+            $('#Name').focus();
+            
+            // Tooltip initialization (if any)
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
 }

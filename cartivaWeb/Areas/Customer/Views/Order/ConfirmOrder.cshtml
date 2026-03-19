@@ -8,28 +8,100 @@
 }
 
 <div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Cart" asp-action="Index">Cart</a></li>
+            <li class="breadcrumb-item"><a asp-action="Checkout">Checkout</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Confirm Order</li>
+        </ol>
+    </nav>
 
-    <h2 class="mb-4">Confirm Your Order</h2>
+    <h2 class="mb-4">
+        <i class="bi bi-check-circle"></i> Confirm Your Order
+    </h2>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
     <div class="row">
-
         <!-- SHIPPING INFO -->
         <div class="col-md-6">
             <div class="card mb-3 shadow-sm">
-                <div class="card-header">
-                    <h5>Shipping Information</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-truck"></i> Shipping Information
+                    </h5>
                 </div>
 
                 <div class="card-body">
-                    <p><strong>Name:</strong> @Model.OrderHeader.Name</p>
-                    <p><strong>Phone:</strong> @Model.OrderHeader.PhoneNumber</p>
-                    <p><strong>Address:</strong> @Model.OrderHeader.StreetAddress</p>
-                    <p><strong>City / State:</strong> @Model.OrderHeader.City, @Model.OrderHeader.State</p>
-                    <p><strong>Postal Code:</strong> @Model.OrderHeader.PostalCode</p>
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong><i class="bi bi-person"></i> Name:</strong></td>
+                            <td>@Model.OrderHeader.Name</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-telephone"></i> Phone:</strong></td>
+                            <td>@Model.OrderHeader.PhoneNumber</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-house-door"></i> Address:</strong></td>
+                            <td>@Model.OrderHeader.StreetAddress</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-building"></i> City/State:</strong></td>
+                            <td>@Model.OrderHeader.City, @Model.OrderHeader.State</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-mailbox"></i> Postal Code:</strong></td>
+                            <td>@Model.OrderHeader.PostalCode</td>
+                        </tr>
+                    </table>
 
-                    <a asp-action="Checkout" class="btn btn-secondary mt-3 w-100">
-                        Edit Shipping Info
+                    <a asp-action="Checkout" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="bi bi-pencil"></i> Edit Shipping Info
                     </a>
+                </div>
+            </div>
+            
+            <!-- Payment Method Summary -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-credit-card"></i> Payment Method
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (User.IsInRole(SD.Role_Company))
+                    {
+                        <div class="d-flex">
+                            <i class="bi bi-building text-primary fs-4 me-3"></i>
+                            <div>
+                                <h6>Company Account</h6>
+                                <p class="text-muted small mb-0">
+                                    Payment is due within 30 days from the order date.
+                                </p>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex">
+                            <i class="bi bi-credit-card text-success fs-4 me-3"></i>
+                            <div>
+                                <h6>Credit Card / Debit Card</h6>
+                                <p class="text-muted small mb-0">
+                                    You'll be redirected to our secure payment gateway.
+                                </p>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -37,71 +109,122 @@
         <!-- ORDER SUMMARY -->
         <div class="col-md-6">
             <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5>Order Summary</h5>
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cart-check"></i> Order Summary
+                        <span class="badge bg-light text-dark float-end">@Model.ShoppingCartList.Count items</span>
+                    </h5>
                 </div>
 
                 <div class="card-body">
-
-                    <table class="table table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Product</th>
-                                <th>Qty</th>
-                                <th class="text-end">Total</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach (var item in Model.ShoppingCartList)
-                            {
-                                var subtotal = item.ProductVariant.Price * item.Count;
-
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
                                 <tr>
-                                    <td>
-                                        @item.ProductVariant.Product.Name
-                                        <br />
-                                        <small class="text-muted">
-                                            @item.ProductVariant.Color / @item.ProductVariant.Size
-                                        </small>
-                                    </td>
+                                    <th>Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
 
-                                    <td class="text-center">
-                                        @item.Count
-                                    </td>
+                            <tbody>
+                                @foreach (var item in Model.ShoppingCartList)
+                                {
+                                    var subtotal = item.ProductVariant.Price * item.Count;
 
+                                    <tr>
+                                        <td>
+                                            <strong>@item.ProductVariant.Product.Name</strong>
+                                            <br />
+                                            <div class="d-flex align-items-center mt-1">
+                                                <!-- Color Badge -->
+                                                <span class="badge me-1"
+                                                      style="background-color: @GetColorCode(item.ProductVariant.Color);
+                                                    color: @GetTextColor(item.ProductVariant.Color);">
+                                                    <i class="bi bi-droplet"></i> @item.ProductVariant.Color
+                                                </span>
+                                                
+                                                <!-- Size Badge -->
+                                                @if (item.ProductVariant.SizeValue != null)
+                                                {
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-rulers"></i> @item.ProductVariant.SizeValue.DisplayText
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-dash"></i> No Size
+                                                    </span>
+                                                }
+                                            </div>
+                                            @if (item.ProductVariant.SizeValue?.Description != null)
+                                            {
+                                                <small class="text-muted d-block mt-1">
+                                                    @item.ProductVariant.SizeValue.Description
+                                                </small>
+                                            }
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <span class="fw-bold">@item.Count</span>
+                                        </td>
+                                        <td class="text-end align-middle">
+                                            <strong class="text-primary">@subtotal.ToString("C", culture)</strong>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="2" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td class="text-end">@Model.OrderTotal.ToString("C", culture)</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="text-end"><strong>Shipping:</strong></td>
+                                    <td class="text-end">Free</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="text-end"><strong>Total:</strong></td>
                                     <td class="text-end">
-                                        @subtotal.ToString("C", culture)
+                                        <h5 class="text-primary mb-0">@Model.OrderTotal.ToString("C", culture)</h5>
                                     </td>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-
-                    <hr />
-
-                    <h5 class="text-end">
-                        Total:
-                        <strong>@Model.OrderTotal.ToString("C", culture)</strong>
-                    </h5>
+                            </tfoot>
+                        </table>
+                    </div>
 
                     <!-- COMPANY PAYMENT MESSAGE -->
                     @if (User.IsInRole(SD.Role_Company))
                     {
-                        <p class="text-success mt-2">
-                            No payment is required now. Payment is due within 30 days from the order date.
-                        </p>
+                        <div class="alert alert-success mt-3">
+                            <div class="d-flex">
+                                <i class="bi bi-building fs-4 me-3"></i>
+                                <div>
+                                    <strong>Company Account Benefit:</strong>
+                                    <p class="small mb-0">
+                                        No payment is required now. Payment is due within 30 days from the order date.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     }
                     else
                     {
-                        <p class="text-warning mt-2">
-                            Payment will be required immediately after placing this order.
-                        </p>
+                        <div class="alert alert-warning mt-3">
+                            <div class="d-flex">
+                                <i class="bi bi-exclamation-triangle fs-4 me-3"></i>
+                                <div>
+                                    <strong>Payment Required Immediately:</strong>
+                                    <p class="small mb-0">
+                                        You will be redirected to our secure payment gateway after placing this order.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     }
 
                     <!-- PLACE ORDER FORM -->
                     <form asp-action="PlaceOrder" method="post">
-
                         @Html.AntiForgeryToken()
 
                         <!-- Hidden fields required for POST -->
@@ -114,20 +237,55 @@
                         <input type="hidden" asp-for="OrderHeader.PostalCode" />
                         <input type="hidden" asp-for="OrderTotal" />
 
-                        <button type="submit" class="btn btn-success w-100 mt-3">
+                        <button type="submit" class="btn btn-success w-100 mt-3 py-3">
+                            <i class="bi @(User.IsInRole(SD.Role_Company) ? "bi-building" : "bi-credit-card")"></i>
                             @(User.IsInRole(SD.Role_Company) ? "Place Order" : "Confirm & Pay")
                         </button>
-
                     </form>
 
+                    <p class="text-muted small text-center mt-3">
+                        <i class="bi bi-shield-lock"></i>
+                        Your information is secure and encrypted
+                    </p>
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+}
+
+@functions {
+    public string GetColorCode(string color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+    
+    public string GetTextColor(string color)
+    {
+        // Return white for dark colors, black for light colors
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
 }

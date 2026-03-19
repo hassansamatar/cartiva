@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
@@ -11,8 +12,8 @@ namespace Models
     {
         // Basic profile info
         // ======================
-        public string Name { get; set; }
-      
+        public string Name { get; set; } = string.Empty;
+
 
         // ======================
         // Address information
@@ -25,6 +26,7 @@ namespace Models
         public int? CompanyId { get; set; }
         [ForeignKey("CompanyId")]
         [ValidateNever]
-        public Company Company { get; set; }
+        [Required]
+        public Company? Company { get; set; }
     }
 }
