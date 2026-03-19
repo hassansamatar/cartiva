@@ -26,4 +26,5 @@ public class ProductVariant
 
     [ForeignKey("ProductId")]
     public Product Product { get; set; }  // Required - non-nullable
+    public ICollection<Review>? Reviews { get; set; }
 }

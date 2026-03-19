@@ -1,25 +1,20 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using System;
-using System.Collections.Generic;
+﻿using Models;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text;
 
-namespace Models
+public class ShoppingCart
 {
-    public class ShoppingCart
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
+    public string ApplicationUserId { get; set; }
+    public int ProductVariantId { get; set; }
+    public int Count { get; set; }
 
-        public int Count { get; set; }
+    // NEW: Tracking properties
+    public DateTime? DateAdded { get; set; }
+    public DateTime? LastUpdated { get; set; }
 
-        public string ApplicationUserId { get; set; }
-        [ForeignKey("ApplicationUserId")]
-        [ValidateNever]
-        public ApplicationUser ApplicationUser { get; set; }
+    [ForeignKey("ApplicationUserId")]
+    public ApplicationUser ApplicationUser { get; set; }
 
-        public int ProductVariantId { get; set; }
-        [ForeignKey("ProductVariantId")]
-        [ValidateNever]
-        public ProductVariant ProductVariant { get; set; }
-    }
+    [ForeignKey("ProductVariantId")]
+    public ProductVariant ProductVariant { get; set; }
 }

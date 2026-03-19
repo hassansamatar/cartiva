@@ -291,4 +291,88 @@ public class OrderController : Controller
 
         return View(orderHeader);
     }
+
+
+    // GET: Cancel Order Confirmation Page
+    [HttpGet]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var order = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.Product)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.SizeValue)
+                        .ThenInclude(sv => sv.SizeSystem)
+            .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == userId);
+
+        if (order == null)
+            return NotFound();
+
+        // Check if order can be cancelled
+        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved)
+        {
+            TempData["Error"] = "This order cannot be cancelled because it's already " + order.OrderStatus;
+            return RedirectToAction("Details", new { id });
+        }
+
+        return View(order);
+    }
+
+    // POST: Confirm Cancel Order
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmCancel(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var order = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+            .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == userId);
+
+        if (order == null)
+            return NotFound();
+
+        // Check if order can be cancelled
+        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved)
+        {
+            return Json(new
+            {
+                success = false,
+                message = $"This order cannot be cancelled because it's already {order.OrderStatus}"
+            });
+        }
+
+        // Update order status
+        order.OrderStatus = SD.StatusCancelled;
+        order.PaymentStatus = SD.PaymentStatusRefunded;
+
+        // Restore stock for each item
+        foreach (var detail in order.OrderDetails)
+        {
+            var variant = await _db.ProductVariants.FindAsync(detail.ProductVariantId);
+            if (variant != null)
+            {
+                variant.Stock += detail.Count;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        // If it's an AJAX request
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return Json(new
+            {
+                success = true,
+                message = "Order cancelled successfully. Stock has been restored."
+            });
+        }
+
+        TempData["Success"] = "Order cancelled successfully. Stock has been restored.";
+        return RedirectToAction("Details", new { id });
+    }
 }

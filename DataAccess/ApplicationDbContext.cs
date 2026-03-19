@@ -29,6 +29,9 @@ namespace DataAccess
         public DbSet<OrderHeader> OrderHeaders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
 
+        // NEW: Reviews table
+        public DbSet<Review> Reviews { get; set; }
+
         // ======================
         // Configure relationships
         // ======================
@@ -43,6 +46,7 @@ namespace DataAccess
             modelBuilder.Entity<ProductVariant>().ToTable("ProductVariants");
             modelBuilder.Entity<SizeSystem>().ToTable("SizeSystems");
             modelBuilder.Entity<SizeValue>().ToTable("SizeValues");
+            modelBuilder.Entity<Review>().ToTable("Reviews"); // NEW
 
             // ======================
             // Relationships
@@ -53,28 +57,41 @@ namespace DataAccess
                 .HasOne(v => v.Product)
                 .WithMany(p => p.Variants)
                 .HasForeignKey(v => v.ProductId)
-                .OnDelete(DeleteBehavior.Cascade); // delete variants if product is deleted
+                .OnDelete(DeleteBehavior.Cascade);
 
             // SizeSystem → SizeValues (one-to-many)
             modelBuilder.Entity<SizeValue>()
                 .HasOne(sv => sv.SizeSystem)
                 .WithMany(ss => ss.SizeValues)
                 .HasForeignKey(sv => sv.SizeSystemId)
-                .OnDelete(DeleteBehavior.Cascade); // delete size values if size system is deleted
+                .OnDelete(DeleteBehavior.Cascade);
 
             // ProductVariant → SizeValue (many-to-one)
             modelBuilder.Entity<ProductVariant>()
                 .HasOne(v => v.SizeValue)
                 .WithMany(sv => sv.ProductVariants)
                 .HasForeignKey(v => v.SizeValueId)
-                .OnDelete(DeleteBehavior.Restrict); // Prevent deleting sizes that are in use
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // FIXED: Category → SizeSystem relationship (many-to-one, not one-to-one)
+            // Category → SizeSystem relationship (many-to-one)
             modelBuilder.Entity<Category>()
                 .HasOne(c => c.DefaultSizeSystem)
-                .WithMany(ss => ss.Categories)  // SizeSystem can have many Categories
+                .WithMany(ss => ss.Categories)
                 .HasForeignKey(c => c.SizeSystemId)
-                .OnDelete(DeleteBehavior.SetNull); // If size system deleted, set SizeSystemId to null
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // NEW: Review relationships
+            modelBuilder.Entity<Review>()
+                .HasOne(r => r.ApplicationUser)
+                .WithMany() // If ApplicationUser doesn't have a Reviews collection
+                .HasForeignKey(r => r.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Review>()
+                .HasOne(r => r.ProductVariant)
+                .WithMany(pv => pv.Reviews) // You'll need to add this navigation property
+                .HasForeignKey(r => r.ProductVariantId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // ======================
             // Indexes for Performance
@@ -91,6 +108,24 @@ namespace DataAccess
 
             modelBuilder.Entity<SizeValue>()
                 .HasIndex(sv => sv.Value);
+
+            // NEW: Review indexes
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => r.ProductVariantId);
+
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => r.ApplicationUserId);
+
+            // Prevent duplicate reviews from same user on same product
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => new { r.ProductVariantId, r.ApplicationUserId })
+                .IsUnique();
+
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => r.Rating); // For filtering by rating
+
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => r.ReviewDate); // For sorting by date
 
             // ======================
             // Property Configurations
@@ -114,12 +149,12 @@ namespace DataAccess
 
             modelBuilder.Entity<ProductVariant>()
                 .Property(v => v.Price)
-                .HasPrecision(18, 2); // For currency
+                .HasPrecision(18, 2);
 
-            // Make SizeValueId nullable for products without sizes (like accessories)
+            // Make SizeValueId nullable for products without sizes (accessories)
             modelBuilder.Entity<ProductVariant>()
                 .Property(v => v.SizeValueId)
-                .IsRequired(false);  // Allow null for products without sizes
+                .IsRequired(false);
 
             // SizeSystem configuration
             modelBuilder.Entity<SizeSystem>()
@@ -160,6 +195,32 @@ namespace DataAccess
                 .Property(c => c.Name)
                 .HasMaxLength(30)
                 .IsRequired();
+
+            // NEW: ShoppingCart tracking properties (if added)
+            modelBuilder.Entity<ShoppingCart>()
+                .Property(sc => sc.DateAdded)
+                .HasDefaultValueSql("GETDATE()");
+
+            modelBuilder.Entity<ShoppingCart>()
+                .Property(sc => sc.LastUpdated)
+                .HasDefaultValueSql("GETDATE()");
+
+            // NEW: Review configurations
+            modelBuilder.Entity<Review>()
+                .Property(r => r.Comment)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<Review>()
+                .Property(r => r.Rating)
+                .IsRequired();
+
+            modelBuilder.Entity<Review>()
+                .Property(r => r.ReviewDate)
+                .HasDefaultValueSql("GETDATE()");
+
+            modelBuilder.Entity<Review>()
+                .Property(r => r.IsApproved)
+                .HasDefaultValue(false);
 
             // ======================
             // REMOVED ALL SEED DATA

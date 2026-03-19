@@ -1,0 +1,27 @@
+﻿<!-- Views/Order/Track.cshtml -->
+@model OrderHeader
+@{
+    ViewData["Title"] = $"Track Order #{Model.Id}";
+}
+
+<div class="container mt-4">
+    <h2>Track Order #@Model.Id</h2>
+    
+    @if (!string.IsNullOrEmpty(Model.TrackingNumber))
+    {
+        <div class="card">
+            <div class="card-body">
+                <h5>Tracking Number: @Model.TrackingNumber</h5>
+                <p>Carrier: @Model.Carrier</p>
+                <a href="@SD.GetTrackingUrl(Model.Carrier, Model.TrackingNumber)"
+                       target="_blank" class="btn btn-primary">
+                    Track with Carrier
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <p>Tracking information not available yet.</p>
+    }
+</div>
