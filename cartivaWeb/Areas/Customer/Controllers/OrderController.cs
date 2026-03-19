@@ -1,19 +1,25 @@
 ﻿using DataAccess;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Models;
 using Models.ViewModels;
-using System.Security.Claims;
 using MyUtility;
+using Stripe;
+using Stripe.V2.Core;
+using System.Security.Claims;
 
 [Area("Customer")]
 public class OrderController : Controller
 {
     private readonly ApplicationDbContext _db;
+    private readonly StripeSettings _stripeSettings;
 
-    public OrderController(ApplicationDbContext db)
+    public OrderController(ApplicationDbContext db, IOptions<StripeSettings> stripeSettings)
     {
         _db = db;
+        _stripeSettings = stripeSettings.Value;
+        StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
     }
 
     // =============================
@@ -119,10 +125,10 @@ public class OrderController : Controller
             var variant = cart.ProductVariant;
             if (variant.Stock < cart.Count)
             {
-                string sizeDisplay = variant.SizeValue != null 
-                    ? variant.SizeValue.DisplayText 
+                string sizeDisplay = variant.SizeValue != null
+                    ? variant.SizeValue.DisplayText
                     : "No Size";
-                    
+
                 TempData["Error"] = $"Not enough stock for {variant.Product?.Name} ({variant.Color}/{sizeDisplay}). Only {variant.Stock} left.";
                 return RedirectToAction("Checkout");
             }
@@ -162,7 +168,7 @@ public class OrderController : Controller
                 Price = cart.ProductVariant.Price
             };
             orderDetails.Add(orderDetail);
-            
+
             // Update stock
             cart.ProductVariant.Stock -= cart.Count;
         }
@@ -181,8 +187,97 @@ public class OrderController : Controller
         }
         else
         {
+            // Create Stripe Payment Intent for regular customers
             return RedirectToAction("Payment", new { orderId = model.OrderHeader.Id });
         }
+    }
+
+    // =============================
+    // PAYMENT PAGE (Stripe)
+    // =============================
+    [HttpGet]
+    public async Task<IActionResult> Payment(int orderId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var order = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.Product)
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.ApplicationUserId == userId);
+
+        if (order == null)
+        {
+            return NotFound();
+        }
+
+        // Create Stripe PaymentIntent
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = (long)(order.OrderTotal * 100), // Convert to cents
+            Currency = "nok", // Norwegian Krone
+            PaymentMethodTypes = new List<string> { "card" },
+            Metadata = new Dictionary<string, string>
+            {
+                { "orderId", order.Id.ToString() },
+                { "userId", userId }
+            }
+        };
+
+        var service = new PaymentIntentService();
+        var paymentIntent = await service.CreateAsync(options);
+
+        var vm = new PaymentVM
+        {
+            Order = order,
+            ClientSecret = paymentIntent.ClientSecret,
+            PublishableKey = _stripeSettings.PublishableKey,
+            PaymentIntentId = paymentIntent.Id
+        };
+
+        return View(vm);
+    }
+
+    // =============================
+    // CONFIRM PAYMENT (Stripe Return)
+    // =============================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmPayment(string paymentIntentId, int orderId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var order = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.ApplicationUserId == userId);
+
+        if (order == null)
+            return NotFound();
+
+        var service = new PaymentIntentService();
+        var paymentIntent = await service.GetAsync(paymentIntentId);
+
+        if (paymentIntent.Status == "succeeded")
+        {
+            // Update order status
+            order.PaymentStatus = SD.PaymentStatusApproved;
+            order.OrderStatus = SD.StatusApproved;
+            order.PaymentIntentId = paymentIntentId;
+            order.PaymentDate = DateTime.Now;
+
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = "Payment successful! Your order has been confirmed.";
+            return RedirectToAction("Receipt", new { id = order.Id });
+        }
+        else if (paymentIntent.Status == "requires_payment_method")
+        {
+            TempData["Error"] = "Payment failed. Please try again with a different payment method.";
+            return RedirectToAction("Payment", new { orderId });
+        }
+
+        TempData["Error"] = "Payment processing error. Please contact support.";
+        return RedirectToAction("Details", new { id = order.Id });
     }
 
     // =============================
@@ -207,48 +302,6 @@ public class OrderController : Controller
         }
 
         return View(orderHeader);
-    }
-
-    // =============================
-    // PAYMENT PAGE
-    // =============================
-    [HttpGet]
-    public async Task<IActionResult> Payment(int orderId)
-    {
-        var orderHeader = await _db.OrderHeaders
-            .Include(o => o.OrderDetails)
-            .FirstOrDefaultAsync(o => o.Id == orderId);
-
-        if (orderHeader == null)
-        {
-            return NotFound();
-        }
-
-        return View(orderHeader);
-    }
-
-    // =============================
-    // PROCESS PAYMENT (Mock)
-    // =============================
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ProcessPayment(int orderId)
-    {
-        var orderHeader = await _db.OrderHeaders
-            .FindAsync(orderId);
-
-        if (orderHeader == null)
-        {
-            return NotFound();
-        }
-
-        orderHeader.PaymentStatus = SD.PaymentStatusApproved;
-        orderHeader.OrderStatus = SD.StatusApproved;
-        orderHeader.PaymentDate = DateTime.Now;
-
-        await _db.SaveChangesAsync();
-
-        return RedirectToAction("Receipt", new { id = orderId });
     }
 
     // =============================
@@ -292,8 +345,9 @@ public class OrderController : Controller
         return View(orderHeader);
     }
 
-
-    // GET: Cancel Order Confirmation Page
+    // =============================
+    // CANCEL ORDER - GET
+    // =============================
     [HttpGet]
     public async Task<IActionResult> Cancel(int id)
     {
@@ -322,7 +376,9 @@ public class OrderController : Controller
         return View(order);
     }
 
-    // POST: Confirm Cancel Order
+    // =============================
+    // CONFIRM CANCEL ORDER - POST
+    // =============================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmCancel(int id)
@@ -346,9 +402,35 @@ public class OrderController : Controller
             });
         }
 
+        // If payment was made, issue refund via Stripe
+        if (!string.IsNullOrEmpty(order.PaymentIntentId) && order.PaymentStatus == SD.PaymentStatusApproved)
+        {
+            try
+            {
+                var options = new RefundCreateOptions
+                {
+                    PaymentIntent = order.PaymentIntentId
+                };
+                var service = new RefundService();
+                var refund = await service.CreateAsync(options);
+
+                if (refund.Status == "succeeded" || refund.Status == "pending")
+                {
+                    order.PaymentStatus = SD.PaymentStatusRefunded;
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Error processing refund: " + ex.Message
+                });
+            }
+        }
+
         // Update order status
         order.OrderStatus = SD.StatusCancelled;
-        order.PaymentStatus = SD.PaymentStatusRefunded;
 
         // Restore stock for each item
         foreach (var detail in order.OrderDetails)
@@ -375,4 +457,72 @@ public class OrderController : Controller
         TempData["Success"] = "Order cancelled successfully. Stock has been restored.";
         return RedirectToAction("Details", new { id });
     }
+
+    // =============================
+    // STRIPE WEBHOOK (Commented out - for future use)
+    // =============================
+    /*
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> Webhook()
+    {
+        var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+
+        try
+        {
+            var stripeEvent = EventUtility.ConstructEvent(
+                json,
+                Request.Headers["Stripe-Signature"],
+                _stripeSettings.WebhookSecret
+            );
+
+            // Handle the event
+            switch (stripeEvent.Type)
+            {
+                case Events.PaymentIntentSucceeded:
+                    var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
+
+                    if (paymentIntent?.Metadata != null && paymentIntent.Metadata.ContainsKey("orderId"))
+                    {
+                        var orderId = int.Parse(paymentIntent.Metadata["orderId"]);
+                        var order = await _db.OrderHeaders.FindAsync(orderId);
+
+                        if (order != null)
+                        {
+                            order.PaymentStatus = SD.PaymentStatusApproved;
+                            order.OrderStatus = SD.StatusApproved;
+                            order.PaymentIntentId = paymentIntent.Id;
+                            order.PaymentDate = DateTime.Now;
+                            await _db.SaveChangesAsync();
+
+                            Console.WriteLine($"Webhook: Order {orderId} payment succeeded");
+                        }
+                    }
+                    break;
+
+                case Events.PaymentIntentPaymentFailed:
+                    var failedIntent = stripeEvent.Data.Object as PaymentIntent;
+                    Console.WriteLine($"Webhook: Payment failed for intent {failedIntent?.Id}");
+                    break;
+
+                case Events.ChargeRefunded:
+                    var charge = stripeEvent.Data.Object as Charge;
+                    Console.WriteLine($"Webhook: Refund processed for charge {charge?.Id}");
+                    break;
+            }
+
+            return Ok();
+        }
+        catch (StripeException e)
+        {
+            Console.WriteLine($"Stripe webhook error: {e.Message}");
+            return BadRequest();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Webhook error: {e.Message}");
+            return BadRequest();
+        }
+    }
+    */
 }
