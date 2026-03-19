@@ -6,21 +6,7 @@
     var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
+<!-- Toastr notifications will appear here -->
 
 <div class="container mt-4">
     <!-- Breadcrumb -->
@@ -35,7 +21,7 @@
         <i class="bi bi-cart"></i> My Shopping Cart
         @if (Model.Any())
         {
-            <span class="badge bg-primary ms-2">@Model.Count() items</span>
+            <span class="badge bg-primary ms-2" id="totalItemsBadge">@Model.Count() items</span>
         }
     </h2>
 
@@ -53,7 +39,7 @@
     else
     {
         <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle">
+            <table class="table table-bordered table-hover align-middle" id="cartTable">
                 <thead class="table-light">
                     <tr>
                         <th class="text-start" style="width: 35%">Product</th>
@@ -64,10 +50,10 @@
                         <th style="width: 10%">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="cartItemsContainer">
                     @foreach (var item in Model)
                     {
-                        <tr>
+                        <tr id="cart-item-@item.Id" data-item-id="@item.Id" data-variant-id="@item.ProductVariantId" data-price="@item.ProductVariant.Price" data-stock="@item.ProductVariant.Stock">
                             <td class="text-start">
                                 <div class="d-flex align-items-center">
                                     @if (!string.IsNullOrEmpty(item.ProductVariant.Product.ImageUrl))
@@ -121,80 +107,58 @@
                                     }
                                 </div>
                             </td>
-                            <td>
+                            <td class="price-cell">
                                 <strong>@item.ProductVariant.Price.ToString("C", culture)</strong>
-                                @if (item.ProductVariant.Stock <= 5)
-                                {
-                                    <br />
-                                    <small class="text-danger">Only @item.ProductVariant.Stock left!</small>
-                                }
+                                <div class="stock-warning-@item.Id">
+                                    @if (item.ProductVariant.Stock <= 5)
+                                    {
+                                        <small class="text-danger">Only @item.ProductVariant.Stock left!</small>
+                                    }
+                                </div>
                             </td>
                             <td>
                                 <div class="d-flex justify-content-center align-items-center gap-2">
-                                    <form asp-area="Customer"
-                                          asp-controller="Cart"
-                                          asp-action="Decrement"
-                                          method="post"
-                                          style="display: inline;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@item.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                            @(item.Count <= 1 ? "disabled" : "")>
-                                            <i class="bi bi-dash"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary decrement-btn"
+                                            data-item-id="@item.Id"
+                                        @(item.Count <= 1 ? "disabled" : "")>
+                                        <i class="bi bi-dash"></i>
+                                    </button>
 
-                                    <span class="px-3 py-1 border rounded bg-light">@item.Count</span>
+                                    <span class="px-3 py-1 border rounded bg-light quantity-display" id="quantity-@item.Id">@item.Count</span>
 
-                                    <form asp-area="Customer"
-                                          asp-controller="Cart"
-                                          asp-action="Increment"
-                                          method="post"
-                                          style="display: inline;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@item.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                            @(item.Count >= item.ProductVariant.Stock ? "disabled" : "")>
-                                            <i class="bi bi-plus"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary increment-btn"
+                                            data-item-id="@item.Id"
+                                        @(item.Count >= item.ProductVariant.Stock ? "disabled" : "")>
+                                        <i class="bi bi-plus"></i>
+                                    </button>
                                 </div>
                                 
                                 <!-- Update form for direct count input -->
-                                <form asp-area="Customer"
-                                      asp-controller="Cart"
-                                      asp-action="UpdateCount"
-                                      method="post"
-                                      class="mt-2 d-flex justify-content-center">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.Id" />
+                                <div class="mt-2 d-flex justify-content-center">
                                     <div class="input-group input-group-sm" style="width: 120px;">
-                                        <input type="number" name="count" value="@item.Count"
+                                        <input type="number" class="form-control text-center quantity-input"
+                                               id="input-@item.Id"
+                                               value="@item.Count"
                                                min="1" max="@item.ProductVariant.Stock"
-                                               class="form-control text-center" />
-                                        <button type="submit" class="btn btn-outline-primary">
+                                               data-item-id="@item.Id" />
+                                        <button class="btn btn-outline-primary update-quantity-btn"
+                                                data-item-id="@item.Id">
                                             <i class="bi bi-check"></i>
                                         </button>
                                     </div>
-                                </form>
+                                </div>
                             </td>
-                            <td>
+                            <td class="subtotal-cell" id="subtotal-@item.Id">
                                 <strong class="text-primary">
                                     @((item.ProductVariant.Price * item.Count).ToString("C", culture))
                                 </strong>
                             </td>
                             <td>
-                                <form asp-area="Customer"
-                                      asp-controller="Cart"
-                                      asp-action="Remove"
-                                      method="post"
-                                      onsubmit="return confirm('Remove this item from your cart?');">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.Id" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"
+                                        data-item-id="@item.Id"
+                                        data-product-name="@item.ProductVariant.Product.Name">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     }
@@ -203,7 +167,7 @@
                     <tr>
                         <td colspan="4" class="text-end"><strong>Total:</strong></td>
                         <td colspan="2">
-                            <h4 class="text-primary mb-0">
+                            <h4 class="text-primary mb-0" id="cartTotal">
                                 @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)
                             </h4>
                         </td>
@@ -221,33 +185,405 @@
                     <i class="bi bi-arrow-left"></i> Continue Shopping
                 </a>
                 
-                <form asp-area="Customer"
-                      asp-controller="Cart"
-                      asp-action="RemoveAll"
-                      method="post"
-                      class="d-inline ms-2"
-                      onsubmit="return confirm('Remove all items from your cart?');">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="bi bi-trash"></i> Clear Cart
-                    </button>
-                </form>
+                <button type="button" class="btn btn-outline-danger ms-2" id="clearCartBtn">
+                    <i class="bi bi-trash"></i> Clear Cart
+                </button>
             </div>
 
             <a asp-area="Customer"
                    asp-controller="Order"
                    asp-action="Checkout"
-                   class="btn btn-success btn-lg mt-3 mt-md-0">
+                   class="btn btn-success btn-lg mt-3 mt-md-0"
+                   id="checkoutBtn">
                 <i class="bi bi-credit-card"></i> Proceed to Checkout
             </a>
         </div>
     }
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove <strong id="deleteProductName"></strong> from your cart?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="bi bi-trash"></i> Remove
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function() {
-            console.log('Cart page loaded');
+            // ======================
+            // VARIABLES
+            // ======================
+            let deleteItemId = null;
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+            // ======================
+            // HELPER FUNCTIONS
+            // ======================
+            
+            // Format currency helper
+            function formatCurrency(amount) {
+                return 'kr ' + amount.toFixed(2).replace('.', ',');
+            }
+
+            // Update cart total and item count
+            function updateTotals() {
+                let cartTotal = 0;
+                $('.subtotal-cell').each(function() {
+                    const subtotalText = $(this).text().replace('kr', '').replace(/\s/g, '').replace(',', '.');
+                    const subtotal = parseFloat(subtotalText) || 0;
+                    cartTotal += subtotal;
+                });
+                $('#cartTotal').text(formatCurrency(cartTotal));
+                
+                // Update items count
+                const itemCount = $('.quantity-display').length;
+                $('#totalItemsBadge').text(itemCount + (itemCount === 1 ? ' item' : ' items'));
+                
+                // Trigger navbar cart update
+                if (typeof window.updateCartCount === 'function') {
+                    window.updateCartCount();
+                } else {
+                    // Fallback: dispatch custom event
+                    document.dispatchEvent(new CustomEvent('cartUpdated'));
+                }
+            }
+
+            // Show toast message
+            function showToast(message, type = 'success') {
+                if (typeof toastr !== 'undefined') {
+                    toastr[type](message);
+                } else {
+                    alert(message);
+                }
+            }
+
+            // ======================
+            // INCREMENT BUTTON
+            // ======================
+            $('.increment-btn').click(function() {
+                const button = $(this);
+                const itemId = button.data('item-id');
+                const quantitySpan = $(`#quantity-${itemId}`);
+                const currentQty = parseInt(quantitySpan.text());
+                const maxStock = $(`#cart-item-${itemId}`).data('stock');
+                
+                if (currentQty < maxStock) {
+                    button.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: '@Url.Action("Increment", "Cart")',
+                        type: 'POST',
+                        data: {
+                            id: itemId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                const newQty = response.newCount;
+                                
+                                // Update UI
+                                quantitySpan.text(newQty);
+                                $(`#input-${itemId}`).val(newQty);
+                                
+                                // Update subtotal
+                                const price = $(`#cart-item-${itemId}`).data('price');
+                                const subtotal = price * newQty;
+                                $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
+                                
+                                // Enable/disable buttons
+                                if (newQty >= maxStock) {
+                                    button.prop('disabled', true);
+                                } else {
+                                    button.prop('disabled', false);
+                                }
+                                
+                                if (newQty > 1) {
+                                    $(`[data-item-id="${itemId}"].decrement-btn`).prop('disabled', false);
+                                }
+                                
+                                // Update totals
+                                updateTotals();
+                                
+                                // Show success message
+                                showToast(response.message || 'Quantity updated');
+                            } else {
+                                showToast(response.message || 'Failed to update quantity', 'error');
+                                button.prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            showToast('Failed to update quantity', 'error');
+                            button.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+
+            // ======================
+            // DECREMENT BUTTON
+            // ======================
+            $('.decrement-btn').click(function() {
+                const button = $(this);
+                const itemId = button.data('item-id');
+                const quantitySpan = $(`#quantity-${itemId}`);
+                const currentQty = parseInt(quantitySpan.text());
+                
+                if (currentQty > 1) {
+                    button.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: '@Url.Action("Decrement", "Cart")',
+                        type: 'POST',
+                        data: {
+                            id: itemId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                if (response.removed) {
+                                    // Item was removed (count became 0)
+                                    $(`#cart-item-${itemId}`).fadeOut(300, function() {
+                                        $(this).remove();
+                                        
+                                        if ($('#cartItemsContainer tr').length === 0) {
+                                            location.reload();
+                                        } else {
+                                            updateTotals();
+                                            showToast(response.message || 'Item removed');
+                                        }
+                                    });
+                                } else {
+                                    const newQty = response.newCount;
+                                    
+                                    // Update UI
+                                    quantitySpan.text(newQty);
+                                    $(`#input-${itemId}`).val(newQty);
+                                    
+                                    // Update subtotal
+                                    const price = $(`#cart-item-${itemId}`).data('price');
+                                    const subtotal = price * newQty;
+                                    $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
+                                    
+                                    // Enable/disable buttons
+                                    if (newQty <= 1) {
+                                        button.prop('disabled', true);
+                                    } else {
+                                        button.prop('disabled', false);
+                                    }
+                                    
+                                    const maxStock = $(`#cart-item-${itemId}`).data('stock');
+                                    if (newQty < maxStock) {
+                                        $(`[data-item-id="${itemId}"].increment-btn`).prop('disabled', false);
+                                    }
+                                    
+                                    // Update totals
+                                    updateTotals();
+                                    
+                                    // Show success message
+                                    showToast(response.message || 'Quantity updated');
+                                }
+                            } else {
+                                showToast(response.message || 'Failed to update quantity', 'error');
+                                button.prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            showToast('Failed to update quantity', 'error');
+                            button.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+
+            // ======================
+            // UPDATE QUANTITY BUTTON
+            // ======================
+            $('.update-quantity-btn').click(function() {
+                const button = $(this);
+                const itemId = button.data('item-id');
+                const input = $(`#input-${itemId}`);
+                const newQty = parseInt(input.val());
+                const maxStock = parseInt(input.attr('max'));
+                const minStock = parseInt(input.attr('min'));
+                
+                if (isNaN(newQty) || newQty < minStock || newQty > maxStock) {
+                    showToast(`Quantity must be between ${minStock} and ${maxStock}`, 'error');
+                    input.val($(`#quantity-${itemId}`).text());
+                    return;
+                }
+                
+                button.prop('disabled', true);
+                
+                $.ajax({
+                    url: '@Url.Action("UpdateCount", "Cart")',
+                    type: 'POST',
+                    data: {
+                        id: itemId,
+                        count: newQty,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            if (response.removed) {
+                                $(`#cart-item-${itemId}`).fadeOut(300, function() {
+                                    $(this).remove();
+                                    
+                                    if ($('#cartItemsContainer tr').length === 0) {
+                                        location.reload();
+                                    } else {
+                                        updateTotals();
+                                        showToast(response.message || 'Item removed');
+                                    }
+                                });
+                            } else {
+                                // Update UI
+                                $(`#quantity-${itemId}`).text(newQty);
+                                
+                                // Update subtotal
+                                const price = $(`#cart-item-${itemId}`).data('price');
+                                const subtotal = price * newQty;
+                                $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
+                                
+                                // Update button states
+                                const decrementBtn = $(`[data-item-id="${itemId}"].decrement-btn`);
+                                const incrementBtn = $(`[data-item-id="${itemId}"].increment-btn`);
+                                
+                                decrementBtn.prop('disabled', newQty <= 1);
+                                incrementBtn.prop('disabled', newQty >= maxStock);
+                                
+                                // Update totals
+                                updateTotals();
+                                
+                                showToast(response.message || 'Quantity updated');
+                            }
+                        } else {
+                            showToast(response.message || 'Failed to update quantity', 'error');
+                            input.val($(`#quantity-${itemId}`).text());
+                        }
+                        button.prop('disabled', false);
+                    },
+                    error: function() {
+                        showToast('Failed to update quantity', 'error');
+                        input.val($(`#quantity-${itemId}`).text());
+                        button.prop('disabled', false);
+                    }
+                });
+            });
+
+            // ======================
+            // REMOVE ITEM (Show Modal)
+            // ======================
+            $('.remove-item-btn').click(function() {
+                const button = $(this);
+                deleteItemId = button.data('item-id');
+                const productName = button.data('product-name');
+                $('#deleteProductName').text(productName);
+                deleteModal.show();
+            });
+
+            // ======================
+            // CONFIRM DELETE
+            // ======================
+            $('#confirmDeleteBtn').click(function() {
+                if (deleteItemId) {
+                    const button = $(this);
+                    button.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: '@Url.Action("Remove", "Cart")',
+                        type: 'POST',
+                        data: {
+                            id: deleteItemId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                $(`#cart-item-${deleteItemId}`).fadeOut(300, function() {
+                                    $(this).remove();
+                                    
+                                    if ($('#cartItemsContainer tr').length === 0) {
+                                        location.reload();
+                                    } else {
+                                        updateTotals();
+                                        showToast(response.message || 'Item removed');
+                                    }
+                                });
+                            } else {
+                                showToast(response.message || 'Failed to remove item', 'error');
+                            }
+                        },
+                        error: function() {
+                            showToast('Failed to remove item', 'error');
+                        },
+                        complete: function() {
+                            deleteModal.hide();
+                            deleteItemId = null;
+                            button.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+
+            // ======================
+            // CLEAR CART
+            // ======================
+            $('#clearCartBtn').click(function() {
+                if (confirm('Are you sure you want to remove all items from your cart?')) {
+                    const button = $(this);
+                    button.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: '@Url.Action("RemoveAll", "Cart")',
+                        type: 'POST',
+                        data: {
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                showToast(response.message || 'Cart cleared');
+                                setTimeout(() => location.reload(), 1000);
+                            }
+                        },
+                        error: function() {
+                            showToast('Failed to clear cart', 'error');
+                            button.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+
+            // ======================
+            // ENTER KEY ON INPUT
+            // ======================
+            $('.quantity-input').keypress(function(e) {
+                if (e.which === 13) {
+                    $(this).siblings('button').click();
+                }
+            });
+
+            // ======================
+            // INITIAL UPDATE
+            // ======================
+            updateTotals();
+            
+            console.log('Cart page loaded with AJAX functionality');
         });
     </script>
 }
@@ -276,7 +612,6 @@
     
     public string GetTextColor(string color)
     {
-        // Return white for dark colors, black for light colors
         return color?.ToLower() switch
         {
             "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",

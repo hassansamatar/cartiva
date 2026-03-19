@@ -36,15 +36,34 @@ namespace CartivaWeb.Areas.Customer.Controllers
             return View(cartItems);
         }
 
+        // GET: Get cart count for navbar badge
+        [HttpGet]
+        public async Task<IActionResult> GetCartCount()
+        {
+            if (!User.Identity.IsAuthenticated)
+            {
+                return Json(new { count = 0 });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var count = await _db.ShoppingCarts
+                .Where(c => c.ApplicationUserId == userId)
+                .SumAsync(c => c.Count);
+
+            return Json(new { count });
+        }
+
         // Add item to cart
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(int productVariantId, int count = 1)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var variant = await _db.ProductVariants
                 .Include(v => v.Product)
-                .Include(v => v.SizeValue)  // Add this to load size info
+                .Include(v => v.SizeValue)
                 .FirstOrDefaultAsync(v => v.Id == productVariantId);
 
             if (variant == null) return NotFound();
@@ -57,6 +76,15 @@ namespace CartivaWeb.Areas.Customer.Controllers
 
             if (totalRequested > variant.Stock)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Cannot add {count} items. Only {variant.Stock - (cartItem?.Count ?? 0)} left in stock."
+                    });
+                }
+
                 TempData["Error"] = $"Cannot add {count} items. Only {variant.Stock - (cartItem?.Count ?? 0)} left in stock.";
                 return RedirectToAction("Details", "Home", new { id = variant.ProductId });
             }
@@ -76,142 +104,241 @@ namespace CartivaWeb.Areas.Customer.Controllers
 
             await _db.SaveChangesAsync();
 
-            // Fix: Use DisplayText instead of SizeValue object
+            // Get updated cart count
+            var cartCount = await _db.ShoppingCarts
+                .Where(c => c.ApplicationUserId == userId)
+                .SumAsync(c => c.Count);
+
             string sizeDisplay = variant.SizeValue != null
                 ? variant.SizeValue.DisplayText
                 : "No Size";
 
-            TempData["Success"] = $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay}) added to your cart!";
+            // If it's an AJAX request, return JSON
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new
+                {
+                    success = true,
+                    cartCount = cartCount,
+                    message = $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay}) added to your cart!"
+                });
+            }
 
+            TempData["Success"] = $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay}) added to your cart!";
             return RedirectToAction("Details", "Home", new { id = variant.ProductId });
         }
 
         // Increment quantity
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Increment(int id)
         {
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
                 .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)  // Add this for size display
+                    .ThenInclude(v => v.SizeValue)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (cartItem != null)
+            if (cartItem == null)
             {
-                if (cartItem.Count < cartItem.ProductVariant.Stock)
-                {
-                    cartItem.Count++;
-                    await _db.SaveChangesAsync();
-
-                    string sizeDisplay = cartItem.ProductVariant.SizeValue != null
-                        ? cartItem.ProductVariant.SizeValue.DisplayText
-                        : "No Size";
-
-                    TempData["Success"] = $"Increased quantity of {cartItem.ProductVariant.Product?.Name} ({cartItem.ProductVariant.Color}/{sizeDisplay}) to {cartItem.Count}.";
-                }
-                else
-                {
-                    TempData["Error"] = $"Cannot add more than {cartItem.ProductVariant.Stock} in stock.";
-                }
+                return Json(new { success = false, message = "Cart item not found." });
             }
 
-            return RedirectToAction("Index");
+            if (cartItem.Count >= cartItem.ProductVariant.Stock)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Cannot add more than {cartItem.ProductVariant.Stock} in stock."
+                });
+            }
+
+            cartItem.Count++;
+            await _db.SaveChangesAsync();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cartCount = await _db.ShoppingCarts
+                .Where(c => c.ApplicationUserId == userId)
+                .SumAsync(c => c.Count);
+
+            string sizeDisplay = cartItem.ProductVariant.SizeValue != null
+                ? cartItem.ProductVariant.SizeValue.DisplayText
+                : "No Size";
+
+            return Json(new
+            {
+                success = true,
+                newCount = cartItem.Count,
+                cartCount = cartCount,
+                subtotal = (cartItem.ProductVariant.Price * cartItem.Count).ToString("C"),
+                message = $"Increased quantity of {cartItem.ProductVariant.Product?.Name} ({cartItem.ProductVariant.Color}/{sizeDisplay}) to {cartItem.Count}."
+            });
         }
 
         // Decrement quantity
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Decrement(int id)
         {
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
                 .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)  // Add this for size display
+                    .ThenInclude(v => v.SizeValue)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (cartItem != null)
+            if (cartItem == null)
             {
-                string productInfo = GetProductInfo(cartItem.ProductVariant);
-
-                cartItem.Count--;
-                if (cartItem.Count <= 0)
-                {
-                    _db.ShoppingCarts.Remove(cartItem);
-                    TempData["Success"] = $"{productInfo} removed from your cart.";
-                }
-                else
-                {
-                    TempData["Success"] = $"Decreased quantity of {productInfo} to {cartItem.Count}.";
-                }
-
-                await _db.SaveChangesAsync();
+                return Json(new { success = false, message = "Cart item not found." });
             }
 
-            return RedirectToAction("Index");
+            string productInfo = GetProductInfo(cartItem.ProductVariant);
+            bool removed = false;
+
+            cartItem.Count--;
+            if (cartItem.Count <= 0)
+            {
+                _db.ShoppingCarts.Remove(cartItem);
+                removed = true;
+            }
+
+            await _db.SaveChangesAsync();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cartCount = await _db.ShoppingCarts
+                .Where(c => c.ApplicationUserId == userId)
+                .SumAsync(c => c.Count);
+
+            if (removed)
+            {
+                return Json(new
+                {
+                    success = true,
+                    removed = true,
+                    itemId = id,
+                    cartCount = cartCount,
+                    message = $"{productInfo} removed from your cart."
+                });
+            }
+
+            return Json(new
+            {
+                success = true,
+                newCount = cartItem.Count,
+                cartCount = cartCount,
+                subtotal = (cartItem.ProductVariant.Price * cartItem.Count).ToString("C"),
+                message = $"Decreased quantity of {productInfo} to {cartItem.Count}."
+            });
         }
 
         // Update quantity directly
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateCount(int id, int count)
         {
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
                 .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)  // Add this for size display
+                    .ThenInclude(v => v.SizeValue)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (cartItem != null)
+            if (cartItem == null)
             {
-                string productInfo = GetProductInfo(cartItem.ProductVariant);
-
-                if (count <= 0)
-                {
-                    _db.ShoppingCarts.Remove(cartItem);
-                    TempData["Success"] = $"{productInfo} removed from your cart.";
-                }
-                else if (count > cartItem.ProductVariant.Stock)
-                {
-                    TempData["Error"] = $"Cannot set quantity higher than available stock ({cartItem.ProductVariant.Stock}).";
-                }
-                else
-                {
-                    cartItem.Count = count;
-                    TempData["Success"] = $"Updated quantity of {productInfo} to {count}.";
-                }
-
-                await _db.SaveChangesAsync();
+                return Json(new { success = false, message = "Cart item not found." });
             }
 
-            return RedirectToAction("Index");
+            string productInfo = GetProductInfo(cartItem.ProductVariant);
+            bool removed = false;
+
+            if (count <= 0)
+            {
+                _db.ShoppingCarts.Remove(cartItem);
+                removed = true;
+            }
+            else if (count > cartItem.ProductVariant.Stock)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Cannot set quantity higher than available stock ({cartItem.ProductVariant.Stock})."
+                });
+            }
+            else
+            {
+                cartItem.Count = count;
+            }
+
+            await _db.SaveChangesAsync();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cartCount = await _db.ShoppingCarts
+                .Where(c => c.ApplicationUserId == userId)
+                .SumAsync(c => c.Count);
+
+            if (removed)
+            {
+                return Json(new
+                {
+                    success = true,
+                    removed = true,
+                    itemId = id,
+                    cartCount = cartCount,
+                    message = $"{productInfo} removed from your cart."
+                });
+            }
+
+            return Json(new
+            {
+                success = true,
+                newCount = cartItem.Count,
+                cartCount = cartCount,
+                subtotal = (cartItem.ProductVariant.Price * cartItem.Count).ToString("C"),
+                message = $"Updated quantity of {productInfo} to {count}."
+            });
         }
 
         // Remove single item
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Remove(int id)
         {
             var cartItem = await _db.ShoppingCarts
                 .Include(c => c.ProductVariant)
                     .ThenInclude(v => v.Product)
                 .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)  // Add this for size display
+                    .ThenInclude(v => v.SizeValue)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (cartItem != null)
+            if (cartItem == null)
             {
-                string productInfo = GetProductInfo(cartItem.ProductVariant);
-
-                _db.ShoppingCarts.Remove(cartItem);
-                await _db.SaveChangesAsync();
-                TempData["Success"] = $"{productInfo} removed from your cart.";
+                return Json(new { success = false, message = "Cart item not found." });
             }
 
-            return RedirectToAction("Index");
+            string productInfo = GetProductInfo(cartItem.ProductVariant);
+
+            _db.ShoppingCarts.Remove(cartItem);
+            await _db.SaveChangesAsync();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cartCount = await _db.ShoppingCarts
+                .Where(c => c.ApplicationUserId == userId)
+                .SumAsync(c => c.Count);
+
+            return Json(new
+            {
+                success = true,
+                removed = true,
+                itemId = id,
+                cartCount = cartCount,
+                message = $"{productInfo} removed from your cart."
+            });
         }
 
         // Remove all items
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveAll()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -221,9 +348,13 @@ namespace CartivaWeb.Areas.Customer.Controllers
 
             _db.ShoppingCarts.RemoveRange(cartItems);
             await _db.SaveChangesAsync();
-            TempData["Success"] = "All items removed from your cart.";
 
-            return RedirectToAction("Index");
+            return Json(new
+            {
+                success = true,
+                cartCount = 0,
+                message = "All items removed from your cart."
+            });
         }
 
         // Helper method to get product info with size display
