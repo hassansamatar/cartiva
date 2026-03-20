@@ -6,9 +6,50 @@
     var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
-<!-- Toastr notifications will appear here -->
+<style>
+    /* Cart Page Styles */
+    .cart-item {
+        transition: all 0.3s ease;
+    }
+    .cart-item-removing {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    .quantity-btn:active {
+        transform: scale(0.95);
+    }
+    .loading-spinner-small {
+        display: inline-block;
+        width: 0.8rem;
+        height: 0.8rem;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.6s linear infinite;
+    }
+    /* Keyframes must be inside style tag */
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .toast-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1055;
+    }
+    .cart-table th, .cart-table td {
+        vertical-align: middle;
+    }
+    .quantity-input {
+        width: 60px;
+        text-align: center;
+    }
+</style>
 
 <div class="container mt-4">
+    <!-- Toast Container for Notifications -->
+    <div class="toast-container"></div>
+
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -39,7 +80,7 @@
     else
     {
         <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle" id="cartTable">
+            <table class="table table-bordered table-hover align-middle cart-table">
                 <thead class="table-light">
                     <tr>
                         <th class="text-start" style="width: 35%">Product</th>
@@ -48,12 +89,11 @@
                         <th style="width: 15%">Quantity</th>
                         <th style="width: 10%">Subtotal</th>
                         <th style="width: 10%">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="cartItemsContainer">
+                    </thead>
+                <tbody id="cart-items-container">
                     @foreach (var item in Model)
                     {
-                        <tr id="cart-item-@item.Id" data-item-id="@item.Id" data-variant-id="@item.ProductVariantId" data-price="@item.ProductVariant.Price" data-stock="@item.ProductVariant.Stock">
+                        <tr id="cart-item-@item.Id" class="cart-item" data-item-id="@item.Id" data-price="@item.ProductVariant.Price" data-stock="@item.ProductVariant.Stock">
                             <td class="text-start">
                                 <div class="d-flex align-items-center">
                                     @if (!string.IsNullOrEmpty(item.ProductVariant.Product.ImageUrl))
@@ -76,23 +116,19 @@
                                         <small class="text-muted">@item.ProductVariant.Product.Brand</small>
                                     </div>
                                 </div>
-                            </td>
-                            <td>
+                             </td>
+                             <td>
                                 <div class="d-flex flex-column align-items-center">
-                                    <!-- Color Badge -->
                                     <span class="badge mb-2"
                                           style="background-color: @GetColorCode(item.ProductVariant.Color);
-                                        color: @GetTextColor(item.ProductVariant.Color);
-                                        padding: 0.5rem 1rem;">
+                                                color: @GetTextColor(item.ProductVariant.Color);
+                                                padding: 0.5rem 1rem;">
                                         <i class="bi bi-droplet me-1"></i> @item.ProductVariant.Color
                                     </span>
-                                    
-                                    <!-- Size Display -->
                                     @if (item.ProductVariant.SizeValue != null)
                                     {
                                         <span class="badge bg-secondary" style="padding: 0.5rem 1rem;">
-                                            <i class="bi bi-rulers me-1"></i>
-                                            @item.ProductVariant.SizeValue.DisplayText
+                                            <i class="bi bi-rulers me-1"></i> @item.ProductVariant.SizeValue.DisplayText
                                         </span>
                                         @if (!string.IsNullOrEmpty(item.ProductVariant.SizeValue.Description))
                                         {
@@ -106,484 +142,364 @@
                                         </span>
                                     }
                                 </div>
-                            </td>
-                            <td class="price-cell">
+                             </td>
+                             <td class="price-cell">
                                 <strong>@item.ProductVariant.Price.ToString("C", culture)</strong>
-                                <div class="stock-warning-@item.Id">
-                                    @if (item.ProductVariant.Stock <= 5)
-                                    {
-                                        <small class="text-danger">Only @item.ProductVariant.Stock left!</small>
-                                    }
-                                </div>
-                            </td>
-                            <td>
+                                @if (item.ProductVariant.Stock <= 5)
+                                {
+                                    <br />
+                                    <small class="text-danger">Only @item.ProductVariant.Stock left!</small>
+                                }
+                             </td>
+                             <td>
                                 <div class="d-flex justify-content-center align-items-center gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary decrement-btn"
-                                            data-item-id="@item.Id"
-                                        @(item.Count <= 1 ? "disabled" : "")>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary decrement-btn" data-item-id="@item.Id" @(item.Count <= 1 ? "disabled" : "")>
                                         <i class="bi bi-dash"></i>
                                     </button>
-
-                                    <span class="px-3 py-1 border rounded bg-light quantity-display" id="quantity-@item.Id">@item.Count</span>
-
-                                    <button type="button" class="btn btn-sm btn-outline-secondary increment-btn"
-                                            data-item-id="@item.Id"
-                                        @(item.Count >= item.ProductVariant.Stock ? "disabled" : "")>
+                                    <span class="px-3 py-1 border rounded bg-light quantity-display" id="qty-@item.Id">@item.Count</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary increment-btn" data-item-id="@item.Id" @(item.Count >= item.ProductVariant.Stock ? "disabled" : "")>
                                         <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
-                                
-                                <!-- Update form for direct count input -->
                                 <div class="mt-2 d-flex justify-content-center">
-                                    <div class="input-group input-group-sm" style="width: 120px;">
-                                        <input type="number" class="form-control text-center quantity-input"
-                                               id="input-@item.Id"
-                                               value="@item.Count"
-                                               min="1" max="@item.ProductVariant.Stock"
-                                               data-item-id="@item.Id" />
-                                        <button class="btn btn-outline-primary update-quantity-btn"
-                                                data-item-id="@item.Id">
+                                    <div class="input-group input-group-sm" style="width: 110px;">
+                                        <input type="number" class="form-control text-center quantity-input" id="qty-input-@item.Id" value="@item.Count" min="1" max="@item.ProductVariant.Stock" />
+                                        <button type="button" class="btn btn-outline-primary update-qty-btn" data-item-id="@item.Id">
                                             <i class="bi bi-check"></i>
                                         </button>
                                     </div>
                                 </div>
-                            </td>
-                            <td class="subtotal-cell" id="subtotal-@item.Id">
-                                <strong class="text-primary">
-                                    @((item.ProductVariant.Price * item.Count).ToString("C", culture))
-                                </strong>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"
-                                        data-item-id="@item.Id"
-                                        data-product-name="@item.ProductVariant.Product.Name">
+                             </td>
+                             <td class="subtotal-cell" id="subtotal-@item.Id">
+                                <strong class="text-primary">@((item.ProductVariant.Price * item.Count).ToString("C", culture))</strong>
+                             </td>
+                             <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" data-item-id="@item.Id" data-product-name="@item.ProductVariant.Product.Name">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            </td>
-                        </tr>
+                             </td>
+                         </tr>
                     }
                 </tbody>
                 <tfoot class="table-light">
-                    <tr>
+                     <tr>
                         <td colspan="4" class="text-end"><strong>Total:</strong></td>
                         <td colspan="2">
                             <h4 class="text-primary mb-0" id="cartTotal">
                                 @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)
                             </h4>
                         </td>
-                    </tr>
+                     </tr>
                 </tfoot>
-            </table>
+             </table>
         </div>
 
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
             <div>
-                <a asp-area="Customer"
-                       asp-controller="Home"
-                       asp-action="Index"
-                       class="btn btn-outline-secondary">
+                <a asp-area="Customer" asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Continue Shopping
                 </a>
-                
                 <button type="button" class="btn btn-outline-danger ms-2" id="clearCartBtn">
                     <i class="bi bi-trash"></i> Clear Cart
                 </button>
             </div>
-
-            <a asp-area="Customer"
-                   asp-controller="Order"
-                   asp-action="Checkout"
-                   class="btn btn-success btn-lg mt-3 mt-md-0"
-                   id="checkoutBtn">
+            <a asp-area="Customer" asp-controller="Order" asp-action="Checkout" class="btn btn-success btn-lg mt-3 mt-md-0">
                 <i class="bi bi-credit-card"></i> Proceed to Checkout
             </a>
         </div>
     }
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle"></i> Confirm Delete
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to remove <strong id="deleteProductName"></strong> from your cart?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                    <i class="bi bi-trash"></i> Remove
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @section Scripts {
     <script>
         $(document).ready(function() {
-            // ======================
-            // VARIABLES
-            // ======================
-            let deleteItemId = null;
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-
-            // ======================
-            // HELPER FUNCTIONS
-            // ======================
-            
-            // Format currency helper
+            // Helper Functions
             function formatCurrency(amount) {
-                return 'kr ' + amount.toFixed(2).replace('.', ',');
+                return new Intl.NumberFormat('nb-NO', {
+                    style: 'currency',
+                    currency: 'NOK'
+                }).format(amount);
             }
 
-            // Update cart total and item count
-            function updateTotals() {
-                let cartTotal = 0;
-                $('.subtotal-cell').each(function() {
-                    const subtotalText = $(this).text().replace('kr', '').replace(/\s/g, '').replace(',', '.');
-                    const subtotal = parseFloat(subtotalText) || 0;
-                    cartTotal += subtotal;
-                });
-                $('#cartTotal').text(formatCurrency(cartTotal));
+            function showToast(message, type = 'success') {
+                const bgColor = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-warning');
+                const icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-triangle' : 'info-circle');
                 
-                // Update items count
-                const itemCount = $('.quantity-display').length;
+                const toast = $(`
+                    <div class="toast align-items-center text-white ${bgColor} border-0 show" role="alert" data-bs-autohide="true" data-bs-delay="3000">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="bi bi-${icon} me-2"></i> ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                `);
+                
+                $('.toast-container').append(toast);
+                
+                setTimeout(() => {
+                    toast.fadeOut(300, () => toast.remove());
+                }, 3000);
+            }
+
+            function updateCartTotals() {
+                let total = 0;
+                let itemCount = 0;
+                
+                $('.cart-item').each(function() {
+                    const price = parseFloat($(this).data('price'));
+                    const qty = parseInt($(this).find('.quantity-display').text());
+                    total += price * qty;
+                    itemCount++;
+                });
+                
+                $('#cartTotal').text(formatCurrency(total));
                 $('#totalItemsBadge').text(itemCount + (itemCount === 1 ? ' item' : ' items'));
                 
-                // Trigger navbar cart update
                 if (typeof window.updateCartCount === 'function') {
                     window.updateCartCount();
-                } else {
-                    // Fallback: dispatch custom event
-                    document.dispatchEvent(new CustomEvent('cartUpdated'));
                 }
             }
 
-            // Show toast message
-            function showToast(message, type = 'success') {
-                if (typeof toastr !== 'undefined') {
-                    toastr[type](message);
-                } else {
-                    alert(message);
-                }
+            function updateSubtotal(itemId, newQty) {
+                const price = $(`#cart-item-${itemId}`).data('price');
+                const subtotal = price * newQty;
+                $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
             }
 
-            // ======================
-            // INCREMENT BUTTON
-            // ======================
+            // Increment Button
             $('.increment-btn').click(function() {
-                const button = $(this);
-                const itemId = button.data('item-id');
-                const quantitySpan = $(`#quantity-${itemId}`);
-                const currentQty = parseInt(quantitySpan.text());
-                const maxStock = $(`#cart-item-${itemId}`).data('stock');
+                const btn = $(this);
+                const itemId = btn.data('item-id');
+                const qtySpan = $(`#qty-${itemId}`);
+                const currentQty = parseInt(qtySpan.text());
+                const maxStock = parseInt($(`#cart-item-${itemId}`).data('stock'));
                 
                 if (currentQty < maxStock) {
-                    button.prop('disabled', true);
+                    const newQty = currentQty + 1;
+                    btn.prop('disabled', true);
+                    $(`#qty-input-${itemId}`).val(newQty);
                     
                     $.ajax({
                         url: '@Url.Action("Increment", "Cart")',
                         type: 'POST',
-                        data: {
-                            id: itemId,
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                        },
+                        data: { id: itemId, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                         success: function(response) {
                             if (response.success) {
-                                const newQty = response.newCount;
+                                qtySpan.text(newQty);
+                                updateSubtotal(itemId, newQty);
                                 
-                                // Update UI
-                                quantitySpan.text(newQty);
-                                $(`#input-${itemId}`).val(newQty);
+                                if (newQty >= maxStock) btn.prop('disabled', true);
+                                else btn.prop('disabled', false);
                                 
-                                // Update subtotal
-                                const price = $(`#cart-item-${itemId}`).data('price');
-                                const subtotal = price * newQty;
-                                $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
+                                if (newQty > 1) $(`[data-item-id="${itemId}"].decrement-btn`).prop('disabled', false);
                                 
-                                // Enable/disable buttons
-                                if (newQty >= maxStock) {
-                                    button.prop('disabled', true);
-                                } else {
-                                    button.prop('disabled', false);
-                                }
-                                
-                                if (newQty > 1) {
-                                    $(`[data-item-id="${itemId}"].decrement-btn`).prop('disabled', false);
-                                }
-                                
-                                // Update totals
-                                updateTotals();
-                                
-                                // Show success message
-                                showToast(response.message || 'Quantity updated');
+                                updateCartTotals();
+                                showToast('Quantity updated');
                             } else {
-                                showToast(response.message || 'Failed to update quantity', 'error');
-                                button.prop('disabled', false);
+                                showToast(response.message || 'Failed to update', 'error');
+                                btn.prop('disabled', false);
                             }
                         },
                         error: function() {
-                            showToast('Failed to update quantity', 'error');
-                            button.prop('disabled', false);
+                            showToast('Network error', 'error');
+                            btn.prop('disabled', false);
                         }
                     });
                 }
             });
 
-            // ======================
-            // DECREMENT BUTTON
-            // ======================
+            // Decrement Button
             $('.decrement-btn').click(function() {
-                const button = $(this);
-                const itemId = button.data('item-id');
-                const quantitySpan = $(`#quantity-${itemId}`);
-                const currentQty = parseInt(quantitySpan.text());
+                const btn = $(this);
+                const itemId = btn.data('item-id');
+                const qtySpan = $(`#qty-${itemId}`);
+                const currentQty = parseInt(qtySpan.text());
                 
                 if (currentQty > 1) {
-                    button.prop('disabled', true);
+                    const newQty = currentQty - 1;
+                    btn.prop('disabled', true);
+                    $(`#qty-input-${itemId}`).val(newQty);
                     
                     $.ajax({
                         url: '@Url.Action("Decrement", "Cart")',
                         type: 'POST',
-                        data: {
-                            id: itemId,
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                        },
+                        data: { id: itemId, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                         success: function(response) {
                             if (response.success) {
                                 if (response.removed) {
-                                    // Item was removed (count became 0)
-                                    $(`#cart-item-${itemId}`).fadeOut(300, function() {
+                                    $(`#cart-item-${itemId}`).addClass('cart-item-removing').fadeOut(300, function() {
                                         $(this).remove();
-                                        
-                                        if ($('#cartItemsContainer tr').length === 0) {
-                                            location.reload();
-                                        } else {
-                                            updateTotals();
-                                            showToast(response.message || 'Item removed');
-                                        }
+                                        updateCartTotals();
+                                        if ($('.cart-item').length === 0) location.reload();
+                                        showToast('Item removed');
                                     });
                                 } else {
-                                    const newQty = response.newCount;
+                                    qtySpan.text(newQty);
+                                    updateSubtotal(itemId, newQty);
                                     
-                                    // Update UI
-                                    quantitySpan.text(newQty);
-                                    $(`#input-${itemId}`).val(newQty);
-                                    
-                                    // Update subtotal
-                                    const price = $(`#cart-item-${itemId}`).data('price');
-                                    const subtotal = price * newQty;
-                                    $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
-                                    
-                                    // Enable/disable buttons
-                                    if (newQty <= 1) {
-                                        button.prop('disabled', true);
-                                    } else {
-                                        button.prop('disabled', false);
-                                    }
+                                    if (newQty <= 1) btn.prop('disabled', true);
+                                    else btn.prop('disabled', false);
                                     
                                     const maxStock = $(`#cart-item-${itemId}`).data('stock');
-                                    if (newQty < maxStock) {
-                                        $(`[data-item-id="${itemId}"].increment-btn`).prop('disabled', false);
-                                    }
+                                    if (newQty < maxStock) $(`[data-item-id="${itemId}"].increment-btn`).prop('disabled', false);
                                     
-                                    // Update totals
-                                    updateTotals();
-                                    
-                                    // Show success message
-                                    showToast(response.message || 'Quantity updated');
+                                    updateCartTotals();
+                                    showToast('Quantity updated');
                                 }
                             } else {
-                                showToast(response.message || 'Failed to update quantity', 'error');
-                                button.prop('disabled', false);
+                                showToast(response.message || 'Failed to update', 'error');
+                                btn.prop('disabled', false);
                             }
                         },
                         error: function() {
-                            showToast('Failed to update quantity', 'error');
-                            button.prop('disabled', false);
+                            showToast('Network error', 'error');
+                            btn.prop('disabled', false);
                         }
                     });
                 }
             });
 
-            // ======================
-            // UPDATE QUANTITY BUTTON
-            // ======================
-            $('.update-quantity-btn').click(function() {
-                const button = $(this);
-                const itemId = button.data('item-id');
-                const input = $(`#input-${itemId}`);
+            // Update Quantity Button
+            $('.update-qty-btn').click(function() {
+                const btn = $(this);
+                const itemId = btn.data('item-id');
+                const input = $(`#qty-input-${itemId}`);
                 const newQty = parseInt(input.val());
                 const maxStock = parseInt(input.attr('max'));
                 const minStock = parseInt(input.attr('min'));
+                const currentQty = parseInt($(`#qty-${itemId}`).text());
                 
-                if (isNaN(newQty) || newQty < minStock || newQty > maxStock) {
-                    showToast(`Quantity must be between ${minStock} and ${maxStock}`, 'error');
-                    input.val($(`#quantity-${itemId}`).text());
+                if (isNaN(newQty) || newQty < minStock) {
+                    showToast(`Minimum quantity is ${minStock}`, 'warning');
+                    input.val(currentQty);
                     return;
                 }
                 
-                button.prop('disabled', true);
+                if (newQty > maxStock) {
+                    showToast(`Only ${maxStock} available`, 'warning');
+                    input.val(currentQty);
+                    return;
+                }
+                
+                if (newQty === currentQty) return;
+                
+                btn.prop('disabled', true);
+                btn.html('<span class="loading-spinner-small"></span>');
                 
                 $.ajax({
                     url: '@Url.Action("UpdateCount", "Cart")',
                     type: 'POST',
-                    data: {
-                        id: itemId,
-                        count: newQty,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
+                    data: { id: itemId, count: newQty, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                     success: function(response) {
                         if (response.success) {
                             if (response.removed) {
-                                $(`#cart-item-${itemId}`).fadeOut(300, function() {
+                                $(`#cart-item-${itemId}`).addClass('cart-item-removing').fadeOut(300, function() {
                                     $(this).remove();
-                                    
-                                    if ($('#cartItemsContainer tr').length === 0) {
-                                        location.reload();
-                                    } else {
-                                        updateTotals();
-                                        showToast(response.message || 'Item removed');
-                                    }
+                                    updateCartTotals();
+                                    if ($('.cart-item').length === 0) location.reload();
+                                    showToast('Item removed');
                                 });
                             } else {
-                                // Update UI
-                                $(`#quantity-${itemId}`).text(newQty);
+                                $(`#qty-${itemId}`).text(newQty);
+                                updateSubtotal(itemId, newQty);
                                 
-                                // Update subtotal
-                                const price = $(`#cart-item-${itemId}`).data('price');
-                                const subtotal = price * newQty;
-                                $(`#subtotal-${itemId}`).html('<strong class="text-primary">' + formatCurrency(subtotal) + '</strong>');
+                                $(`[data-item-id="${itemId}"].decrement-btn`).prop('disabled', newQty <= 1);
+                                $(`[data-item-id="${itemId}"].increment-btn`).prop('disabled', newQty >= maxStock);
                                 
-                                // Update button states
-                                const decrementBtn = $(`[data-item-id="${itemId}"].decrement-btn`);
-                                const incrementBtn = $(`[data-item-id="${itemId}"].increment-btn`);
-                                
-                                decrementBtn.prop('disabled', newQty <= 1);
-                                incrementBtn.prop('disabled', newQty >= maxStock);
-                                
-                                // Update totals
-                                updateTotals();
-                                
-                                showToast(response.message || 'Quantity updated');
+                                updateCartTotals();
+                                showToast('Quantity updated');
                             }
                         } else {
-                            showToast(response.message || 'Failed to update quantity', 'error');
-                            input.val($(`#quantity-${itemId}`).text());
+                            showToast(response.message || 'Failed to update', 'error');
+                            input.val(currentQty);
                         }
-                        button.prop('disabled', false);
+                        btn.prop('disabled', false);
+                        btn.html('<i class="bi bi-check"></i>');
                     },
                     error: function() {
-                        showToast('Failed to update quantity', 'error');
-                        input.val($(`#quantity-${itemId}`).text());
-                        button.prop('disabled', false);
+                        showToast('Network error', 'error');
+                        input.val(currentQty);
+                        btn.prop('disabled', false);
+                        btn.html('<i class="bi bi-check"></i>');
                     }
                 });
             });
 
-            // ======================
-            // REMOVE ITEM (Show Modal)
-            // ======================
+            // Remove Item
             $('.remove-item-btn').click(function() {
-                const button = $(this);
-                deleteItemId = button.data('item-id');
-                const productName = button.data('product-name');
-                $('#deleteProductName').text(productName);
-                deleteModal.show();
-            });
-
-            // ======================
-            // CONFIRM DELETE
-            // ======================
-            $('#confirmDeleteBtn').click(function() {
-                if (deleteItemId) {
-                    const button = $(this);
-                    button.prop('disabled', true);
+                const btn = $(this);
+                const itemId = btn.data('item-id');
+                const productName = btn.data('product-name');
+                
+                if (confirm(`Remove ${productName} from your cart?`)) {
+                    btn.prop('disabled', true);
+                    btn.html('<span class="loading-spinner-small"></span>');
                     
                     $.ajax({
                         url: '@Url.Action("Remove", "Cart")',
                         type: 'POST',
-                        data: {
-                            id: deleteItemId,
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                        },
+                        data: { id: itemId, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                         success: function(response) {
                             if (response.success) {
-                                $(`#cart-item-${deleteItemId}`).fadeOut(300, function() {
+                                $(`#cart-item-${itemId}`).addClass('cart-item-removing').fadeOut(300, function() {
                                     $(this).remove();
-                                    
-                                    if ($('#cartItemsContainer tr').length === 0) {
-                                        location.reload();
-                                    } else {
-                                        updateTotals();
-                                        showToast(response.message || 'Item removed');
-                                    }
+                                    updateCartTotals();
+                                    if ($('.cart-item').length === 0) location.reload();
+                                    showToast(`${productName} removed`);
                                 });
                             } else {
-                                showToast(response.message || 'Failed to remove item', 'error');
+                                showToast(response.message || 'Failed to remove', 'error');
+                                btn.prop('disabled', false);
+                                btn.html('<i class="bi bi-trash"></i>');
                             }
                         },
                         error: function() {
-                            showToast('Failed to remove item', 'error');
-                        },
-                        complete: function() {
-                            deleteModal.hide();
-                            deleteItemId = null;
-                            button.prop('disabled', false);
+                            showToast('Network error', 'error');
+                            btn.prop('disabled', false);
+                            btn.html('<i class="bi bi-trash"></i>');
                         }
                     });
                 }
             });
 
-            // ======================
-            // CLEAR CART
-            // ======================
+            // Clear Cart
             $('#clearCartBtn').click(function() {
-                if (confirm('Are you sure you want to remove all items from your cart?')) {
-                    const button = $(this);
-                    button.prop('disabled', true);
+                if (confirm('Remove all items from your cart?')) {
+                    const btn = $(this);
+                    btn.prop('disabled', true);
+                    btn.html('<span class="spinner-border spinner-border-sm"></span> Clearing...');
                     
                     $.ajax({
                         url: '@Url.Action("RemoveAll", "Cart")',
                         type: 'POST',
-                        data: {
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                        },
+                        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                         success: function(response) {
                             if (response.success) {
-                                showToast(response.message || 'Cart cleared');
+                                showToast('Cart cleared');
                                 setTimeout(() => location.reload(), 1000);
+                            } else {
+                                showToast(response.message || 'Failed to clear', 'error');
+                                btn.prop('disabled', false);
+                                btn.html('<i class="bi bi-trash"></i> Clear Cart');
                             }
                         },
                         error: function() {
-                            showToast('Failed to clear cart', 'error');
-                            button.prop('disabled', false);
+                            showToast('Network error', 'error');
+                            btn.prop('disabled', false);
+                            btn.html('<i class="bi bi-trash"></i> Clear Cart');
                         }
                     });
                 }
             });
 
-            // ======================
-            // ENTER KEY ON INPUT
-            // ======================
+            // Enter key on quantity input
             $('.quantity-input').keypress(function(e) {
                 if (e.which === 13) {
-                    $(this).siblings('button').click();
+                    $(this).closest('td').find('.update-qty-btn').click();
                 }
             });
-
-            // ======================
-            // INITIAL UPDATE
-            // ======================
-            updateTotals();
-            
-            console.log('Cart page loaded with AJAX functionality');
         });
     </script>
 }
