@@ -1,82 +1,111 @@
 ﻿@model Company
+@{
+    ViewData["Title"] = Model.Id != 0 ? "Update Company" : "Create Company";
+}
 
-<div class="card shadow border-0 mt-4">
-    <!-- Header -->
-    <div class="card-header bg-dark text-white py-3 text-center">
-        <h2 class="mb-0">
-            @(Model.Id != 0 ? "Update Company" : "Create Company")
-        </h2>
-    </div>
+<div class="row justify-content-center mt-5">
+    <div class="col-lg-7 col-md-9">
 
-    <!-- Body -->
-    <div class="card-body">
-        <form asp-action="Upsert" method="post" id="companyForm">
-            <!-- Hidden Id for Update -->
-            <input asp-for="Id" type="hidden" />
+        <div class="card shadow border-0 rounded-3">
 
-            <!-- Company Name -->
-            <div class="mb-3">
-                <label asp-for="Name" class="form-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+            <!-- Header -->
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h3 class="mb-0">
+                    <i class="bi bi-building me-2"></i>
+                    @(Model.Id != 0 ? "Update Company" : "Create Company")
+                </h3>
             </div>
 
-            <!-- Street Address -->
-            <div class="mb-3">
-                <label asp-for="StreetAddress" class="form-label"></label>
-                <input asp-for="StreetAddress" class="form-control" />
-                <span asp-validation-for="StreetAddress" class="text-danger"></span>
-            </div>
+            <!-- Body -->
+            <div class="card-body p-4">
 
-            <!-- City -->
-            <div class="mb-3">
-                <label asp-for="City" class="form-label"></label>
-                <input asp-for="City" class="form-control" />
-                <span asp-validation-for="City" class="text-danger"></span>
-            </div>
+                <form asp-action="Upsert" method="post" id="companyForm" class="row g-3">
 
-            <!-- State -->
-            <div class="mb-3">
-                <label asp-for="State" class="form-label"></label>
-                <input asp-for="State" class="form-control" />
-                <span asp-validation-for="State" class="text-danger"></span>
-            </div>
+                    <input asp-for="Id" type="hidden" />
 
-            <!-- Postal Code -->
-            <div class="mb-3">
-                <label asp-for="PostalCode" class="form-label"></label>
-                <input asp-for="PostalCode" class="form-control" />
-                <span asp-validation-for="PostalCode" class="text-danger"></span>
-            </div>
+                    <p class="text-center text-muted mb-3">
+                        @(Model.Id != 0 ? "Update company information" : "Register a new company")
+                    </p>
 
-            <!-- Phone Number -->
-            <div class="mb-3">
-                <label asp-for="PhoneNumber" class="form-label"></label>
-                <input asp-for="PhoneNumber" class="form-control" />
-                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <!-- Company Name -->
+                    <div class="form-floating col-md-12">
+                        <input asp-for="Name" class="form-control" placeholder="Company Name" />
+                        <label asp-for="Name">Company Name</label>
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <!-- Street -->
+                    <div class="form-floating col-md-12">
+                        <input asp-for="StreetAddress" id="street" class="form-control" placeholder="Street Address" />
+                        <label asp-for="StreetAddress">Street Address</label>
+                        <span asp-validation-for="StreetAddress" class="text-danger"></span>
+                    </div>
+
+                    <!-- Address Suggestions -->
+                    <div id="addressSuggestions" class="list-group col-md-12 mb-2"></div>
+
+                    <!-- City -->
+                    <div class="form-floating col-md-6">
+                        <input asp-for="City" id="city" class="form-control" readonly />
+                        <label asp-for="City">City</label>
+                        <span asp-validation-for="City" class="text-danger"></span>
+                    </div>
+
+                    <!-- State -->
+                    <div class="form-floating col-md-6">
+                        <input asp-for="State" id="state" class="form-control" readonly />
+                        <label asp-for="State">State</label>
+                        <span asp-validation-for="State" class="text-danger"></span>
+                    </div>
+
+                    <!-- Postal -->
+                    <div class="form-floating col-md-6">
+                        <input asp-for="PostalCode" id="postalCode" class="form-control" readonly />
+                        <label asp-for="PostalCode">Postal Code</label>
+                        <span asp-validation-for="PostalCode" class="text-danger"></span>
+                    </div>
+
+                    <!-- Phone (Moved to end) -->
+                    <div class="form-floating col-md-6">
+                        <input asp-for="PhoneNumber" class="form-control" placeholder="Phone Number" />
+                        <label asp-for="PhoneNumber">Phone Number</label>
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="col-12 mt-3 d-flex justify-content-between">
+
+                        <button type="submit" class="btn btn-dark btn-lg px-4">
+                            @(Model.Id != 0 ? "Update Company" : "Create Company")
+                        </button>
+
+                        <a asp-area="Admin"
+                               asp-controller="Company"
+                               asp-action="Index"
+                               class="btn btn-outline-secondary btn-lg">
+                            Back to List
+                        </a>
+
+                    </div>
+
+                </form>
+
             </div>
-            <!-- Buttons -->
-            <div class="d-flex justify-content-between mt-4">
-                <button type="submit" class="btn btn-dark">
-                    @(Model.Id != 0 ? "Update" : "Create")
-                </button>
-                <a asp-area="Admin" asp-controller="Company" asp-action="Index" class="btn btn-secondary">
-                    Back to List
-                </a>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
-    <!-- Client-side validation -->
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+
     <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/address_autocomlete.js"></script>
 
     <script>
         $(document).ready(function () {
-            // Highlight invalid fields
+
             $("#companyForm").validate({
                 highlight: function (element) {
                     $(element).addClass('is-invalid');
@@ -85,6 +114,7 @@
                     $(element).removeClass('is-invalid');
                 }
             });
+
         });
     </script>
 }

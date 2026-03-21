@@ -310,11 +310,17 @@ public class OrderController : Controller
     [HttpGet]
     public async Task<IActionResult> History()
     {
+        
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var orders = await _db.OrderHeaders
-            .Include(o => o.OrderDetails)
             .Where(o => o.ApplicationUserId == userId)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.ProductVariant)
+                    .ThenInclude(pv => pv.Product)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.ProductVariant)
+                    .ThenInclude(pv => pv.SizeValue)
             .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
 

@@ -3,6 +3,7 @@
     const streetInput = document.getElementById("street");
     const postalCodeInput = document.getElementById("postalCode");
     const cityInput = document.getElementById("city");
+    const stateInput = document.getElementById("state");
     const suggestionsContainer = document.getElementById("addressSuggestions");
 
     function debounce(func, delay) {
@@ -21,15 +22,19 @@
         }
 
         try {
+
             const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             const addresses = data.adresser ?? [];
 
             renderSuggestions(addresses);
+
         } catch (error) {
+
             console.error("Address lookup failed:", error);
             suggestionsContainer.innerHTML = "";
+
         }
     }
 
@@ -49,19 +54,26 @@
 
             item.onclick = () => {
 
+                const city = a.poststed ?? "";
+
                 streetInput.value = a.adressetekst ?? "";
                 postalCodeInput.value = a.postnummer ?? "";
-                cityInput.value = a.poststed ?? "";
+
+                cityInput.value = city;
+                stateInput.value = city;
 
                 suggestionsContainer.innerHTML = "";
             };
 
             suggestionsContainer.appendChild(item);
+
         });
     }
 
-    streetInput.addEventListener("input", debounce((e) => {
-        fetchAddresses(e.target.value);
-    }, 300));
+    streetInput.addEventListener("input",
+        debounce((e) => {
+            fetchAddresses(e.target.value);
+        }, 300)
+    );
 
 });
