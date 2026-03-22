@@ -1,0 +1,73 @@
+﻿@model IEnumerable<Shipment>
+@using MyUtility
+
+@{
+    ViewData["Title"] = "Shipment Management";
+    var currentStatus = ViewBag.CurrentStatus as string;
+}
+
+<div class="container mt-4">
+    <h2><i class="bi bi-box-seam"></i> Shipment Management</h2>
+
+    <!-- Status filter tabs -->
+    <div class="mb-3">
+        <a asp-action="Index" asp-route-status="" class="btn btn-outline-secondary @(string.IsNullOrEmpty(currentStatus) ? "active" : "")">All</a>
+        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusPendingApproval" class="btn btn-outline-warning @(currentStatus == SD.ShipmentStatusPendingApproval ? "active" : "")">Pending Approval</a>
+        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusShipped" class="btn btn-outline-info @(currentStatus == SD.ShipmentStatusShipped ? "active" : "")">Shipped</a>
+        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusDelivered" class="btn btn-outline-success @(currentStatus == SD.ShipmentStatusDelivered ? "active" : "")">Delivered</a>
+        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusCancelled" class="btn btn-outline-danger @(currentStatus == SD.ShipmentStatusCancelled ? "active" : "")">Cancelled</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                32
+                <th>Shipment ID</th>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Order Total</th>
+                <th>Status</th>
+                <th>Tracking</th>
+                <th>Actions</th>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    <tr>
+                        <td>@s.Id</td>
+                        <td>@s.OrderHeader.Id</td>
+                        <td>@s.OrderHeader.Name</td>
+                        <td>@s.OrderHeader.OrderTotal.ToString("C")</td>
+                        <td><span class="badge @SD.GetShipmentStatusBadgeClass(s.ShipmentStatus)">@s.ShipmentStatus</span></td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(s.TrackingNumber))
+                            {
+                                <span>@s.TrackingNumber</span>
+                                if (!string.IsNullOrEmpty(s.Carrier))
+                                {
+                                    <br /><small>@s.Carrier</small>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-info">Details</a>
+                            @if (s.ShipmentStatus == SD.ShipmentStatusPendingApproval)
+                            {
+                                <a asp-action="Approve" asp-route-id="@s.Id" class="btn btn-sm btn-success">Approve</a>
+                            }
+                            @if (s.ShipmentStatus != SD.ShipmentStatusShipped && s.ShipmentStatus != SD.ShipmentStatusDelivered && s.ShipmentStatus != SD.ShipmentStatusCancelled)
+                            {
+                                <a asp-action="Cancel" asp-route-id="@s.Id" class="btn btn-sm btn-danger">Cancel</a>
+                            }
+                            <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-warning">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

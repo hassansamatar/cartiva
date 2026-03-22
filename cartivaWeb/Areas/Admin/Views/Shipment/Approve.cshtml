@@ -1,0 +1,55 @@
+﻿@model Shipment
+
+@{
+    ViewData["Title"] = "Approve Shipment";
+}
+
+<div class="container mt-4">
+    <h2>Approve Shipment for Order #@Model.OrderHeader.Id</h2>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">Order Details</div>
+                <div class="card-body">
+                    <p><strong>Customer:</strong> @Model.OrderHeader.Name</p>
+                    <p><strong>Address:</strong> @Model.OrderHeader.StreetAddress, @Model.OrderHeader.City, @Model.OrderHeader.PostalCode</p>
+                    <p><strong>Phone:</strong> @Model.OrderHeader.PhoneNumber</p>
+                    <p><strong>Order Total:</strong> @Model.OrderHeader.OrderTotal.ToString("C")</p>
+                    <p><strong>Items:</strong></p>
+                    <ul>
+                        @foreach (var detail in Model.OrderHeader.OrderDetails)
+                        {
+                            <li>@detail.ProductVariant?.Product?.Name (x@detail.Count)</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <form asp-action="Approve" method="post">
+                <input type="hidden" asp-for="Id" />
+                <div class="mb-3">
+                    <label class="form-label">Tracking Number</label>
+                    <input type="text" name="trackingNumber" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Carrier</label>
+                    <select name="carrier" class="form-select" required>
+                        <option value="">Select carrier</option>
+                        <option value="@SD.CarrierPosten">Posten Norge</option>
+                        <option value="@SD.CarrierBring">Bring</option>
+                        <option value="@SD.CarrierHelthjem">Helthjem</option>
+                        <option value="@SD.CarrierDHL">DHL Express</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Service (optional)</label>
+                    <input type="text" name="service" class="form-control" placeholder="e.g., Express, Economy" />
+                </div>
+                <button type="submit" class="btn btn-success">Approve Shipment</button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>

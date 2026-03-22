@@ -9,26 +9,26 @@
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
     var trackingUrl = QrCodeService.GetOrderTrackingUrl(Model.Id);
-    
-    // Calculate progress percentage based on order status
-    int progressPercentage = Model.OrderStatus switch
-    {
-        "Pending" => 25,
-        "Approved" => 50,
-        "Shipped" => 75,
-        "Delivered" => 100,
-        "Cancelled" => 0,
-        _ => 0
-    };
-    
-    // Get status icon and color
+
+    // Get the first shipment (if any)
+    var shipment = Model.Shipments?.OrderBy(s => s.Id).FirstOrDefault();
+    var trackingNumber = shipment?.TrackingNumber;
+    var carrier = shipment?.Carrier;
+    var shippedDate = shipment?.ShippedDate;
+    var deliveredDate = shipment?.DeliveredDate;
+
+    // Calculate progress percentage based on order status (using SD helper)
+    int progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
+
+    // Get status icon and color using SD helpers
     var statusInfo = Model.OrderStatus switch
     {
-        "Pending" => new { Icon = "⏳", Color = "warning", Text = "Awaiting Payment" },
-        "Approved" => new { Icon = "✅", Color = "primary", Text = "Payment Confirmed" },
-        "Shipped" => new { Icon = "📦", Color = "info", Text = "On the Way" },
-        "Delivered" => new { Icon = "🏠", Color = "success", Text = "Delivered" },
-        "Cancelled" => new { Icon = "❌", Color = "danger", Text = "Cancelled" },
+        SD.StatusPending => new { Icon = "⏳", Color = "warning", Text = "Awaiting Payment" },
+        SD.StatusApproved => new { Icon = "✅", Color = "primary", Text = "Payment Confirmed" },
+        SD.StatusAwaitingShipmentApproval => new { Icon = "⏰", Color = "info", Text = "Awaiting Shipment Approval" },
+        SD.StatusShipped => new { Icon = "📦", Color = "info", Text = "On the Way" },
+        SD.StatusDelivered => new { Icon = "🏠", Color = "success", Text = "Delivered" },
+        SD.StatusCancelled => new { Icon = "❌", Color = "danger", Text = "Cancelled" },
         _ => new { Icon = "📝", Color = "secondary", Text = "Processing" }
     };
 }
@@ -64,42 +64,21 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
-                    <!-- Current Status Message -->
+                    <!-- Current Status Message (using SD helper) -->
                     <div class="alert alert-@statusInfo.Color bg-opacity-10 border-0 mb-4">
                         <div class="d-flex align-items-center">
                             <div class="fs-1 me-3">@statusInfo.Icon</div>
                             <div>
                                 <h5 class="mb-1">Your order is @statusInfo.Text.ToLower()</h5>
-                                <p class="mb-0">
-                                    @if (Model.OrderStatus == "Pending")
-                                    {
-                                        <span>Complete your payment to proceed with order processing.</span>
-                                    }
-                                    else if (Model.OrderStatus == "Approved")
-                                    {
-                                        <span>Your payment has been confirmed. We're preparing your order for shipping.</span>
-                                    }
-                                    else if (Model.OrderStatus == "Shipped")
-                                    {
-                                        <span>Your order is on its way! Estimated delivery: @DateTime.Now.AddDays(3).ToString("dd MMM yyyy")</span>
-                                    }
-                                    else if (Model.OrderStatus == "Delivered")
-                                    {
-                                        <span>Your order has been delivered. Thank you for shopping with us!</span>
-                                    }
-                                    else if (Model.OrderStatus == "Cancelled")
-                                    {
-                                        <span>This order has been cancelled. Contact support if you have questions.</span>
-                                    }
-                                </p>
+                                <p class="mb-0">@SD.GetOrderTrackingMessage(Model.OrderStatus)</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Progress Timeline -->
                     <h5 class="fw-bold mb-4">Order Progress</h5>
-                    
-                    @if (Model.OrderStatus != "Cancelled")
+
+                    @if (Model.OrderStatus != SD.StatusCancelled)
                     {
                         <div class="progress mb-4" style="height: 8px;">
                             <div class="progress-bar bg-@statusInfo.Color progress-bar-striped progress-bar-animated"
@@ -127,9 +106,9 @@
                         </div>
 
                         <!-- Step 2: Payment Confirmed -->
-                        <div class="timeline-step @(Model.PaymentDate.HasValue ? "completed" : (Model.OrderStatus == "Cancelled" ? "" : "active"))">
+                        <div class="timeline-step @(Model.PaymentDate.HasValue ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "active"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(Model.PaymentDate.HasValue ? "success" : (Model.OrderStatus == "Cancelled" ? "secondary" : "warning"))">
+                                <div class="step-icon bg-@(Model.PaymentDate.HasValue ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "warning"))">
                                     <i class="bi bi-credit-card"></i>
                                 </div>
                             </div>
@@ -143,7 +122,7 @@
                                     {
                                         <span>Payment of @Model.OrderTotal.ToString("C", culture) completed</span>
                                     }
-                                    else if (Model.OrderStatus == "Cancelled")
+                                    else if (Model.OrderStatus == SD.StatusCancelled)
                                     {
                                         <span>Payment not processed</span>
                                     }
@@ -155,28 +134,47 @@
                             </div>
                         </div>
 
-                        <!-- Step 3: Order Shipped -->
-                        <div class="timeline-step @(Model.OrderStatus == "Shipped" || Model.OrderStatus == "Delivered" ? "completed" : (Model.OrderStatus == "Cancelled" ? "" : "pending"))">
+                        <!-- Step 3: Shipment Approval (only if status is AwaitingShipmentApproval) -->
+                        @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                        {
+                            <div class="timeline-step active">
+                                <div class="step-icon-wrapper">
+                                    <div class="step-icon bg-warning">
+                                        <i class="bi bi-clock-history"></i>
+                                    </div>
+                                </div>
+                                <div class="step-content">
+                                    <h6 class="fw-bold mb-1">Awaiting Shipment Approval</h6>
+                                    <p class="text-muted small mb-0">
+                                        @(Model.PaymentDate?.ToString("dd MMM yyyy HH:mm") ?? "Pending")
+                                    </p>
+                                    <p class="small mb-0">Your order is waiting for admin approval. We'll notify you when it ships.</p>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Step 4: Order Shipped -->
+                        <div class="timeline-step @(shippedDate.HasValue ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(Model.OrderStatus == "Shipped" || Model.OrderStatus == "Delivered" ? "success" : (Model.OrderStatus == "Cancelled" ? "secondary" : "light"))">
+                                <div class="step-icon bg-@(shippedDate.HasValue ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
                                     <i class="bi bi-truck"></i>
                                 </div>
                             </div>
                             <div class="step-content">
                                 <h6 class="fw-bold mb-1">Order Shipped</h6>
                                 <p class="text-muted small mb-0">
-                                    @(Model.ShippedDate?.ToString("dd MMM yyyy HH:mm") ?? "Not yet shipped")
+                                    @(shippedDate?.ToString("dd MMM yyyy HH:mm") ?? "Not yet shipped")
                                 </p>
                                 <p class="small mb-0">
-                                    @if (Model.OrderStatus == "Shipped" || Model.OrderStatus == "Delivered")
+                                    @if (shippedDate.HasValue)
                                     {
                                         <span>Your order is on its way!</span>
-                                        if (!string.IsNullOrEmpty(Model.TrackingNumber))
+                                        if (!string.IsNullOrEmpty(trackingNumber))
                                         {
-                                            <span><br />Tracking Number: <strong>@Model.TrackingNumber</strong></span>
+                                            <span><br />Tracking Number: <strong>@trackingNumber</strong></span>
                                         }
                                     }
-                                    else if (Model.OrderStatus == "Cancelled")
+                                    else if (Model.OrderStatus == SD.StatusCancelled)
                                     {
                                         <span>Shipment cancelled</span>
                                     }
@@ -188,30 +186,34 @@
                             </div>
                         </div>
 
-                        <!-- Step 4: Delivered -->
-                        <div class="timeline-step @(Model.OrderStatus == "Delivered" ? "completed" : (Model.OrderStatus == "Cancelled" ? "" : "pending"))">
+                        <!-- Step 5: Delivered -->
+                        <div class="timeline-step @(deliveredDate.HasValue ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(Model.OrderStatus == "Delivered" ? "success" : (Model.OrderStatus == "Cancelled" ? "secondary" : "light"))">
+                                <div class="step-icon bg-@(deliveredDate.HasValue ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
                                     <i class="bi bi-house-check"></i>
                                 </div>
                             </div>
                             <div class="step-content">
                                 <h6 class="fw-bold mb-1">Delivered</h6>
                                 <p class="text-muted small mb-0">
-                                    @(Model.DeliveredDate?.ToString("dd MMM yyyy HH:mm") ?? "Awaiting delivery")
+                                    @(deliveredDate?.ToString("dd MMM yyyy HH:mm") ?? "Awaiting delivery")
                                 </p>
                                 <p class="small mb-0">
-                                    @if (Model.OrderStatus == "Delivered")
+                                    @if (deliveredDate.HasValue)
                                     {
                                         <span>Your order has been delivered. Enjoy your purchase!</span>
                                     }
-                                    else if (Model.OrderStatus == "Cancelled")
+                                    else if (Model.OrderStatus == SD.StatusCancelled)
                                     {
                                         <span>Order cancelled</span>
                                     }
+                                    else if (shippedDate.HasValue)
+                                    {
+                                        <span>Expected delivery: @DateTime.Now.AddDays(3).ToString("dd MMM yyyy")</span>
+                                    }
                                     else
                                     {
-                                        <span>Expected delivery: @DateTime.Now.AddDays(5).ToString("dd MMM yyyy")</span>
+                                        <span>Will be shipped soon</span>
                                     }
                                 </p>
                             </div>
@@ -220,7 +222,7 @@
                 </div>
             </div>
 
-            <!-- Order Items Card -->
+            <!-- Order Items Card (unchanged) -->
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-light py-3">
                     <h5 class="mb-0 fw-bold">
@@ -231,164 +233,164 @@
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
-                                32
-                                <th>Product</th>
-                                <th>Details</th>
-                                <th class="text-center">Quantity</th>
-                                <th class="text-end">Price</th>
-                                <th class="text-end">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model.OrderDetails)
-                            {
                                 <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            @if (item.ProductVariant?.Product?.ImageUrl != null)
-                                            {
-                                                <img src="@item.ProductVariant.Product.ImageUrl"
-                                                     alt="@item.ProductVariant.Product.Name"
-                                                     style="width: 50px; height: 50px; object-fit: cover;"
-                                                     class="rounded me-2" />
-                                            }
-                                            else
-                                            {
-                                                <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center"
-                                                     style="width: 50px; height: 50px;">
-                                                    <i class="bi bi-image fs-3 text-muted"></i>
-                                                </div>
-                                            }
-                                            <div>
-                                                <strong>@item.ProductVariant?.Product?.Name</strong>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            <span class="badge" style="background-color: @GetColorCode(item.ProductVariant?.Color); color: @GetTextColor(item.ProductVariant?.Color);">
-                                                @item.ProductVariant?.Color
-                                            </span>
-                                            @if (item.ProductVariant?.SizeValue != null)
-                                            {
-                                                <span class="badge bg-secondary">@item.ProductVariant.SizeValue.DisplayText</span>
-                                            }
-                                        </small>
-                                    </td>
-                                    <td class="text-center">@item.Count</td>
-                                    <td class="text-end">@item.Price.ToString("C", culture)</td>
-                                    <td class="text-end fw-bold">@((item.Price * item.Count).ToString("C", culture))</td>
+                                    <th>Product</th>
+                                    <th>Details</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-end">Total</th>
                                 </tr>
-                            }
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="4" class="text-end fw-bold">Order Total:</td>
-                                <td class="text-end fw-bold text-primary h5">@Model.OrderTotal.ToString("C", culture)</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderDetails)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                @if (item.ProductVariant?.Product?.ImageUrl != null)
+                                                {
+                                                    <img src="@item.ProductVariant.Product.ImageUrl"
+                                                         alt="@item.ProductVariant.Product.Name"
+                                                         style="width: 50px; height: 50px; object-fit: cover;"
+                                                         class="rounded me-2" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center"
+                                                         style="width: 50px; height: 50px;">
+                                                        <i class="bi bi-image fs-3 text-muted"></i>
+                                                    </div>
+                                                }
+                                                <div>
+                                                    <strong>@item.ProductVariant?.Product?.Name</strong>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                <span class="badge" style="background-color: @GetColorCode(item.ProductVariant?.Color); color: @GetTextColor(item.ProductVariant?.Color);">
+                                                    @item.ProductVariant?.Color
+                                                </span>
+                                                @if (item.ProductVariant?.SizeValue != null)
+                                                {
+                                                    <span class="badge bg-secondary">@item.ProductVariant.SizeValue.DisplayText</span>
+                                                }
+                                            </small>
+                                        </td>
+                                        <td class="text-center">@item.Count</td>
+                                        <td class="text-end">@item.Price.ToString("C", culture)</td>
+                                        <td class="text-end fw-bold">@((item.Price * item.Count).ToString("C", culture))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Order Total:</td>
+                                    <td class="text-end fw-bold text-primary h5">@Model.OrderTotal.ToString("C", culture)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- QR Code Card -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-dark text-white py-3">
-                <h5 class="mb-0">
-                    <i class="bi bi-qr-code me-2"></i>Track via QR Code
-                </h5>
-            </div>
-            <div class="card-body text-center p-4">
-                @if (!string.IsNullOrEmpty(qrCodeBase64))
-                {
-                    <img src="data:image/png;base64,@qrCodeBase64"
-                         alt="Order Tracking QR Code"
-                         style="width: 180px; height: 180px; cursor: pointer;"
-                         onclick="window.open('@trackingUrl', '_blank')"
-                         class="img-thumbnail mb-3" />
-                    <p class="text-muted small">
-                        <a href="@trackingUrl" target="_blank" class="text-decoration-none text-muted">
-                            <i class="bi bi-phone"></i> Scan with your phone camera
-                        </a>
-                    </p>
-                    <a href="@trackingUrl" class="btn btn-outline-primary btn-sm w-100" target="_blank">
-                        <i class="bi bi-link-45deg"></i> Open Tracking Link
-                    </a>
-                }
-                else
-                {
-                    <div class="text-muted py-4">
-                        <i class="bi bi-qr-code-scan fs-1"></i>
-                        <p class="mt-2 mb-0">QR code will be available after payment</p>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Delivery Information Card -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-light py-3">
-                <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-geo-alt me-2"></i>Shipping Address
-                </h5>
-            </div>
-            <div class="card-body">
-                <p class="mb-0 fw-bold">@Model.Name</p>
-                <p class="mb-0">@Model.StreetAddress</p>
-                <p class="mb-0">@Model.PostalCode @Model.City</p>
-                <p class="mb-0">@Model.State, @Model.City</p>
-                <p class="mb-0">Phone: @Model.PhoneNumber</p>
-            </div>
-        </div>
-
-        <!-- Need Help Card -->
-        <div class="card shadow-sm border-0 bg-info bg-opacity-10">
-            <div class="card-body">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-question-circle-fill fs-2 text-info me-3"></i>
-                    <div>
-                        <h6 class="fw-bold mb-1">Need Help?</h6>
-                        <p class="small text-muted mb-2">
-                            Have questions about your order?
-                        </p>
-                        <div class="d-grid gap-2">
-                            <a href="/Contact" class="btn btn-outline-info btn-sm">
-                                <i class="bi bi-envelope"></i> Contact Support
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- QR Code Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-qr-code me-2"></i>Track via QR Code
+                    </h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    @if (!string.IsNullOrEmpty(qrCodeBase64))
+                    {
+                        <img src="data:image/png;base64,@qrCodeBase64"
+                             alt="Order Tracking QR Code"
+                             style="width: 180px; height: 180px; cursor: pointer;"
+                             onclick="window.open('@trackingUrl', '_blank')"
+                             class="img-thumbnail mb-3" />
+                        <p class="text-muted small">
+                            <a href="@trackingUrl" target="_blank" class="text-decoration-none text-muted">
+                                <i class="bi bi-phone"></i> Scan with your phone camera
                             </a>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-                                <i class="bi bi-printer"></i> Print Tracking Info
-                            </button>
+                        </p>
+                        <a href="@trackingUrl" class="btn btn-outline-primary btn-sm w-100" target="_blank">
+                            <i class="bi bi-link-45deg"></i> Open Tracking Link
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="text-muted py-4">
+                            <i class="bi bi-qr-code-scan fs-1"></i>
+                            <p class="mt-2 mb-0">QR code will be available after payment</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Delivery Information Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-geo-alt me-2"></i>Shipping Address
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0 fw-bold">@Model.Name</p>
+                    <p class="mb-0">@Model.StreetAddress</p>
+                    <p class="mb-0">@Model.PostalCode @Model.City</p>
+                    <p class="mb-0">@Model.State, @Model.City</p>
+                    <p class="mb-0">Phone: @Model.PhoneNumber</p>
+                </div>
+            </div>
+
+            <!-- Need Help Card -->
+            <div class="card shadow-sm border-0 bg-info bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-question-circle-fill fs-2 text-info me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Need Help?</h6>
+                            <p class="small text-muted mb-2">
+                                Have questions about your order?
+                            </p>
+                            <div class="d-grid gap-2">
+                                <a href="/Contact" class="btn btn-outline-info btn-sm">
+                                    <i class="bi bi-envelope"></i> Contact Support
+                                </a>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                                    <i class="bi bi-printer"></i> Print Tracking Info
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Share Tracking Card -->
-        <div class="card shadow-sm border-0 mt-4">
-            <div class="card-body text-center">
-                <h6 class="fw-bold mb-3">Share Tracking</h6>
-                <div class="d-flex justify-content-around">
-                    <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
-                           class="btn btn-outline-secondary">
-                        <i class="bi bi-envelope"></i>
-                    </a>
-                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
-                        <i class="bi bi-link"></i>
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="window.print()">
-                        <i class="bi bi-printer"></i>
-                    </button>
+            <!-- Share Tracking Card -->
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-body text-center">
+                    <h6 class="fw-bold mb-3">Share Tracking</h6>
+                    <div class="d-flex justify-content-around">
+                        <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
+                               class="btn btn-outline-secondary">
+                            <i class="bi bi-envelope"></i>
+                        </a>
+                        <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
+                            <i class="bi bi-link"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mt-2">Share tracking link with others</small>
                 </div>
-                <small class="text-muted d-block mt-2">Share tracking link with others</small>
             </div>
         </div>
     </div>
-</div>
 </div>
 
 @section Scripts {
@@ -400,15 +402,15 @@
                 alert('Failed to copy link');
             });
         }
-        
+
         // Refresh page every 30 seconds for pending orders
-        @if (Model.OrderStatus == "Pending" || Model.OrderStatus == "Approved")
+        @if (Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
         {
-                        <text>
-                                    setTimeout(function() {
-                                        location.reload();
-                                    }, 30000);
-                        </text>
+                <text>
+                        setTimeout(function() {
+                            location.reload();
+                        }, 30000);
+                </text>
         }
     </script>
 }
@@ -434,7 +436,7 @@
             _ => "#6c757d"
         };
     }
-    
+
     public string GetTextColor(string? color)
     {
         return color?.ToLower() switch
@@ -451,13 +453,13 @@
         position: relative;
         padding-left: 30px;
     }
-    
+
     .timeline-step {
         display: flex;
         margin-bottom: 30px;
         position: relative;
     }
-    
+
         .timeline-step:not(:last-child)::before {
             content: '';
             position: absolute;
@@ -467,12 +469,12 @@
             width: 2px;
             background: linear-gradient(to bottom, #dee2e6 0%, #dee2e6 70%, transparent 100%);
         }
-    
+
     .step-icon-wrapper {
         margin-right: 20px;
         z-index: 1;
     }
-    
+
     .step-icon {
         width: 40px;
         height: 40px;
@@ -484,29 +486,29 @@
         color: white;
         transition: all 0.3s ease;
     }
-    
+
         .step-icon.bg-success {
             background: linear-gradient(135deg, #28a745, #20c997);
             box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
         }
-    
+
         .step-icon.bg-warning {
             background: linear-gradient(135deg, #ffc107, #ff9800);
             animation: pulse 2s infinite;
         }
-    
+
     .step-content {
         flex: 1;
     }
-    
+
     .timeline-step.completed .step-content h6 {
         color: #28a745;
     }
-    
+
     .timeline-step.active .step-content h6 {
         color: #ffc107;
     }
-    
+
     keyframes pulse {
         0% {
             box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
@@ -520,62 +522,62 @@
             box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
         }
     }
-    
+
     /* Progress Bar Animation */
     .progress-bar {
         transition: width 0.5s ease;
     }
-    
+
     /* Card Hover Effects */
     .card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
+
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
         }
-    
+
     /* Responsive Design */
     @@media (max-width: 768px) {
         .timeline {
             padding-left: 20px;
         }
-        
+
         .step-icon {
             width: 32px;
             height: 32px;
             font-size: 16px;
         }
-        
+
         .timeline-step:not(:last-child)::before {
             left: 16px;
         }
-        
+
         .step-content h6 {
             font-size: 14px;
         }
-        
+
         .step-content p {
             font-size: 12px;
         }
     }
-    
+
     /* Print Styles */
     @@media print {
         .btn, .navbar, footer, .card-header .btn {
             display: none !important;
         }
-        
+
         .card {
             box-shadow: none !important;
             border: 1px solid #ddd;
         }
-        
+
         .timeline-step:not(:last-child)::before {
             background: #ddd;
         }
-        
+
         body {
             padding: 20px;
         }

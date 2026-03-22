@@ -46,7 +46,7 @@
                         <i class="bi bi-calendar"></i> @Model.Order.OrderDate.ToString("dd MMM yyyy HH:mm")
                     </p>
 
-                    <!-- QR Code Section -->
+                    <!-- QR Code Section with note about shipment approval -->
                     <div class="text-center bg-light p-3 rounded mb-3">
                         <h6 class="fw-bold mb-2">
                             <i class="bi bi-qr-code me-2"></i>Track Your Order
@@ -68,6 +68,11 @@
                                 <i class="bi bi-info-circle"></i>
                                 Scan with phone or <a href="@trackingUrl" target="_blank">click here</a> to track order
                             </p>
+                            <!-- Added note: tracking details will appear after shipment approval -->
+                            <div class="alert alert-light small mt-2 mb-0">
+                                <i class="bi bi-clock-history"></i>
+                                Tracking details will be available once your order is approved for shipment.
+                            </div>
                         }
                         else
                         {
@@ -131,7 +136,7 @@
                 </div>
             </div>
 
-            <!-- Order Tracking Info -->
+            <!-- Order Tracking Info (updated note) -->
             <div class="card mt-3 border-0 bg-info bg-opacity-10">
                 <div class="card-body">
                     <div class="d-flex align-items-start">
@@ -139,7 +144,7 @@
                         <div>
                             <h6 class="fw-bold mb-1">Track Your Order</h6>
                             <small class="text-muted">
-                                After payment, use the QR code or link to track your order status
+                                After payment, your order will be reviewed. You will receive an email with tracking details once shipment is approved.
                             </small>
                             <div class="mt-2">
                                 <a href="@trackingUrl" class="btn btn-sm btn-outline-info" target="_blank">
@@ -225,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- After Payment Info -->
+            <!-- After Payment Info (updated) -->
             <div class="card mt-3 border-0 bg-success bg-opacity-10">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
@@ -235,9 +240,9 @@
                             <small class="text-muted">
                                 After payment, you'll receive:
                                 <ul class="mb-0 mt-1 small">
-                                    <li>Order confirmation email with receipt</li>
-                                    <li>QR code for easy order tracking</li>
-                                    <li>SMS notification when order ships</li>
+                                    <li>Order confirmation email</li>
+                                    <li>QR code and tracking link (once shipment is approved)</li>
+                                    <li>Email notification when your order ships</li>
                                 </ul>
                             </small>
                         </div>
@@ -305,7 +310,7 @@
         const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: { return_url: returnUrl },
-        redirect: 'always'   // ← Important: always redirect to server
+        redirect: 'always'
         });
 
         if (error) {

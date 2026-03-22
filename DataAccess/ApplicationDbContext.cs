@@ -28,7 +28,7 @@ namespace DataAccess
         public DbSet<ShoppingCart> ShoppingCarts { get; set; }
         public DbSet<OrderHeader> OrderHeaders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
-
+        public DbSet<Shipment> Shipments { get; set; }
         // NEW: Reviews table
         public DbSet<Review> Reviews { get; set; }
 
@@ -221,6 +221,27 @@ namespace DataAccess
             modelBuilder.Entity<Review>()
                 .Property(r => r.IsApproved)
                 .HasDefaultValue(false);
+            // Configure Shipment
+            modelBuilder.Entity<Shipment>(entity =>
+            {
+                // Index on OrderHeaderId for faster lookups
+                entity.HasIndex(e => e.OrderHeaderId);
+
+                // Optional: Cascade delete
+                entity.HasOne(s => s.OrderHeader)
+                      .WithMany(o => o.Shipments)
+                      .HasForeignKey(s => s.OrderHeaderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Set string lengths (optional)
+                entity.Property(e => e.TrackingNumber).HasMaxLength(100);
+                entity.Property(e => e.Carrier).HasMaxLength(50);
+                entity.Property(e => e.Service).HasMaxLength(50);
+                entity.Property(e => e.PackageType).HasMaxLength(50);
+
+                // Precision for decimal weight (e.g., total 5 digits, 2 decimal places)
+                entity.Property(e => e.Weight).HasPrecision(8, 2);
+            });
 
             // ======================
             // REMOVED ALL SEED DATA

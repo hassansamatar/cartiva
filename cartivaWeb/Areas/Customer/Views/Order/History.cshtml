@@ -1,6 +1,9 @@
 ﻿@model IEnumerable<OrderHeader>
 @using System.Globalization
 @using MyUtility
+@using Models.Interfaces
+@inject IQrCodeService QrCodeService
+
 @{
     ViewData["Title"] = "My Order History";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
@@ -31,6 +34,12 @@
         <div class="row g-4">
             @foreach (var order in Model.OrderByDescending(o => o.OrderDate))
             {
+                var trackingUrl = Url.Action("Track", "Order", new { id = order.Id, area = "Customer" });
+                var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(order.Id);
+                var progressPercentage = SD.GetOrderProgressPercentage(order.OrderStatus);
+                var statusIcon = SD.GetOrderStatusIcon(order.OrderStatus);
+                var statusBadgeClass = SD.GetOrderStatusBadgeClass(order.OrderStatus);
+
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <!-- Order Header -->
@@ -40,8 +49,8 @@
                                 <small class="text-muted">@order.OrderDate.ToString("dd MMM yyyy 'at' HH:mm")</small>
                             </div>
                             <div>
-                                <span class="badge @SD.GetOrderStatusBadgeClass(order.OrderStatus)">
-                                    <i class="bi @SD.GetOrderStatusIcon(order.OrderStatus)"></i> @order.OrderStatus
+                                <span class="badge @statusBadgeClass">
+                                    <i class="bi @statusIcon"></i> @order.OrderStatus
                                 </span>
                                 <span class="badge @SD.GetPaymentStatusBadgeClass(order.PaymentStatus)">
                                     <i class="bi bi-credit-card"></i> @order.PaymentStatus
@@ -117,6 +126,43 @@
                                             <span>Total:</span>
                                             <span>@order.OrderTotal.ToString("C", culture)</span>
                                         </div>
+
+                                        <!-- QR Code Section -->
+                                        <div class="mt-3 text-center">
+                                            <h6 class="fw-bold mb-2">
+                                                <i class="bi bi-qr-code text-primary"></i> Track Order
+                                            </h6>
+                                            @if (!string.IsNullOrEmpty(qrCodeBase64))
+                                            {
+                                                <div class="d-flex justify-content-center gap-2 align-items-center">
+                                                    <img src="data:image/png;base64,@qrCodeBase64"
+                                                         alt="QR Code"
+                                                         style="width: 60px; height: 60px; cursor: pointer;"
+                                                         onclick="window.open('@trackingUrl', '_blank')"
+                                                         class="img-thumbnail"
+                                                         title="Click to track" />
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
+                                                        <i class="bi bi-link"></i> Copy Link
+                                                    </button>
+                                                </div>
+                                                <small class="text-muted d-block mt-2">
+                                                    <i class="bi bi-phone"></i> Scan to track
+                                                </small>
+                                                @if (order.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                                                {
+                                                    <div class="alert alert-light small mt-2 mb-0">
+                                                        <i class="bi bi-clock-history"></i>
+                                                        Tracking details will appear after shipment approval.
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="text-muted small">
+                                                    <i class="bi bi-qr-code"></i> QR code will be available soon
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -125,7 +171,7 @@
                         <!-- Footer -->
                         <div class="card-footer d-flex justify-content-between align-items-center">
                             <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary">View Details</a>
-                            @if (order.OrderStatus == SD.StatusPending)
+                            @if (order.OrderStatus == SD.StatusPending || order.OrderStatus == SD.StatusAwaitingShipmentApproval)
                             {
                                 <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(@order.Id)">Cancel</button>
                             }
@@ -145,7 +191,24 @@
                     .done(function () { location.reload(); });
             }
         }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Tracking link copied to clipboard!');
+            }).catch(function() {
+                alert('Failed to copy link');
+            });
+        }
     </script>
+    <style>
+        .img-thumbnail {
+            transition: transform 0.2s ease;
+        }
+
+            .img-thumbnail:hover {
+                transform: scale(1.05);
+            }
+    </style>
 }
 
 @functions {

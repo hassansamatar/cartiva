@@ -16,7 +16,7 @@ namespace Models
 
         [ForeignKey("OrderHeaderId")]
         [ValidateNever]
-        public OrderHeader OrderHeader { get; set; }
+        public OrderHeader? OrderHeader { get; set; }
 
         [Required]
         public int ProductVariantId { get; set; }

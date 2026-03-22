@@ -8,7 +8,10 @@
     ViewData["Title"] = "Cancel Order";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var refundAmount = Model.OrderTotal;
-    var canCancel = Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusApproved;
+    // Allow cancellation for pending, approved, or awaiting shipment approval
+    var canCancel = Model.OrderStatus == SD.StatusPending
+                    || Model.OrderStatus == SD.StatusApproved
+                    || Model.OrderStatus == SD.StatusAwaitingShipmentApproval;
 
     var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
@@ -136,6 +139,13 @@
                                     <p class="text-muted small mt-2 mb-0">
                                         <i class="bi bi-phone"></i> Scan with your phone to track this order.
                                     </p>
+                                    @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                                    {
+                                        <div class="alert alert-light small mt-2 mb-0">
+                                            <i class="bi bi-clock-history"></i>
+                                            Tracking details will be available after shipment approval.
+                                        </div>
+                                    }
                                 }
                                 else
                                 {
@@ -241,7 +251,14 @@
                                     </li>
                                     <li>
                                         <i class="bi bi-check2-circle text-success me-2"></i>
-                                        Refund will be processed within 5-7 business days
+                                        @if (Model.PaymentStatus == SD.PaymentStatusApproved)
+                                        {
+                                            <span>Refund will be processed within 5-7 business days</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No payment has been processed; order will be cancelled without charge</span>
+                                        }
                                     </li>
                                     <li>
                                         <i class="bi bi-check2-circle text-success me-2"></i>

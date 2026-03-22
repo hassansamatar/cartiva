@@ -76,7 +76,6 @@ public class OrderController : Controller
 
     // =============================
     // CONFIRM ORDER (POST)
-    // from Checkout form
     // =============================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -127,7 +126,7 @@ public class OrderController : Controller
             return RedirectToAction("Index", "Cart");
         }
 
-        // Validate stock before placing order
+        // Validate stock
         foreach (var cart in cartList)
         {
             var variant = cart.ProductVariant;
@@ -151,7 +150,7 @@ public class OrderController : Controller
         if (User.IsInRole(SD.Role_Company))
         {
             model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
-            model.OrderHeader.OrderStatus = SD.StatusApproved;
+            model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval; // Company orders also need shipment approval
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
         }
         else
@@ -191,6 +190,15 @@ public class OrderController : Controller
         // Redirect based on role
         if (User.IsInRole(SD.Role_Company))
         {
+            // Create a shipment record for company orders (pending approval)
+            var shipment = new Shipment
+            {
+                OrderHeaderId = model.OrderHeader.Id,
+                ShipmentStatus = SD.ShipmentStatusPendingApproval
+            };
+            _db.Shipments.Add(shipment);
+            await _db.SaveChangesAsync();
+
             return RedirectToAction("Receipt", new { id = model.OrderHeader.Id });
         }
         else
@@ -222,8 +230,8 @@ public class OrderController : Controller
         // Create Stripe PaymentIntent
         var options = new PaymentIntentCreateOptions
         {
-            Amount = (long)(order.OrderTotal * 100), // Convert to cents
-            Currency = "nok", // Norwegian Krone
+            Amount = (long)(order.OrderTotal * 100),
+            Currency = "nok",
             PaymentMethodTypes = new List<string> { "card" },
             Metadata = new Dictionary<string, string>
             {
@@ -247,9 +255,9 @@ public class OrderController : Controller
     }
 
     // =============================
-    // CONFIRM PAYMENT (Stripe Return) - FIXED
+    // CONFIRM PAYMENT (Stripe Return)
     // =============================
-    [HttpGet] // Important: must be GET
+    [HttpGet] // must be GET
     public async Task<IActionResult> ConfirmPayment(int orderId, [FromQuery(Name = "payment_intent")] string paymentIntentId)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -278,15 +286,27 @@ public class OrderController : Controller
 
             if (paymentIntent.Status == "succeeded")
             {
+                // Update payment status
                 order.PaymentStatus = SD.PaymentStatusApproved;
-                order.OrderStatus = SD.StatusApproved;
                 order.PaymentIntentId = paymentIntentId;
                 order.PaymentDate = DateTime.Now;
-                await _db.SaveChangesAsync();
-                _logger.LogInformation($"Order {orderId} updated to Approved");
 
-                TempData["Success"] = "Payment successful! Your order has been confirmed.";
-                return RedirectToAction("Receipt", new { id = order.Id });
+                // Create a shipment record
+                var shipment = new Shipment
+                {
+                    OrderHeaderId = order.Id,
+                    ShipmentStatus = SD.ShipmentStatusPendingApproval
+                };
+                _db.Shipments.Add(shipment);
+
+                // Update order status to AwaitingShipmentApproval
+                order.OrderStatus = SD.StatusAwaitingShipmentApproval;
+
+                await _db.SaveChangesAsync();
+                _logger.LogInformation($"Order {orderId} updated to AwaitingShipmentApproval with pending shipment.");
+
+                TempData["Success"] = "Payment successful! Your order is being prepared for shipment.";
+                return RedirectToAction("ShipmentPending", new { id = order.Id });
             }
             else
             {
@@ -304,6 +324,27 @@ public class OrderController : Controller
     }
 
     // =============================
+    // SHIPMENT PENDING PAGE (new)
+    // =============================
+    [HttpGet]
+    public async Task<IActionResult> ShipmentPending(int id)
+    {
+        var order = await _db.OrderHeaders
+            .Include(o => o.OrderDetails)
+                .ThenInclude(d => d.ProductVariant)
+                    .ThenInclude(v => v.Product)
+            .Include(o => o.Shipments)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return NotFound();
+        }
+
+        return View(order);
+    }
+
+    // =============================
     // ORDER RECEIPT
     // =============================
     [HttpGet]
@@ -317,6 +358,7 @@ public class OrderController : Controller
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.SizeValue)
                         .ThenInclude(sv => sv.SizeSystem)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (orderHeader == null)
@@ -362,6 +404,7 @@ public class OrderController : Controller
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.SizeValue)
                         .ThenInclude(sv => sv.SizeSystem)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (orderHeader == null)
@@ -388,12 +431,14 @@ public class OrderController : Controller
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.SizeValue)
                         .ThenInclude(sv => sv.SizeSystem)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == userId);
 
         if (order == null)
             return NotFound();
 
-        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved)
+        // Allow cancellation for Pending, Approved, or AwaitingShipmentApproval orders
+        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved && order.OrderStatus != SD.StatusAwaitingShipmentApproval)
         {
             TempData["Error"] = "This order cannot be cancelled because it's already " + order.OrderStatus;
             return RedirectToAction("Details", new { id });
@@ -413,12 +458,14 @@ public class OrderController : Controller
 
         var order = await _db.OrderHeaders
             .Include(o => o.OrderDetails)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == userId);
 
         if (order == null)
             return NotFound();
 
-        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved)
+        // Check if order can be cancelled
+        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved && order.OrderStatus != SD.StatusAwaitingShipmentApproval)
         {
             return Json(new
             {
@@ -454,8 +501,17 @@ public class OrderController : Controller
             }
         }
 
+        // Update order status
         order.OrderStatus = SD.StatusCancelled;
 
+        // Cancel any associated shipment
+        var shipment = order.Shipments?.FirstOrDefault();
+        if (shipment != null && shipment.ShipmentStatus != SD.ShipmentStatusCancelled)
+        {
+            shipment.ShipmentStatus = SD.ShipmentStatusCancelled;
+        }
+
+        // Restore stock for each item
         foreach (var detail in order.OrderDetails)
         {
             var variant = await _db.ProductVariants.FindAsync(detail.ProductVariantId);
@@ -494,6 +550,7 @@ public class OrderController : Controller
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.SizeValue)
                         .ThenInclude(sv => sv.SizeSystem)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
@@ -509,16 +566,4 @@ public class OrderController : Controller
     {
         return Content("Track action is working!");
     }
-
-    // =============================
-    // STRIPE WEBHOOK (Commented out - for future use)
-    // =============================
-    /*
-    [HttpPost]
-    [IgnoreAntiforgeryToken]
-    public async Task<IActionResult> Webhook()
-    {
-        // ... webhook code remains unchanged
-    }
-    */
 }

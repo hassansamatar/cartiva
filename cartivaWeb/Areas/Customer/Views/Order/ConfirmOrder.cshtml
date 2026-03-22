@@ -7,7 +7,7 @@
 @{
     ViewData["Title"] = "Confirm Order";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
-    
+
     // Generate a placeholder QR code for preview
     var placeholderOrderId = 99999;
     var placeholderQrCodeBase64 = QrCodeService.GenerateOrderQrCode(placeholderOrderId);
@@ -76,7 +76,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <!-- Payment Method Summary -->
             <div class="card shadow-sm">
                 <div class="card-header bg-info text-white">
@@ -112,7 +112,7 @@
                 </div>
             </div>
 
-            <!-- QR Code Preview Card (New) -->
+            <!-- QR Code Preview Card (updated) -->
             <div class="card border-0 shadow-sm mt-3 bg-light">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3">
@@ -150,6 +150,11 @@
                             <i class="bi bi-truck text-warning fs-5"></i>
                             <p class="small mb-0">Real-time Tracking</p>
                         </div>
+                    </div>
+                    <!-- Additional note: after approval -->
+                    <div class="alert alert-light small mt-3 mb-0">
+                        <i class="bi bi-clock-history"></i>
+                        QR code and tracking link will be sent once your order is approved for shipment (typically within 1 business day).
                     </div>
                 </div>
             </div>
@@ -192,7 +197,7 @@
                                                     color: @GetTextColor(item.ProductVariant.Color);">
                                                     <i class="bi bi-droplet"></i> @item.ProductVariant.Color
                                                 </span>
-                                                
+
                                                 <!-- Size Badge -->
                                                 @if (item.ProductVariant.SizeValue != null)
                                                 {
@@ -242,7 +247,7 @@
                         </table>
                     </div>
 
-                    <!-- Estimated Delivery -->
+                    <!-- Estimated Delivery (with note about approval) -->
                     <div class="alert alert-info mt-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
@@ -250,12 +255,12 @@
                                 <strong>Estimated Delivery:</strong>
                             </div>
                             <div>
-                                <span class="fw-bold">@DateTime.Now.AddDays(3).ToString("dd MMM")</span> -
-                                <span class="fw-bold">@DateTime.Now.AddDays(5).ToString("dd MMM yyyy")</span>
+                                <span class="fw-bold">@DateTime.Now.AddDays(4).ToString("dd MMM")</span> -
+                                <span class="fw-bold">@DateTime.Now.AddDays(7).ToString("dd MMM yyyy")</span>
                             </div>
                         </div>
                         <p class="small text-muted mt-2 mb-0">
-                            <i class="bi bi-truck"></i> Standard shipping (3-5 business days)
+                            <i class="bi bi-truck"></i> Standard shipping (3-5 business days) + 1 business day for order approval.
                         </p>
                     </div>
 
@@ -289,7 +294,7 @@
                         </div>
                     }
 
-                    <!-- What You'll Get Card -->
+                    <!-- What You'll Get Card (updated) -->
                     <div class="card mt-3 border-0 bg-light">
                         <div class="card-body p-3">
                             <h6 class="fw-bold mb-2">
@@ -299,13 +304,13 @@
                                 <div class="col-6">
                                     <ul class="list-unstyled small mb-0">
                                         <li><i class="bi bi-envelope-check text-success me-2"></i> Order confirmation email</li>
-                                        <li><i class="bi bi-receipt text-primary me-2"></i> Digital receipt with QR code</li>
+                                        <li><i class="bi bi-receipt text-primary me-2"></i> Digital receipt (QR code after approval)</li>
                                     </ul>
                                 </div>
                                 <div class="col-6">
                                     <ul class="list-unstyled small mb-0">
-                                        <li><i class="bi bi-sms text-info me-2"></i> SMS shipping updates</li>
-                                        <li><i class="bi bi-geo-alt text-warning me-2"></i> Real-time tracking link</li>
+                                        <li><i class="bi bi-sms text-info me-2"></i> SMS updates when order ships</li>
+                                        <li><i class="bi bi-geo-alt text-warning me-2"></i> Real-time tracking link (after approval)</li>
                                     </ul>
                                 </div>
                             </div>
@@ -351,15 +356,15 @@
         transition: transform 0.2s ease;
         cursor: pointer;
     }
-    
+
         .img-thumbnail:hover {
             transform: scale(1.05);
         }
-    
+
     .card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
+
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
@@ -387,7 +392,7 @@
             _ => "#6c757d"
         };
     }
-    
+
     public string GetTextColor(string color)
     {
         return color?.ToLower() switch

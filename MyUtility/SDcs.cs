@@ -20,6 +20,7 @@ namespace MyUtility
         public const string StatusPending = "Pending";
         public const string StatusApproved = "Approved";
         public const string StatusProcessing = "Processing";
+        public const string StatusAwaitingShipmentApproval = "Awaiting Shipment Approval";   // NEW
         public const string StatusShipped = "Shipped";
         public const string StatusOutForDelivery = "Out for Delivery";
         public const string StatusDelivered = "Delivered";
@@ -35,6 +36,15 @@ namespace MyUtility
         public const string PaymentStatusDeferred = "Deferred";
         public const string PaymentStatusRejected = "Rejected";
         public const string PaymentStatusRefunded = "Refunded";
+
+        // ======================
+        // SHIPMENT STATUS CONSTANTS (NEW)
+        // ======================
+        public const string ShipmentStatusPendingApproval = "Pending Approval";
+        public const string ShipmentStatusApproved = "Approved";
+        public const string ShipmentStatusShipped = "Shipped";
+        public const string ShipmentStatusDelivered = "Delivered";
+        public const string ShipmentStatusCancelled = "Cancelled";
 
         // ======================
         // SIZE TYPE CONSTANTS
@@ -82,6 +92,7 @@ namespace MyUtility
                 StatusPending => "Awaiting payment confirmation. Complete payment to start processing.",
                 StatusApproved => "Payment confirmed! We're preparing your order for shipment.",
                 StatusProcessing => "Your order is being processed and packed.",
+                StatusAwaitingShipmentApproval => "Your order is waiting for shipment approval. We'll notify you soon.",
                 StatusShipped => "Your order has been shipped! Use tracking number to follow your package.",
                 StatusOutForDelivery => "Your order is out for delivery today! Expect it soon.",
                 StatusDelivered => "Your order has been delivered. Thank you for shopping with us!",
@@ -100,6 +111,7 @@ namespace MyUtility
                 StatusPending => 10,
                 StatusApproved => 25,
                 StatusProcessing => 40,
+                StatusAwaitingShipmentApproval => 45,
                 StatusShipped => 60,
                 StatusOutForDelivery => 80,
                 StatusDelivered => 100,
@@ -117,6 +129,7 @@ namespace MyUtility
                 StatusPending => 7,
                 StatusApproved => 6,
                 StatusProcessing => 5,
+                StatusAwaitingShipmentApproval => 5,
                 StatusShipped => 3,
                 StatusOutForDelivery => 1,
                 StatusDelivered => 0,
@@ -138,6 +151,7 @@ namespace MyUtility
                 StatusPending => "bg-warning",
                 StatusApproved => "bg-primary",
                 StatusProcessing => "bg-info",
+                StatusAwaitingShipmentApproval => "bg-info",
                 StatusShipped => "bg-primary",
                 StatusOutForDelivery => "bg-info",
                 StatusDelivered => "bg-success",
@@ -155,12 +169,42 @@ namespace MyUtility
                 StatusPending => "bg-warning bg-opacity-25",
                 StatusApproved => "bg-success bg-opacity-25",
                 StatusProcessing => "bg-info bg-opacity-25",
+                StatusAwaitingShipmentApproval => "bg-info bg-opacity-25",
                 StatusShipped => "bg-primary bg-opacity-25",
                 StatusOutForDelivery => "bg-info bg-opacity-25",
                 StatusDelivered => "bg-success bg-opacity-25",
                 StatusCancelled => "bg-danger bg-opacity-25",
                 StatusRefunded => "bg-secondary bg-opacity-25",
                 _ => "bg-secondary bg-opacity-25"
+            };
+        }
+
+        // ======================
+        // SHIPMENT STATUS HELPERS (NEW)
+        // ======================
+        public static string GetShipmentStatusBadgeClass(string status)
+        {
+            return status switch
+            {
+                ShipmentStatusPendingApproval => "bg-warning text-dark",
+                ShipmentStatusApproved => "bg-success",
+                ShipmentStatusShipped => "bg-primary",
+                ShipmentStatusDelivered => "bg-success",
+                ShipmentStatusCancelled => "bg-danger",
+                _ => "bg-secondary"
+            };
+        }
+
+        public static string GetShipmentStatusIcon(string status)
+        {
+            return status switch
+            {
+                ShipmentStatusPendingApproval => "bi-hourglass",
+                ShipmentStatusApproved => "bi-check-circle",
+                ShipmentStatusShipped => "bi-box-seam",
+                ShipmentStatusDelivered => "bi-check-circle-fill",
+                ShipmentStatusCancelled => "bi-x-circle",
+                _ => "bi-question-circle"
             };
         }
 
@@ -174,6 +218,7 @@ namespace MyUtility
                 StatusPending => "bg-warning text-dark",
                 StatusApproved => "bg-success",
                 StatusProcessing => "bg-info",
+                StatusAwaitingShipmentApproval => "bg-info text-white",
                 StatusShipped => "bg-primary",
                 StatusOutForDelivery => "bg-info text-white",
                 StatusDelivered => "bg-success",
@@ -191,6 +236,7 @@ namespace MyUtility
                 StatusPending => "bi-hourglass",
                 StatusApproved => "bi-check-circle",
                 StatusProcessing => "bi-gear",
+                StatusAwaitingShipmentApproval => "bi-clock-history",
                 StatusShipped => "bi-box-seam",
                 StatusOutForDelivery => "bi-truck",
                 StatusDelivered => "bi-check-circle-fill",
