@@ -33,6 +33,11 @@ builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Str
 Stripe.StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe")["SecretKey"];
 builder.Services.AddHttpContextAccessor(); 
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+builder.Services.AddHttpClient<Models.Interfaces.IBringShippingService, BringShippingService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Bring:BaseUrl"] ?? "https://api.bring.com/shipping/api/v1");
+    client.DefaultRequestHeaders.Add("Accept", "application/xml");
+});
 
 var app = builder.Build();
 // ======================

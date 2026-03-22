@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
+using Models.Interfaces;
 using MyUtility;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,11 +17,12 @@ namespace CartivaWeb.Areas.Admin.Controllers
         private readonly ApplicationDbContext _db;
         private readonly ILogger<ShipmentController> _logger;
         // TODO: Inject IEmailSender when ready
-
-        public ShipmentController(ApplicationDbContext db, ILogger<ShipmentController> logger)
+        private readonly IBringShippingService _bringShippingService;
+        public ShipmentController(ApplicationDbContext db, ILogger<ShipmentController> logger, IBringShippingService bringShippingService)
         {
             _db = db;
             _logger = logger;
+            _bringShippingService = bringShippingService;
         }
 
         // GET: /Admin/Shipment/Index
@@ -101,41 +103,51 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // TODO: Call Bring API to create a real shipment and get tracking number
-            // For now, we'll accept manual input
-            shipment.TrackingNumber = trackingNumber;
-            shipment.Carrier = carrier;
-            shipment.Service = service;
-            shipment.ShipmentStatus = SD.ShipmentStatusShipped; // or Approved, depending on flow
-            shipment.ShippedDate = DateTime.Now;
-            shipment.ShippingDate = DateTime.Now;
+            // Prepare request to Bring API
+            var request = new BringShipmentRequest
+            {
+                CustomerName = shipment.OrderHeader.Name,
+                CustomerAddress = shipment.OrderHeader.StreetAddress,
+                CustomerPostalCode = shipment.OrderHeader.PostalCode,
+                CustomerCity = shipment.OrderHeader.City,
+                CustomerCountry = "NO",
+                Weight = 1.0m, // TODO: calculate based on product variants
+                PackageType = "BOX",
+                OrderNumber = shipment.OrderHeader.Id.ToString()
+            };
 
-            // Update the order status (shipping date is not in OrderHeader)
-            shipment.OrderHeader.OrderStatus = SD.StatusShipped;
+            var bringResponse = await _bringShippingService.CreateShipmentAsync(request);
 
-            await _db.SaveChangesAsync();
+            if (bringResponse.Success)
+            {
+                // Update shipment with returned data
+                shipment.TrackingNumber = bringResponse.TrackingNumber;
+                shipment.Carrier = bringResponse.Carrier;
+                shipment.Service = bringResponse.Service;
+                shipment.LabelUrl = bringResponse.LabelUrl;
+                shipment.ShipmentStatus = SD.ShipmentStatusShipped;
+                shipment.ShippedDate = DateTime.Now;
+                shipment.ShippingDate = DateTime.Now;
 
-            // TODO: Send email to customer with tracking link and QR code
+                // Update order status
+                shipment.OrderHeader.OrderStatus = SD.StatusShipped;
 
-            TempData["Success"] = $"Shipment approved. Tracking number: {trackingNumber}";
-            return RedirectToAction(nameof(Index));
+                await _db.SaveChangesAsync();
+
+                // TODO: Send email to customer with tracking link and QR code
+
+                TempData["Success"] = $"Shipment approved. Tracking number: {shipment.TrackingNumber}";
+                return RedirectToAction(nameof(Index));
+            }
+            else
+            {
+                TempData["Error"] = $"Failed to create shipment with Bring: {bringResponse.ErrorMessage}";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
-        // GET: /Admin/Shipment/Edit/5
-        public async Task<IActionResult> Edit(int id)
-        {
-            var shipment = await _db.Shipments
-                .Include(s => s.OrderHeader)
-                .FirstOrDefaultAsync(s => s.Id == id);
-
-            if (shipment == null)
-                return NotFound();
-
-            return View(shipment);
-        }
-
-        // POST: /Admin/Shipment/Edit
-        [HttpPost]
+            // POST: /Admin/Shipment/Edit
+            [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, string trackingNumber, string carrier, string service, string shipmentStatus)
         {

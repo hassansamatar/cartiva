@@ -337,9 +337,7 @@ public class OrderController : Controller
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
-        {
             return NotFound();
-        }
 
         return View(order);
     }
