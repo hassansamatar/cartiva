@@ -305,7 +305,7 @@
         const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: { return_url: returnUrl },
-        redirect: 'if_required'
+        redirect: 'always'   // ← Important: always redirect to server
         });
 
         if (error) {
@@ -314,9 +314,8 @@
         submitButton.disabled = false;
         buttonText.style.display = 'inline';
         spinner.style.display = 'none';
-        } else {
-        window.location.href = '@Url.Action("Receipt", "Order", new { id = Model.Order.Id })';
         }
+        // On success, Stripe will automatically redirect to returnUrl
         });
         });
 
