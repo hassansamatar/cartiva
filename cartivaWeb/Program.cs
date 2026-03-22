@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.Interfaces;
+using Models.Services;
 using MyUtility;
 using Services;
 
@@ -30,6 +31,8 @@ builder.Services.AddScoped<IImageService, ImageService>();
 // Add to Program.cs
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 Stripe.StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe")["SecretKey"];
+builder.Services.AddHttpContextAccessor(); 
+builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 
 var app = builder.Build();
 // ======================

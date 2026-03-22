@@ -21,8 +21,8 @@ namespace MyUtility
         public const string StatusApproved = "Approved";
         public const string StatusProcessing = "Processing";
         public const string StatusShipped = "Shipped";
-        public const string StatusOutForDelivery = "Out for Delivery";  // NEW
-        public const string StatusDelivered = "Delivered";              // NEW
+        public const string StatusOutForDelivery = "Out for Delivery";
+        public const string StatusDelivered = "Delivered";
         public const string StatusCancelled = "Cancelled";
         public const string StatusRefunded = "Refunded";
         public const string StatusCompleted = "Completed";
@@ -32,7 +32,7 @@ namespace MyUtility
         // ======================
         public const string PaymentStatusPending = "Pending";
         public const string PaymentStatusApproved = "Approved";
-        public const string PaymentStatusDeferred = "Deferred";  // For company accounts
+        public const string PaymentStatusDeferred = "Deferred";
         public const string PaymentStatusRejected = "Rejected";
         public const string PaymentStatusRefunded = "Refunded";
 
@@ -66,7 +66,106 @@ namespace MyUtility
         public const string CarrierDHL = "DHL Express";
 
         // ======================
-        // HELPER METHODS
+        // QR CODE SETTINGS
+        // ======================
+        public const int QrCodeSize = 20;           // Size in pixels
+        public const string QrCodeFormat = "png";
+        public const int QrCodeErrorCorrection = 2; // Q level (0-3: L, M, Q, H)
+
+        // ======================
+        // ORDER TRACKING
+        // ======================
+        public static string GetOrderTrackingMessage(string status)
+        {
+            return status switch
+            {
+                StatusPending => "Awaiting payment confirmation. Complete payment to start processing.",
+                StatusApproved => "Payment confirmed! We're preparing your order for shipment.",
+                StatusProcessing => "Your order is being processed and packed.",
+                StatusShipped => "Your order has been shipped! Use tracking number to follow your package.",
+                StatusOutForDelivery => "Your order is out for delivery today! Expect it soon.",
+                StatusDelivered => "Your order has been delivered. Thank you for shopping with us!",
+                StatusCancelled => "This order has been cancelled. Contact support if you have questions.",
+                StatusRefunded => "This order has been refunded. Funds should return within 3-5 business days.",
+                StatusCompleted => "Order completed. Thank you for your business!",
+                _ => "Your order is being processed."
+            };
+        }
+
+        // Get progress percentage for tracking timeline
+        public static int GetOrderProgressPercentage(string status)
+        {
+            return status switch
+            {
+                StatusPending => 10,
+                StatusApproved => 25,
+                StatusProcessing => 40,
+                StatusShipped => 60,
+                StatusOutForDelivery => 80,
+                StatusDelivered => 100,
+                StatusCancelled => 0,
+                StatusRefunded => 0,
+                _ => 0
+            };
+        }
+
+        // Get estimated delivery days based on status
+        public static int GetEstimatedDeliveryDays(string status, DateTime orderDate)
+        {
+            return status switch
+            {
+                StatusPending => 7,
+                StatusApproved => 6,
+                StatusProcessing => 5,
+                StatusShipped => 3,
+                StatusOutForDelivery => 1,
+                StatusDelivered => 0,
+                _ => 5
+            };
+        }
+
+        // Get QR code tracking URL text
+        public static string GetQrCodeTrackingText(string orderId)
+        {
+            return $"Scan to track order #{orderId}";
+        }
+
+        // Get status color for progress bar
+        public static string GetStatusProgressBarColor(string status)
+        {
+            return status switch
+            {
+                StatusPending => "bg-warning",
+                StatusApproved => "bg-primary",
+                StatusProcessing => "bg-info",
+                StatusShipped => "bg-primary",
+                StatusOutForDelivery => "bg-info",
+                StatusDelivered => "bg-success",
+                StatusCancelled => "bg-danger",
+                StatusRefunded => "bg-secondary",
+                _ => "bg-secondary"
+            };
+        }
+
+        // Get status icon background class
+        public static string GetStatusIconBackground(string status)
+        {
+            return status switch
+            {
+                StatusPending => "bg-warning bg-opacity-25",
+                StatusApproved => "bg-success bg-opacity-25",
+                StatusProcessing => "bg-info bg-opacity-25",
+                StatusShipped => "bg-primary bg-opacity-25",
+                StatusOutForDelivery => "bg-info bg-opacity-25",
+                StatusDelivered => "bg-success bg-opacity-25",
+                StatusCancelled => "bg-danger bg-opacity-25",
+                StatusRefunded => "bg-secondary bg-opacity-25",
+                _ => "bg-secondary bg-opacity-25"
+            };
+        }
+
+        // ======================
+        // EXISTING HELPER METHODS
         // ======================
         public static string GetOrderStatusBadgeClass(string status)
         {
@@ -76,8 +175,8 @@ namespace MyUtility
                 StatusApproved => "bg-success",
                 StatusProcessing => "bg-info",
                 StatusShipped => "bg-primary",
-                StatusOutForDelivery => "bg-info text-white",      // NEW
-                StatusDelivered => "bg-success",                   // NEW
+                StatusOutForDelivery => "bg-info text-white",
+                StatusDelivered => "bg-success",
                 StatusCancelled => "bg-danger",
                 StatusRefunded => "bg-secondary",
                 StatusCompleted => "bg-success",
@@ -93,8 +192,8 @@ namespace MyUtility
                 StatusApproved => "bi-check-circle",
                 StatusProcessing => "bi-gear",
                 StatusShipped => "bi-box-seam",
-                StatusOutForDelivery => "bi-truck",                // NEW
-                StatusDelivered => "bi-check-circle-fill",         // NEW
+                StatusOutForDelivery => "bi-truck",
+                StatusDelivered => "bi-check-circle-fill",
                 StatusCancelled => "bi-x-circle",
                 StatusRefunded => "bi-arrow-return-left",
                 StatusCompleted => "bi-star",
@@ -152,7 +251,6 @@ namespace MyUtility
             };
         }
 
-        // NEW: Get delivery time estimate
         public static string GetDeliveryEstimate(string deliveryMethod)
         {
             return deliveryMethod switch
@@ -165,7 +263,6 @@ namespace MyUtility
             };
         }
 
-        // NEW: Get carrier tracking URL
         public static string GetTrackingUrl(string carrier, string trackingNumber)
         {
             return carrier switch

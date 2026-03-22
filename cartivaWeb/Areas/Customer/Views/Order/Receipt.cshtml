@@ -2,11 +2,23 @@
 @using System.Globalization
 @using MyUtility
 @using Models
+@using Models.Interfaces
+@inject IQrCodeService QrCodeService
+
 @{
-    ViewData["Title"] = "Order Receipt";
+    ViewData["Title"] = $"Order Receipt #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var estimatedDeliveryStart = DateTime.Now.AddDays(3).ToString("dd MMM yyyy");
     var estimatedDeliveryEnd = DateTime.Now.AddDays(5).ToString("dd MMM yyyy");
+    
+    // Generate QR Code and tracking URL
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
+    var trackingUrl = QrCodeService.GetOrderTrackingUrl(Model.Id);
+    
+    // Get progress percentage
+    var progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
+    var trackingMessage = SD.GetOrderTrackingMessage(Model.OrderStatus);
+    var progressBarColor = SD.GetStatusProgressBarColor(Model.OrderStatus);
 }
 
 <div class="container mt-4 mb-5">
@@ -29,6 +41,67 @@
         </p>
     </div>
 
+    <!-- QR Code & Quick Actions Row -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">
+                        <i class="bi bi-qr-code text-primary me-2"></i>Track Your Order
+                    </h5>
+                    @if (!string.IsNullOrEmpty(qrCodeBase64))
+                    {
+                        <div class="qr-code-container mb-3">
+                            <img src="data:image/png;base64,@qrCodeBase64"
+                                 alt="Order Tracking QR Code"
+                                 style="width: 150px; height: 150px; cursor: pointer;"
+                                 onclick="window.open('@trackingUrl', '_blank')"
+                                 class="img-thumbnail qr-code" />
+                            <p class="text-muted small mt-2 mb-0">
+                                <i class="bi bi-phone"></i> Scan with your phone
+                            </p>
+                        </div>
+                        <a href="@trackingUrl" class="btn btn-primary btn-sm w-100" target="_blank">
+                            <i class="bi bi-geo-alt"></i> Track Order Now
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="text-muted py-3">
+                            <i class="bi bi-qr-code-scan fs-1"></i>
+                            <p class="mt-2 mb-0">QR code will be available after payment</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="row align-items-center h-100">
+                        <div class="col-md-8">
+                            <h6 class="fw-bold text-primary mb-2">
+                                <i class="bi bi-info-circle"></i> Order Status
+                            </h6>
+                            <p class="mb-2">@trackingMessage</p>
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div class="progress-bar @progressBarColor progress-bar-striped"
+                                     style="width: @progressPercentage%"></div>
+                            </div>
+                            <small class="text-muted">@progressPercentage% complete</small>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <a href="@trackingUrl" class="btn btn-outline-primary w-100" target="_blank">
+                                <i class="bi bi-truck"></i> View Tracking Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Order Status Bar -->
     <div class="card mb-4 shadow-sm">
         <div class="card-body">
@@ -44,29 +117,29 @@
                 </div>
                 <div class="col-md-3">
                     <div class="p-3">
-                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusShipped ? "bg-success" : "bg-warning") bg-opacity-10 d-inline-flex p-3 mb-2">
-                            <i class="bi @(Model.OrderStatus == SD.StatusShipped ? "bi-check-circle-fill text-success" : "bi-hourglass-split text-warning") fs-2"></i>
+                        <div class="rounded-circle @(Model.PaymentDate.HasValue ? "bg-success" : "bg-warning") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.PaymentDate.HasValue ? "bi-check-circle-fill text-success" : "bi-hourglass-split text-warning") fs-2"></i>
                         </div>
-                        <h6 class="fw-bold">Processing</h6>
-                        <small class="text-muted">@(Model.OrderStatus ?? "Pending")</small>
+                        <h6 class="fw-bold">Payment</h6>
+                        <small class="text-muted">@(Model.PaymentDate?.ToString("dd MMM yyyy") ?? "Pending")</small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="p-3">
-                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusShipped ? "bg-success" : "bg-secondary") bg-opacity-10 d-inline-flex p-3 mb-2">
-                            <i class="bi @(Model.OrderStatus == SD.StatusShipped ? "bi-check-circle-fill text-success" : "bi-clock text-secondary") fs-2"></i>
+                        <div class="rounded-circle @(Model.ShippedDate.HasValue ? "bg-success" : "bg-secondary") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.ShippedDate.HasValue ? "bi-check-circle-fill text-success" : "bi-clock text-secondary") fs-2"></i>
                         </div>
                         <h6 class="fw-bold">Shipped</h6>
-                        <small class="text-muted">@(Model.ShippingDate?.ToString("dd MMM yyyy") ?? "Pending")</small>
+                        <small class="text-muted">@(Model.ShippedDate?.ToString("dd MMM yyyy") ?? "Pending")</small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="p-3">
-                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex p-3 mb-2">
-                            <i class="bi bi-truck text-primary fs-2"></i>
+                        <div class="rounded-circle @(Model.DeliveredDate.HasValue ? "bg-success" : "bg-primary") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.DeliveredDate.HasValue ? "bi-check-circle-fill text-success" : "bi-truck text-primary") fs-2"></i>
                         </div>
-                        <h6 class="fw-bold">Delivery</h6>
-                        <small class="text-muted">@estimatedDeliveryStart – @estimatedDeliveryEnd</small>
+                        <h6 class="fw-bold">Delivered</h6>
+                        <small class="text-muted">@(Model.DeliveredDate?.ToString("dd MMM yyyy") ?? "Est. @estimatedDeliveryStart")</small>
                     </div>
                 </div>
             </div>
@@ -116,6 +189,14 @@
                                     @if (!string.IsNullOrEmpty(Model.Carrier))
                                     {
                                         <small>Carrier: @Model.Carrier</small>
+                                        var carrierUrl = SD.GetTrackingUrl(Model.Carrier, Model.TrackingNumber);
+                                        if (carrierUrl != "#")
+                                        {
+                                            <br />
+                                            <a href="@carrierUrl" target="_blank" class="btn btn-sm btn-link p-0">
+                                                <i class="bi bi-box-arrow-up-right"></i> Track with carrier
+                                            </a>
+                                        }
                                     }
                                 </div>
                             </div>
@@ -147,6 +228,7 @@
                             <td><strong>Payment Status:</strong></td>
                             <td>
                                 <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus) px-3 py-2">
+                                    <i class="bi @SD.GetPaymentStatusIcon(Model.PaymentStatus) me-1"></i>
                                     @Model.PaymentStatus
                                 </span>
                             </td>
@@ -155,6 +237,7 @@
                             <td><strong>Order Status:</strong></td>
                             <td>
                                 <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus) px-3 py-2">
+                                    <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus) me-1"></i>
                                     @Model.OrderStatus
                                 </span>
                             </td>
@@ -278,21 +361,55 @@
 
     <!-- Action Buttons -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-5 gap-3">
-        <a asp-action="History" asp-controller="Order" class="btn btn-outline-primary btn-lg px-4 w-100 w-md-auto">
+        <a asp-action="History" asp-controller="Order" asp-area="Customer" class="btn btn-outline-primary btn-lg px-4 w-100 w-md-auto">
             <i class="bi bi-clock-history me-2"></i> View Order History
         </a>
         
-        <a asp-action="Index" asp-controller="Home" class="btn btn-primary btn-lg px-4 w-100 w-md-auto">
+        <a href="@trackingUrl" target="_blank" class="btn btn-info btn-lg px-4 w-100 w-md-auto">
+            <i class="bi bi-geo-alt me-2"></i> Track Order
+        </a>
+        
+        <a asp-action="Index" asp-controller="Home" asp-area="Customer" class="btn btn-primary btn-lg px-4 w-100 w-md-auto">
             <i class="bi bi-arrow-left me-2"></i> Continue Shopping
         </a>
     </div>
     
-    <!-- Help Section -->
-    <div class="text-center mt-4">
-        <p class="text-muted small">
-            <i class="bi bi-question-circle"></i> Need help with your order?
-            <a href="#" class="text-decoration-none">Contact Customer Support</a>
-        </p>
+    <!-- Share & Help Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-share"></i> Share Your Order
+                    </h6>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
+                            <i class="bi bi-link"></i> Copy Tracking Link
+                        </button>
+                        <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
+                               class="btn btn-outline-secondary">
+                            <i class="bi bi-envelope"></i> Email
+                        </a>
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-question-circle"></i> Need Help?
+                    </h6>
+                    <p class="text-muted small mb-0">
+                        Have questions about your order?
+                        <a href="#" class="text-decoration-none">Contact Customer Support</a>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -300,10 +417,16 @@
     <script>
         $(document).ready(function() {
             console.log('Receipt page loaded for order #@Model.Id');
-            
-            // Smooth scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Tracking link copied to clipboard!');
+            }).catch(function() {
+                alert('Failed to copy link');
+            });
+        }
     </script>
 }
 
@@ -331,7 +454,6 @@
     
     public string GetTextColor(string? color)
     {
-        // Return white for dark colors, black for light colors
         return color?.ToLower() switch
         {
             "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",

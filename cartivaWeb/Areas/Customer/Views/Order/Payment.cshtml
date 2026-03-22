@@ -1,9 +1,14 @@
 ﻿@model PaymentVM
 @using System.Globalization
+@using Models.Interfaces
+@inject IQrCodeService QrCodeService
+
 @{
     ViewData["Title"] = "Payment";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var returnUrl = Url.Action("ConfirmPayment", "Order", new { orderId = Model.Order.Id }, Context.Request.Scheme);
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Order.Id);
+    var trackingUrl = QrCodeService.GetOrderTrackingUrl(Model.Order.Id);
 }
 
 <!-- Add Stripe.js -->
@@ -33,12 +38,44 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold">Order #@Model.Order.Id</h6>
                         <span class="badge @SD.GetOrderStatusBadgeClass(Model.Order.OrderStatus)">
+                            <i class="bi @SD.GetOrderStatusIcon(Model.Order.OrderStatus) me-1"></i>
                             @Model.Order.OrderStatus
                         </span>
                     </div>
                     <p class="text-muted small">
                         <i class="bi bi-calendar"></i> @Model.Order.OrderDate.ToString("dd MMM yyyy HH:mm")
                     </p>
+
+                    <!-- QR Code Section -->
+                    <div class="text-center bg-light p-3 rounded mb-3">
+                        <h6 class="fw-bold mb-2">
+                            <i class="bi bi-qr-code me-2"></i>Track Your Order
+                        </h6>
+                        @if (!string.IsNullOrEmpty(qrCodeBase64))
+                        {
+                            <div class="d-flex justify-content-center gap-3 align-items-center">
+                                <img src="data:image/png;base64,@qrCodeBase64"
+                                     alt="Order Tracking QR Code"
+                                     style="width: 100px; height: 100px; cursor: pointer;"
+                                     onclick="window.open('@trackingUrl', '_blank')"
+                                     class="img-thumbnail"
+                                     title="Click to track order" />
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')" title="Copy tracking link">
+                                    <i class="bi bi-link"></i> Copy Link
+                                </button>
+                            </div>
+                            <p class="text-muted small mt-2 mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                Scan with phone or <a href="@trackingUrl" target="_blank">click here</a> to track order
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="text-muted small">
+                                <i class="bi bi-qr-code"></i> QR code will be available after payment
+                            </div>
+                        }
+                    </div>
 
                     <hr />
 
@@ -89,6 +126,29 @@
                         <div>
                             <h6 class="fw-bold mb-1">Secure Payment</h6>
                             <small class="text-muted">Your payment information is encrypted and secure</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Tracking Info -->
+            <div class="card mt-3 border-0 bg-info bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-truck fs-1 text-info me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Track Your Order</h6>
+                            <small class="text-muted">
+                                After payment, use the QR code or link to track your order status
+                            </small>
+                            <div class="mt-2">
+                                <a href="@trackingUrl" class="btn btn-sm btn-outline-info" target="_blank">
+                                    <i class="bi bi-geo-alt"></i> Track Order
+                                </a>
+                                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('@trackingUrl')">
+                                    <i class="bi bi-link"></i> Copy Link
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -164,6 +224,26 @@
                     </div>
                 </div>
             </div>
+
+            <!-- After Payment Info -->
+            <div class="card mt-3 border-0 bg-success bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-envelope-paper fs-1 text-success me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">What Happens Next?</h6>
+                            <small class="text-muted">
+                                After payment, you'll receive:
+                                <ul class="mb-0 mt-1 small">
+                                    <li>Order confirmation email with receipt</li>
+                                    <li>QR code for easy order tracking</li>
+                                    <li>SMS notification when order ships</li>
+                                </ul>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -184,8 +264,6 @@
 
         // Initialize Stripe
         const stripe = Stripe('@Model.PublishableKey');
-            
-        // Use the returnUrl defined in Razor
         const returnUrl = '@returnUrl';
 
         const elements = stripe.elements({
@@ -201,27 +279,16 @@
         borderRadius: '8px',
         },
         rules: {
-        '.Label': {
-        fontWeight: '500',
-        marginBottom: '8px',
-        },
-        '.Input': {
-        padding: '12px',
-        border: '1px solid #ced4da',
-        },
-        '.Input:focus': {
-        borderColor: '#198754',
-        boxShadow: '0 0 0 0.25rem rgba(25, 135, 84, 0.25)',
-        }
+        '.Label': { fontWeight: '500', marginBottom: '8px' },
+        '.Input': { padding: '12px', border: '1px solid #ced4da' },
+        '.Input:focus': { borderColor: '#198754', boxShadow: '0 0 0 0.25rem rgba(25, 135, 84, 0.25)' }
         }
         }
         });
 
-        // Create and mount the Payment Element
         const paymentElement = elements.create('payment');
         paymentElement.mount('#payment-element');
 
-        // Handle form submission
         const form = document.getElementById('payment-form');
         const submitButton = document.getElementById('submit-button');
         const buttonText = document.getElementById('button-text');
@@ -231,35 +298,35 @@
         form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        // Disable button and show spinner
         submitButton.disabled = true;
         buttonText.style.display = 'none';
         spinner.style.display = 'inline-block';
 
-        // Confirm payment
         const { error } = await stripe.confirmPayment({
         elements,
-        confirmParams: {
-        return_url: returnUrl,
-        },
+        confirmParams: { return_url: returnUrl },
         redirect: 'if_required'
         });
 
         if (error) {
-        // Show error message
         messageDiv.style.display = 'block';
         messageDiv.textContent = error.message;
-
-        // Re-enable button
         submitButton.disabled = false;
         buttonText.style.display = 'inline';
         spinner.style.display = 'none';
         } else {
-        // Payment succeeded - redirect to receipt
         window.location.href = '@Url.Action("Receipt", "Order", new { id = Model.Order.Id })';
         }
         });
         });
+
+        function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+        alert('Tracking link copied to clipboard!');
+        }).catch(function() {
+        alert('Failed to copy link');
+        });
+        }
     </script>
 }
 

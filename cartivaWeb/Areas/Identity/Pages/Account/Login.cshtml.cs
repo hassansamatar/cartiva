@@ -82,20 +82,8 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
             {
                 _logger.LogInformation("User logged in.");
 
-                // --- NEW: check if user has orders ---
-                var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == Input.Email);
-                if (user != null)
-                {
-                    bool hasOrders = await _db.OrderHeaders.AnyAsync(o => o.ApplicationUserId == user.Id);
-                    if (hasOrders)
-                    {
-                        // redirect to Order History
-                        return LocalRedirect("/Customer/Order/History");
-                    }
-                }
-
-                // fallback to returnUrl if no orders
-                return LocalRedirect(returnUrl);
+                // ✅ Always redirect to the home page after successful login
+                return LocalRedirect(Url.Content("~/"));
             }
             if (result.RequiresTwoFactor)
             {

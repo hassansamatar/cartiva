@@ -1,11 +1,17 @@
 ﻿@model OrderHeader
 @using System.Globalization
 @using MyUtility
+@using Models.Interfaces
+@inject IQrCodeService QrCodeService
+
 @{
     ViewData["Title"] = "Cancel Order";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var refundAmount = Model.OrderTotal;
     var canCancel = Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusApproved;
+
+    var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
 }
 
 @if (!canCancel)
@@ -98,6 +104,45 @@
                                         <td class="fw-bold text-primary h5 mb-0">@Model.OrderTotal.ToString("C", culture)</td>
                                     </tr>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Section (NEW) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="cancel-info-box text-center">
+                                <h6 class="cancel-info-title">
+                                    <i class="bi bi-qr-code"></i> Track Your Order
+                                </h6>
+                                @if (!string.IsNullOrEmpty(qrCodeBase64))
+                                {
+                                    <div class="d-flex justify-content-center gap-3 align-items-center">
+                                        <img src="data:image/png;base64,@qrCodeBase64"
+                                             alt="Order Tracking QR Code"
+                                             style="width: 80px; height: 80px; cursor: pointer;"
+                                             onclick="window.open('@trackingUrl', '_blank')"
+                                             class="img-thumbnail"
+                                             title="Click to track order" />
+                                        <div class="text-start">
+                                            <a href="@trackingUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-geo-alt"></i> Track Order
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('@trackingUrl')">
+                                                <i class="bi bi-link"></i> Copy Link
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mt-2 mb-0">
+                                        <i class="bi bi-phone"></i> Scan with your phone to track this order.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <div class="text-muted small">
+                                        <i class="bi bi-qr-code"></i> QR code will be available after payment.
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -277,6 +322,15 @@
 @section Scripts {
     <link rel="stylesheet" href="~/css/cancel.css" />
     <script src="~/js/cancel.js"></script>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Tracking link copied to clipboard!');
+            }).catch(function() {
+                alert('Failed to copy link');
+            });
+        }
+    </script>
 }
 
 @functions {

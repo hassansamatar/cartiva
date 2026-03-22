@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Models;
+using Models.Interfaces;
 using Models.ViewModels;
 using MyUtility;
 using Stripe;
@@ -14,12 +15,15 @@ public class OrderController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly StripeSettings _stripeSettings;
+    private readonly IQrCodeService _qrCodeService;
+    private string userId;
 
-    public OrderController(ApplicationDbContext db, IOptions<StripeSettings> stripeSettings)
+    public OrderController(ApplicationDbContext db, IOptions<StripeSettings> stripeSettings, IQrCodeService qrCodeService)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
         StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
+        _qrCodeService = qrCodeService;
     }
 
     // =============================
@@ -308,23 +312,22 @@ public class OrderController : Controller
     // ORDER HISTORY
     // =============================
     [HttpGet]
+  
     public async Task<IActionResult> History()
     {
-        
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
         var orders = await _db.OrderHeaders
             .Where(o => o.ApplicationUserId == userId)
             .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.ProductVariant)
+                .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(pv => pv.Product)
             .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.ProductVariant)
+                .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(pv => pv.SizeValue)
             .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
 
-        return View(orders);
+        return View(orders);  // ✅ returns the list to the History view
     }
 
     // =============================
@@ -464,6 +467,9 @@ public class OrderController : Controller
         return RedirectToAction("Details", new { id });
     }
 
+
+
+
     // =============================
     // STRIPE WEBHOOK (Commented out - for future use)
     // =============================
@@ -531,4 +537,37 @@ public class OrderController : Controller
         }
     }
     */
+
+    // =============================
+// QR CODE TRACKING PAGE
+// =============================
+[HttpGet]
+public async Task<IActionResult> Track(int id)
+{
+    var order = await _db.OrderHeaders
+        .Include(o => o.OrderDetails)
+            .ThenInclude(d => d.ProductVariant)
+                .ThenInclude(v => v.Product)
+        .Include(o => o.OrderDetails)
+            .ThenInclude(d => d.ProductVariant)
+                .ThenInclude(v => v.SizeValue)
+                    .ThenInclude(sv => sv.SizeSystem)
+        .FirstOrDefaultAsync(o => o.Id == id);
+
+    if (order == null)
+    {
+        return NotFound();
+    }
+
+    // Optional: Track page is public - anyone with the link can view
+    // This is good for sharing tracking links with customers
+    // No user authentication required for tracking page
+    
+    return View(order);
+}
+    [HttpGet]
+    public IActionResult TrackTest()
+    {
+        return Content("Track action is working!");
+    }
 }
