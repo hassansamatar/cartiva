@@ -11,9 +11,11 @@
     var estimatedDeliveryStart = DateTime.Now.AddDays(3).ToString("dd MMM yyyy");
     var estimatedDeliveryEnd = DateTime.Now.AddDays(5).ToString("dd MMM yyyy");
     
-    // Generate QR Code and tracking URL
+    // ✅ Generate QR Code image (still uses the service)
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
-    var trackingUrl = QrCodeService.GetOrderTrackingUrl(Model.Id);
+    
+    // ✅ Generate tracking URL using Url.Action (same as Details page)
+    var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
     
     // Get progress percentage
     var progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);

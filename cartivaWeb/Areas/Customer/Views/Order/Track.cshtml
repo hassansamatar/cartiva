@@ -231,162 +231,164 @@
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
+                                32
+                                <th>Product</th>
+                                <th>Details</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrderDetails)
+                            {
                                 <tr>
-                                    <th>Product</th>
-                                    <th>Details</th>
-                                    <th class="text-center">Quantity</th>
-                                    <th class="text-end">Price</th>
-                                    <th class="text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in Model.OrderDetails)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                @if (item.ProductVariant?.Product?.ImageUrl != null)
-                                                {
-                                                    <img src="@item.ProductVariant.Product.ImageUrl"
-                                                         alt="@item.ProductVariant.Product.Name"
-                                                         style="width: 50px; height: 50px; object-fit: cover;"
-                                                         class="rounded me-2" />
-                                                }
-                                                else
-                                                {
-                                                    <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center"
-                                                         style="width: 50px; height: 50px;">
-                                                        <i class="bi bi-image fs-3 text-muted"></i>
-                                                    </div>
-                                                }
-                                                <div>
-                                                    <strong>@item.ProductVariant?.Product?.Name</strong>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (item.ProductVariant?.Product?.ImageUrl != null)
+                                            {
+                                                <img src="@item.ProductVariant.Product.ImageUrl"
+                                                     alt="@item.ProductVariant.Product.Name"
+                                                     style="width: 50px; height: 50px; object-fit: cover;"
+                                                     class="rounded me-2" />
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center"
+                                                     style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-image fs-3 text-muted"></i>
                                                 </div>
+                                            }
+                                            <div>
+                                                <strong>@item.ProductVariant?.Product?.Name</strong>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                <span class="badge" style="background-color: @GetColorCode(item.ProductVariant?.Color); color: @GetTextColor(item.ProductVariant?.Color);">
-                                                    @item.ProductVariant?.Color
-                                                </span>
-                                                @if (item.ProductVariant?.SizeValue != null)
-                                                {
-                                                    <span class="badge bg-secondary">@item.ProductVariant.SizeValue.DisplayText</span>
-                                                }
-                                            </small>
-                                        </td>
-                                        <td class="text-center">@item.Count</td>
-                                        <td class="text-end">@item.Price.ToString("C", culture)</td>
-                                        <td class="text-end fw-bold">@((item.Price * item.Count).ToString("C", culture))</td>
-                                    </tr>
-                                }
-                            </tbody>
-                            <tfoot class="table-light">
-                                <tr>
-                                    <td colspan="4" class="text-end fw-bold">Order Total:</td>
-                                    <td class="text-end fw-bold text-primary h5">@Model.OrderTotal.ToString("C", culture)</td>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            <span class="badge" style="background-color: @GetColorCode(item.ProductVariant?.Color); color: @GetTextColor(item.ProductVariant?.Color);">
+                                                @item.ProductVariant?.Color
+                                            </span>
+                                            @if (item.ProductVariant?.SizeValue != null)
+                                            {
+                                                <span class="badge bg-secondary">@item.ProductVariant.SizeValue.DisplayText</span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-center">@item.Count</td>
+                                    <td class="text-end">@item.Price.ToString("C", culture)</td>
+                                    <td class="text-end fw-bold">@((item.Price * item.Count).ToString("C", culture))</td>
                                 </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <!-- QR Code Card -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-dark text-white py-3">
-                    <h5 class="mb-0">
-                        <i class="bi bi-qr-code me-2"></i>Track via QR Code
-                    </h5>
-                </div>
-                <div class="card-body text-center p-4">
-                    @if (!string.IsNullOrEmpty(qrCodeBase64))
-                    {
-                        <img src="data:image/png;base64,@qrCodeBase64"
-                             alt="Order Tracking QR Code"
-                             style="width: 180px; height: 180px; cursor: pointer;"
-                             onclick="window.open('@trackingUrl', '_blank')"
-                             class="img-thumbnail mb-3" />
-                        <p class="text-muted small">
-                            <i class="bi bi-phone"></i> Scan with your phone camera
-                        </p>
-                        <a href="@trackingUrl" class="btn btn-outline-primary btn-sm w-100" target="_blank">
-                            <i class="bi bi-link-45deg"></i> Open Tracking Link
-                        </a>
-                    }
-                    else
-                    {
-                        <div class="text-muted py-4">
-                            <i class="bi bi-qr-code-scan fs-1"></i>
-                            <p class="mt-2 mb-0">QR code will be available after payment</p>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Delivery Information Card -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-light py-3">
-                    <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-geo-alt me-2"></i>Shipping Address
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-0 fw-bold">@Model.Name</p>
-                    <p class="mb-0">@Model.StreetAddress</p>
-                    <p class="mb-0">@Model.PostalCode @Model.City</p>
-                    <p class="mb-0">@Model.State, @Model.City</p>
-                    <p class="mb-0">Phone: @Model.PhoneNumber</p>
-                </div>
-            </div>
-
-            <!-- Need Help Card -->
-            <div class="card shadow-sm border-0 bg-info bg-opacity-10">
-                <div class="card-body">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-question-circle-fill fs-2 text-info me-3"></i>
-                        <div>
-                            <h6 class="fw-bold mb-1">Need Help?</h6>
-                            <p class="small text-muted mb-2">
-                                Have questions about your order?
-                            </p>
-                            <div class="d-grid gap-2">
-                                <a href="/Contact" class="btn btn-outline-info btn-sm">
-                                    <i class="bi bi-envelope"></i> Contact Support
-                                </a>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-                                    <i class="bi bi-printer"></i> Print Tracking Info
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Share Tracking Card -->
-            <div class="card shadow-sm border-0 mt-4">
-                <div class="card-body text-center">
-                    <h6 class="fw-bold mb-3">Share Tracking</h6>
-                    <div class="d-flex justify-content-around">
-                        <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
-                               class="btn btn-outline-secondary">
-                            <i class="bi bi-envelope"></i>
-                        </a>
-                        <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
-                            <i class="bi bi-link"></i>
-                        </button>
-                        <button class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer"></i>
-                        </button>
-                    </div>
-                    <small class="text-muted d-block mt-2">Share tracking link with others</small>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Order Total:</td>
+                                <td class="text-end fw-bold text-primary h5">@Model.OrderTotal.ToString("C", culture)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- QR Code Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-qr-code me-2"></i>Track via QR Code
+                </h5>
+            </div>
+            <div class="card-body text-center p-4">
+                @if (!string.IsNullOrEmpty(qrCodeBase64))
+                {
+                    <img src="data:image/png;base64,@qrCodeBase64"
+                         alt="Order Tracking QR Code"
+                         style="width: 180px; height: 180px; cursor: pointer;"
+                         onclick="window.open('@trackingUrl', '_blank')"
+                         class="img-thumbnail mb-3" />
+                    <p class="text-muted small">
+                        <a href="@trackingUrl" target="_blank" class="text-decoration-none text-muted">
+                            <i class="bi bi-phone"></i> Scan with your phone camera
+                        </a>
+                    </p>
+                    <a href="@trackingUrl" class="btn btn-outline-primary btn-sm w-100" target="_blank">
+                        <i class="bi bi-link-45deg"></i> Open Tracking Link
+                    </a>
+                }
+                else
+                {
+                    <div class="text-muted py-4">
+                        <i class="bi bi-qr-code-scan fs-1"></i>
+                        <p class="mt-2 mb-0">QR code will be available after payment</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Delivery Information Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-light py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-geo-alt me-2"></i>Shipping Address
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0 fw-bold">@Model.Name</p>
+                <p class="mb-0">@Model.StreetAddress</p>
+                <p class="mb-0">@Model.PostalCode @Model.City</p>
+                <p class="mb-0">@Model.State, @Model.City</p>
+                <p class="mb-0">Phone: @Model.PhoneNumber</p>
+            </div>
+        </div>
+
+        <!-- Need Help Card -->
+        <div class="card shadow-sm border-0 bg-info bg-opacity-10">
+            <div class="card-body">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-question-circle-fill fs-2 text-info me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1">Need Help?</h6>
+                        <p class="small text-muted mb-2">
+                            Have questions about your order?
+                        </p>
+                        <div class="d-grid gap-2">
+                            <a href="/Contact" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-envelope"></i> Contact Support
+                            </a>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                                <i class="bi bi-printer"></i> Print Tracking Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Tracking Card -->
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body text-center">
+                <h6 class="fw-bold mb-3">Share Tracking</h6>
+                <div class="d-flex justify-content-around">
+                    <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
+                           class="btn btn-outline-secondary">
+                        <i class="bi bi-envelope"></i>
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
+                        <i class="bi bi-link"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                </div>
+                <small class="text-muted d-block mt-2">Share tracking link with others</small>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 
 @section Scripts {
@@ -402,11 +404,11 @@
         // Refresh page every 30 seconds for pending orders
         @if (Model.OrderStatus == "Pending" || Model.OrderStatus == "Approved")
         {
-                    <text>
-                            setTimeout(function() {
-                                location.reload();
-                            }, 30000);
-                    </text>
+                        <text>
+                                    setTimeout(function() {
+                                        location.reload();
+                                    }, 30000);
+                        </text>
         }
     </script>
 }
