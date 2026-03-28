@@ -47,7 +47,7 @@
                 </div>
 
                 <div class="card-body">
-                    <form asp-action="ConfirmOrder" method="post">
+                    <form asp-controller="Order"   asp-action="ConfirmOrder" method="post">
                         @Html.AntiForgeryToken()
 
                         <input asp-for="OrderHeader.ApplicationUserId" type="hidden" />
@@ -103,6 +103,18 @@
                                 <input asp-for="OrderHeader.PostalCode" class="form-control" placeholder="Postal code" />
                                 <span asp-validation-for="OrderHeader.PostalCode" class="text-danger"></span>
                             </div>
+                        </div>
+
+                        <!-- Country field -->
+                        <div class="mb-3">
+                            <label asp-for="OrderHeader.Country" class="form-label fw-bold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-globe"></i>
+                                </span>
+                                <input asp-for="OrderHeader.Country" class="form-control" placeholder="Country" value="Norway" />
+                            </div>
+                            <span asp-validation-for="OrderHeader.Country" class="text-danger"></span>
                         </div>
 
                         <button type="submit" class="btn btn-success w-100">
@@ -191,7 +203,6 @@
                                 <th class="text-end">Total</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             @foreach (var item in Model.ShoppingCartList)
                             {
@@ -208,7 +219,7 @@
                                                 color: @GetTextColor(item.ProductVariant.Color);">
                                                 <i class="bi bi-droplet"></i> @item.ProductVariant.Color
                                             </span>
-                                                
+
                                             <!-- Size Badge -->
                                             @if (item.ProductVariant.SizeValue != null)
                                             {
@@ -316,7 +327,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -325,7 +335,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    
+
     <script>
         $(document).ready(function() {
             console.log('Checkout page loaded');
@@ -338,15 +348,15 @@
         transition: transform 0.2s ease;
         cursor: pointer;
     }
-    
+
         .img-thumbnail:hover {
             transform: scale(1.05);
         }
-    
+
     .card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
+
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
@@ -374,7 +384,7 @@
             _ => "#6c757d"
         };
     }
-    
+
     public string GetTextColor(string color)
     {
         return color?.ToLower() switch

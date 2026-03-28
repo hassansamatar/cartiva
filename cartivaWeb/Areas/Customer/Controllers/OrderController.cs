@@ -1,4 +1,6 @@
 ﻿using DataAccess;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -17,17 +19,20 @@ public class OrderController : Controller
     private readonly StripeSettings _stripeSettings;
     private readonly IQrCodeService _qrCodeService;
     private readonly ILogger<OrderController> _logger;
+    private readonly IEmailSender _emailSender;
 
     public OrderController(ApplicationDbContext db,
                            IOptions<StripeSettings> stripeSettings,
                            IQrCodeService qrCodeService,
-                           ILogger<OrderController> logger)
+                           ILogger<OrderController> logger,
+                           IEmailSender emailSender)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
         StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
         _qrCodeService = qrCodeService;
         _logger = logger;
+        _emailSender = emailSender;
     }
 
     // =============================
@@ -53,8 +58,7 @@ public class OrderController : Controller
             return RedirectToAction("Index", "Cart");
         }
 
-        var user = await _db.ApplicationUsers
-            .FirstOrDefaultAsync(u => u.Id == userId);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
         var vm = new CheckoutVM
         {
@@ -65,7 +69,8 @@ public class OrderController : Controller
                 StreetAddress = user?.StreetAddress,
                 City = user?.City,
                 State = user?.State,
-                PostalCode = user?.PostalCode
+                PostalCode = user?.PostalCode,
+                Country = user?.Country ?? "Norway"
             },
             ShoppingCartList = cartList,
             OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count)
@@ -75,7 +80,7 @@ public class OrderController : Controller
     }
 
     // =============================
-    // CONFIRM ORDER (POST)
+    // CONFIRM ORDER (POST) – Displays the confirmation page
     // =============================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -104,7 +109,7 @@ public class OrderController : Controller
     }
 
     // =============================
-    // PLACE ORDER
+    // PLACE ORDER – Creates the order and redirects
     // =============================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -141,16 +146,19 @@ public class OrderController : Controller
             }
         }
 
+        var user = await _db.Users.FindAsync(userId);
+
         // Create OrderHeader
         model.OrderHeader.ApplicationUserId = userId;
         model.OrderHeader.OrderDate = DateTime.Now;
         model.OrderHeader.OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+        model.OrderHeader.Country = user?.Country ?? "Norway";
 
         // Company vs Regular customer logic
         if (User.IsInRole(SD.Role_Company))
         {
             model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
-            model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval; // Company orders also need shipment approval
+            model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval;
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
         }
         else
@@ -198,6 +206,24 @@ public class OrderController : Controller
             };
             _db.Shipments.Add(shipment);
             await _db.SaveChangesAsync();
+
+            // Send order confirmation email for company users
+            if (user != null && !string.IsNullOrEmpty(user.Email))
+            {
+                var trackingUrl = Url.Action("Track", "Order", new { id = model.OrderHeader.Id, area = "Customer" }, Request.Scheme);
+                var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(model.OrderHeader.Id);
+                var subject = "Order Confirmation";
+                var body = $@"
+<h2>Thank you for your order!</h2>
+<p>Your order <strong>#{model.OrderHeader.Id}</strong> has been confirmed.</p>
+<p>We'll notify you when it ships.</p>
+<p>You can track your order status at any time: <a href='{trackingUrl}'>Track Order</a></p>
+<p>Or scan the QR code below with your phone:</p>
+<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
+<p>Thank you for shopping with us!</p>
+";
+                await _emailSender.SendEmailAsync(user.Email, subject, body);
+            }
 
             return RedirectToAction("Receipt", new { id = model.OrderHeader.Id });
         }
@@ -257,7 +283,7 @@ public class OrderController : Controller
     // =============================
     // CONFIRM PAYMENT (Stripe Return)
     // =============================
-    [HttpGet] // must be GET
+    [HttpGet]
     public async Task<IActionResult> ConfirmPayment(int orderId, [FromQuery(Name = "payment_intent")] string paymentIntentId)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -305,6 +331,25 @@ public class OrderController : Controller
                 await _db.SaveChangesAsync();
                 _logger.LogInformation($"Order {orderId} updated to AwaitingShipmentApproval with pending shipment.");
 
+                // Send order confirmation email for regular customers
+                var user = await _db.Users.FindAsync(userId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    var trackingUrl = Url.Action("Track", "Order", new { id = order.Id, area = "Customer" }, Request.Scheme);
+                    var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(order.Id);
+                    var subject = "Order Confirmation";
+                    var body = $@"
+<h2>Thank you for your order!</h2>
+<p>Your order <strong>#{order.Id}</strong> has been confirmed.</p>
+<p>We'll notify you when it ships.</p>
+<p>You can track your order status at any time: <a href='{trackingUrl}'>Track Order</a></p>
+<p>Or scan the QR code below with your phone:</p>
+<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
+<p>Thank you for shopping with us!</p>
+";
+                    await _emailSender.SendEmailAsync(user.Email, subject, body);
+                }
+
                 TempData["Success"] = "Payment successful! Your order is being prepared for shipment.";
                 return RedirectToAction("ShipmentPending", new { id = order.Id });
             }
@@ -324,7 +369,7 @@ public class OrderController : Controller
     }
 
     // =============================
-    // SHIPMENT PENDING PAGE (new)
+    // SHIPMENT PENDING PAGE
     // =============================
     [HttpGet]
     public async Task<IActionResult> ShipmentPending(int id)
@@ -435,7 +480,6 @@ public class OrderController : Controller
         if (order == null)
             return NotFound();
 
-        // Allow cancellation for Pending, Approved, or AwaitingShipmentApproval orders
         if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved && order.OrderStatus != SD.StatusAwaitingShipmentApproval)
         {
             TempData["Error"] = "This order cannot be cancelled because it's already " + order.OrderStatus;
@@ -462,7 +506,6 @@ public class OrderController : Controller
         if (order == null)
             return NotFound();
 
-        // Check if order can be cancelled
         if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved && order.OrderStatus != SD.StatusAwaitingShipmentApproval)
         {
             return Json(new
@@ -499,17 +542,14 @@ public class OrderController : Controller
             }
         }
 
-        // Update order status
         order.OrderStatus = SD.StatusCancelled;
 
-        // Cancel any associated shipment
         var shipment = order.Shipments?.FirstOrDefault();
         if (shipment != null && shipment.ShipmentStatus != SD.ShipmentStatusCancelled)
         {
             shipment.ShipmentStatus = SD.ShipmentStatusCancelled;
         }
 
-        // Restore stock for each item
         foreach (var detail in order.OrderDetails)
         {
             var variant = await _db.ProductVariants.FindAsync(detail.ProductVariantId);

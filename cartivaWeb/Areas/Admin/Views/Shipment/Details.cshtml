@@ -1,8 +1,10 @@
 ﻿@model Shipment
 @using MyUtility
+@using System.Globalization
 
 @{
     ViewData["Title"] = $"Shipment Details #{Model.Id}";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
 <div class="container mt-4">
@@ -60,7 +62,7 @@
                         </dd>
 
                         <dt class="col-sm-4">Order Total</dt>
-                        <dd class="col-sm-8">@Model.OrderHeader.OrderTotal.ToString("C")</dd>
+                        <dd class="col-sm-8">@Model.OrderHeader.OrderTotal.ToString("C", culture)</dd>
 
                         <dt class="col-sm-4">Order Status</dt>
                         <dd class="col-sm-8"><span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderHeader.OrderStatus)">@Model.OrderHeader.OrderStatus</span></dd>
@@ -80,6 +82,6 @@
         {
             <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-danger">Cancel</a>
         }
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+        <a  asp-controller="Shipment" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
     </div>
 </div>

@@ -123,6 +123,20 @@
                 </div>
             </div>
 
+            <!-- Shipping Address Card (NEW) -->
+            <div class="card mt-3 border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-2">
+                        <i class="bi bi-geo-alt"></i> Shipping Address
+                    </h6>
+                    <p class="mb-0">@Model.Order.Name</p>
+                    <p class="mb-0">@Model.Order.StreetAddress</p>
+                    <p class="mb-0">@Model.Order.City, @Model.Order.State @Model.Order.PostalCode</p>
+                    <p class="mb-0">@Model.Order.Country</p>
+                    <p class="mb-0"><i class="bi bi-telephone"></i> @Model.Order.PhoneNumber</p>
+                </div>
+            </div>
+
             <!-- Payment Security Info -->
             <div class="card mt-3 border-0 bg-light">
                 <div class="card-body">

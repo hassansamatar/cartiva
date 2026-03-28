@@ -1,79 +1,128 @@
 ﻿document.addEventListener("DOMContentLoaded", function () {
-
     const streetInput = document.getElementById("street");
     const postalCodeInput = document.getElementById("postalCode");
     const cityInput = document.getElementById("city");
     const stateInput = document.getElementById("state");
+    const countryInput = document.getElementById("country");
     const suggestionsContainer = document.getElementById("addressSuggestions");
 
+    let debounceTimer;
+    let currentRequest = null;
+
     function debounce(func, delay) {
-        let timer;
         return function (...args) {
-            clearTimeout(timer);
-            timer = setTimeout(() => func.apply(this, args), delay);
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(this, args), delay);
         };
     }
 
-    async function fetchAddresses(query) {
+    function showLoading() {
+        if (suggestionsContainer) {
+            suggestionsContainer.innerHTML = '<div class="text-muted text-center p-2">Searching...</div>';
+            suggestionsContainer.style.display = "block";
+        }
+    }
 
+    async function fetchAddresses(query) {
         if (!query || query.length < 3) {
-            suggestionsContainer.innerHTML = "";
+            suggestionsContainer.style.display = "none";
             return;
         }
 
+        if (currentRequest) {
+            currentRequest.abort();
+        }
+
+        showLoading();
+
         try {
+            const controller = new AbortController();
+            currentRequest = controller;
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
+            // Use your local API endpoint
+            const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
             const data = await response.json();
-
-            const addresses = data.adresser ?? [];
+            const addresses = data.adresser || [];
 
             renderSuggestions(addresses);
-
         } catch (error) {
-
-            console.error("Address lookup failed:", error);
-            suggestionsContainer.innerHTML = "";
-
+            if (error.name !== 'AbortError') {
+                console.error("Address lookup failed:", error);
+                if (suggestionsContainer) {
+                    suggestionsContainer.innerHTML = '<div class="text-warning text-center p-2">Unable to fetch addresses. Please enter manually.</div>';
+                    setTimeout(() => {
+                        suggestionsContainer.style.display = "none";
+                    }, 2000);
+                }
+            }
+        } finally {
+            currentRequest = null;
         }
     }
 
     function renderSuggestions(addresses) {
-
+        if (!suggestionsContainer) return;
         suggestionsContainer.innerHTML = "";
 
-        addresses.forEach(a => {
+        if (!addresses || addresses.length === 0) {
+            suggestionsContainer.style.display = "none";
+            return;
+        }
 
+        // Show only first 5
+        const top = addresses.slice(0, 5);
+        top.forEach(a => {
             const item = document.createElement("button");
-
             item.type = "button";
             item.className = "list-group-item list-group-item-action";
 
-            item.textContent =
-                `${a.adressetekst ?? ""}, ${a.postnummer ?? ""} ${a.poststed ?? ""}`;
+            const streetText = a.adressetekst || "";
+            const postalCode = a.postnummer || "";
+            const city = a.poststed || "";
+            item.textContent = `${streetText}, ${postalCode} ${city}`.trim();
 
-            item.onclick = () => {
+            item.onclick = (e) => {
+                e.preventDefault();
 
-                const city = a.poststed ?? "";
-
-                streetInput.value = a.adressetekst ?? "";
-                postalCodeInput.value = a.postnummer ?? "";
-
+                streetInput.value = streetText;
+                postalCodeInput.value = postalCode;
                 cityInput.value = city;
-                stateInput.value = city;
+                stateInput.value = a.fylke || city;      // set state (region)
+                if (countryInput) countryInput.value = "Norway";
 
+                suggestionsContainer.style.display = "none";
                 suggestionsContainer.innerHTML = "";
+
+                // Trigger validation events
+                streetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                postalCodeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                cityInput.dispatchEvent(new Event('input', { bubbles: true }));
+                if (countryInput) countryInput.dispatchEvent(new Event('input', { bubbles: true }));
             };
 
             suggestionsContainer.appendChild(item);
-
         });
+
+        suggestionsContainer.style.display = "block";
     }
 
-    streetInput.addEventListener("input",
-        debounce((e) => {
-            fetchAddresses(e.target.value);
-        }, 300)
-    );
+    if (streetInput) {
+        streetInput.addEventListener("input", debounce((e) => {
+            const query = e.target.value.trim();
+            fetchAddresses(query);
+        }, 500));
+    }
 
+    document.addEventListener("click", function (event) {
+        if (suggestionsContainer && !suggestionsContainer.contains(event.target) && event.target !== streetInput) {
+            suggestionsContainer.style.display = "none";
+        }
+    });
 });

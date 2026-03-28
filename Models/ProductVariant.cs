@@ -26,5 +26,6 @@ public class ProductVariant
 
     [ForeignKey("ProductId")]
     public Product Product { get; set; }  // Required - non-nullable
+    public decimal? Weight { get; set; } // in kg
     public ICollection<Review>? Reviews { get; set; }
 }

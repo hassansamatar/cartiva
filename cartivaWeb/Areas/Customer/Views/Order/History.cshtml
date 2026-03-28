@@ -126,6 +126,11 @@
                                             <span>Total:</span>
                                             <span>@order.OrderTotal.ToString("C", culture)</span>
                                         </div>
+                                        <!-- Country -->
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <span>Country:</span>
+                                            <span>@(order.Country ?? "—")</span>
+                                        </div>
 
                                         <!-- QR Code Section -->
                                         <div class="mt-3 text-center">

@@ -50,7 +50,8 @@ namespace Models
         public string City { get; set; }
         public string State { get; set; }
         public string PostalCode { get; set; }
-
+        // In Models/ApplicationUser.cs
+        public string Country { get; set; } = "Norway";
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
 

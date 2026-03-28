@@ -1,5 +1,6 @@
 ﻿using DataAccess;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
@@ -16,13 +17,21 @@ namespace CartivaWeb.Areas.Admin.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<ShipmentController> _logger;
-        // TODO: Inject IEmailSender when ready
         private readonly IBringShippingService _bringShippingService;
-        public ShipmentController(ApplicationDbContext db, ILogger<ShipmentController> logger, IBringShippingService bringShippingService)
+        private readonly IEmailSender _emailSender;
+        private readonly IQrCodeService _qrCodeService;
+
+        public ShipmentController(ApplicationDbContext db,
+                                  ILogger<ShipmentController> logger,
+                                  IBringShippingService bringShippingService,
+                                  IEmailSender emailSender,
+                                  IQrCodeService qrCodeService)
         {
             _db = db;
             _logger = logger;
             _bringShippingService = bringShippingService;
+            _emailSender = emailSender;
+            _qrCodeService = qrCodeService;
         }
 
         // GET: /Admin/Shipment/Index
@@ -38,9 +47,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(status))
-            {
                 query = query.Where(s => s.ShipmentStatus == status);
-            }
 
             var shipments = await query.OrderByDescending(s => s.Id).ToListAsync();
 
@@ -67,10 +74,14 @@ namespace CartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: /Admin/Shipment/Approve/5
+        [HttpGet]
         public async Task<IActionResult> Approve(int id)
         {
             var shipment = await _db.Shipments
                 .Include(s => s.OrderHeader)
+                    .ThenInclude(o => o.OrderDetails)
+                        .ThenInclude(d => d.ProductVariant)
+                            .ThenInclude(v => v.Product)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (shipment == null)
@@ -85,13 +96,14 @@ namespace CartivaWeb.Areas.Admin.Controllers
             return View(shipment);
         }
 
-        // POST: /Admin/Shipment/Approve
+        // POST: /Admin/Shipment/ApprovePost
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Approve(int id, string trackingNumber, string carrier, string service)
+        public async Task<IActionResult> ApprovePost(int id)
         {
             var shipment = await _db.Shipments
                 .Include(s => s.OrderHeader)
+                    .ThenInclude(o => o.OrderDetails)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (shipment == null)
@@ -103,24 +115,25 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Prepare request to Bring API
+            // Prepare request to shipping service
             var request = new BringShipmentRequest
             {
+                OrderNumber = shipment.OrderHeader.Id.ToString(),
                 CustomerName = shipment.OrderHeader.Name,
                 CustomerAddress = shipment.OrderHeader.StreetAddress,
                 CustomerPostalCode = shipment.OrderHeader.PostalCode,
                 CustomerCity = shipment.OrderHeader.City,
-                CustomerCountry = "NO",
-                Weight = 1.0m, // TODO: calculate based on product variants
-                PackageType = "BOX",
-                OrderNumber = shipment.OrderHeader.Id.ToString()
+                CustomerCountry = shipment.OrderHeader.Country ?? "NO",
+                CustomerPhone = shipment.OrderHeader.PhoneNumber,
+                Weight = 1.0m, // TODO: calculate total weight from order items
+                PackageType = "BOX"
             };
 
+            _logger.LogInformation("Creating shipment for order {OrderId}", shipment.OrderHeader.Id);
             var bringResponse = await _bringShippingService.CreateShipmentAsync(request);
 
             if (bringResponse.Success)
             {
-                // Update shipment with returned data
                 shipment.TrackingNumber = bringResponse.TrackingNumber;
                 shipment.Carrier = bringResponse.Carrier;
                 shipment.Service = bringResponse.Service;
@@ -129,25 +142,74 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 shipment.ShippedDate = DateTime.Now;
                 shipment.ShippingDate = DateTime.Now;
 
-                // Update order status
                 shipment.OrderHeader.OrderStatus = SD.StatusShipped;
 
                 await _db.SaveChangesAsync();
 
-                // TODO: Send email to customer with tracking link and QR code
+                // Send shipment confirmation email with inline QR code
+                var user = await _db.Users.FindAsync(shipment.OrderHeader.ApplicationUserId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    var trackingUrl = Url.Action("Track", "Order", new { id = shipment.OrderHeader.Id, area = "Customer" }, Request.Scheme);
+                    var qrCodeBytes = _qrCodeService.GenerateOrderQrCodeBytes(shipment.OrderHeader.Id);
+                    var subject = "Your order has shipped!";
+                    var body = $@"
+<h2>Good news!</h2>
+<p>Your order <strong>#{shipment.OrderHeader.Id}</strong> has been shipped.</p>
+<p><strong>Tracking number:</strong> {shipment.TrackingNumber}</p>
+<p>Track your order: <a href='{trackingUrl}'>Click here</a></p>
+<p>Or scan the QR code below with your phone:</p>
+<img src='cid:qrCode' width='150' />
+<p>Thank you for shopping with us!</p>
+";
+
+                    if (_emailSender is MyUtility.EmailSender emailSender)
+                    {
+                        await emailSender.SendEmailWithInlineImageAsync(user.Email, subject, body, qrCodeBytes);
+                    }
+                    else
+                    {
+                        // Fallback to base64 image
+                        var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(shipment.OrderHeader.Id);
+                        var fallbackBody = $@"
+<h2>Good news!</h2>
+<p>Your order <strong>#{shipment.OrderHeader.Id}</strong> has been shipped.</p>
+<p><strong>Tracking number:</strong> {shipment.TrackingNumber}</p>
+<p>Track your order: <a href='{trackingUrl}'>Click here</a></p>
+<p>Or scan the QR code below with your phone:</p>
+<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
+<p>Thank you for shopping with us!</p>
+";
+                        await _emailSender.SendEmailAsync(user.Email, subject, fallbackBody);
+                    }
+                }
 
                 TempData["Success"] = $"Shipment approved. Tracking number: {shipment.TrackingNumber}";
                 return RedirectToAction(nameof(Index));
             }
             else
             {
-                TempData["Error"] = $"Failed to create shipment with Bring: {bringResponse.ErrorMessage}";
+                _logger.LogError("Bring API error: {ErrorMessage}", bringResponse.ErrorMessage);
+                TempData["Error"] = $"Failed to create shipment: {bringResponse.ErrorMessage}";
                 return RedirectToAction(nameof(Index));
             }
         }
 
-            // POST: /Admin/Shipment/Edit
-            [HttpPost]
+        // GET: /Admin/Shipment/Edit/5
+        public async Task<IActionResult> Edit(int id)
+        {
+            var shipment = await _db.Shipments
+                .Include(s => s.OrderHeader)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (shipment == null)
+                return NotFound();
+
+            return View(shipment);
+        }
+
+        // POST: /Admin/Shipment/Edit
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, string trackingNumber, string carrier, string service, string shipmentStatus)
         {
@@ -220,8 +282,6 @@ namespace CartivaWeb.Areas.Admin.Controllers
             }
 
             shipment.ShipmentStatus = SD.ShipmentStatusCancelled;
-            // Optionally, also update order status to Cancelled? Usually order would be cancelled entirely, not just shipment.
-            // For now, we'll leave order status as is, but admin may need to handle refund separately.
 
             await _db.SaveChangesAsync();
 

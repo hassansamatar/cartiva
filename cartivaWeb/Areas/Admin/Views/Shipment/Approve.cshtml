@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="col-md-6">
-            <form asp-action="Approve" method="post">
+            <form asp-comntroller="Shipment" asp-action="ApprovePost" method="post">
                 <input type="hidden" asp-for="Id" />
                 <p>Confirm shipment creation with Bring. A tracking number will be generated automatically.</p>
                 <button type="submit" class="btn btn-success">Approve and Create Shipment</button>

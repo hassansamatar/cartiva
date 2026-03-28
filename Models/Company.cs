@@ -24,7 +24,8 @@ namespace Models
         public string? PostalCode { get; set; }
 
         public string? State { get; set; }
-
+          // In Models/ApplicationUser.cs
+public string Country { get; set; } = "Norway";
         [Display(Name = "Phone Number")]
         public string PhoneNumber { get; set; }
 

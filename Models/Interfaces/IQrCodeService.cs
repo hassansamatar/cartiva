@@ -19,6 +19,7 @@ namespace Models.Interfaces
         /// <summary>
         /// Gets the tracking URL for an order
         /// </summary>
+       
         string GetOrderTrackingUrl(int orderId);
     }
 }

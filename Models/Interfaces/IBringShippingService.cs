@@ -12,14 +12,16 @@ namespace Models.Interfaces
 
     public class BringShipmentRequest
     {
+        public string OrderNumber { get; set; }
         public string CustomerName { get; set; }
         public string CustomerAddress { get; set; }
         public string CustomerPostalCode { get; set; }
         public string CustomerCity { get; set; }
         public string CustomerCountry { get; set; } = "NO";
-        public decimal Weight { get; set; } // in kg
-        public string PackageType { get; set; } // e.g., "BOX"
-        public string OrderNumber { get; set; }
+        public string CustomerPhone { get; set; }      // ✅ add this line
+        public decimal Weight { get; set; }
+        public string PackageType { get; set; }
+
     }
 
     public class BringShipmentResponse
