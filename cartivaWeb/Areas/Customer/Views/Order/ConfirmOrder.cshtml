@@ -91,14 +91,14 @@
                 <div class="card-body">
                     @if (User.IsInRole(SD.Role_Company))
                     {
-                        <div class="d-flex">
-                            <i class="bi bi-building text-primary fs-4 me-3"></i>
-                            <div>
-                                <h6>Company Account</h6>
-                                <p class="text-muted small mb-0">
-                                    Payment is due within 30 days from the order date.
-                                </p>
-                            </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" value="true" id="payNowSwitch" name="payNow">
+                            <label class="form-check-label" for="payNowSwitch">
+                                Pay now instead of deferred (optional)
+                            </label>
+                        </div>
+                        <div class="alert alert-success mt-2">
+                            Payment is normally deferred and due within 30 days.
                         </div>
                     }
                     else
@@ -116,7 +116,7 @@
                 </div>
             </div>
 
-            <!-- QR Code Preview Card (updated) -->
+            <!-- QR Code Preview Card -->
             <div class="card border-0 shadow-sm mt-3 bg-light">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3">
@@ -155,10 +155,9 @@
                             <p class="small mb-0">Real-time Tracking</p>
                         </div>
                     </div>
-                    <!-- Additional note: after approval -->
                     <div class="alert alert-light small mt-3 mb-0">
                         <i class="bi bi-clock-history"></i>
-                        QR code and tracking link will be sent once your order is approved for shipment (typically within 1 business day).
+                        QR code and tracking link will be sent once your order is approved for shipment.
                     </div>
                 </div>
             </div>
@@ -178,204 +177,105 @@
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <thead class="table-light">
-                                32
-                                <th>Product</th>
-                                <th class="text-center">Qty</th>
-                                <th class="text-end">Total</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach (var item in Model.ShoppingCartList)
-                            {
-                                var subtotal = item.ProductVariant.Price * item.Count;
-
                                 <tr>
-                                    <td>
-                                        <strong>@item.ProductVariant.Product.Name</strong>
-                                        <br />
-                                        <div class="d-flex align-items-center mt-1">
-                                            <!-- Color Badge -->
-                                            <span class="badge me-1"
-                                                  style="background-color: @GetColorCode(item.ProductVariant.Color);
-                                                color: @GetTextColor(item.ProductVariant.Color);">
-                                                <i class="bi bi-droplet"></i> @item.ProductVariant.Color
-                                            </span>
-
-                                            <!-- Size Badge -->
-                                            @if (item.ProductVariant.SizeValue != null)
-                                            {
-                                                <span class="badge bg-secondary">
-                                                    <i class="bi bi-rulers"></i> @item.ProductVariant.SizeValue.DisplayText
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-secondary">
-                                                    <i class="bi bi-dash"></i> No Size
-                                                </span>
-                                            }
-                                        </div>
-                                        @if (item.ProductVariant.SizeValue?.Description != null)
-                                        {
-                                            <small class="text-muted d-block mt-1">
-                                                @item.ProductVariant.SizeValue.Description
-                                            </small>
-                                        }
-                                    </td>
-                                    <td class="text-center align-middle">
-                                        <span class="fw-bold">@item.Count</span>
-                                    </td>
-                                    <td class="text-end align-middle">
-                                        <strong class="text-primary">@subtotal.ToString("C", culture)</strong>
-                                    </td>
+                                    <th>Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Total</th>
                                 </tr>
-                            }
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="2" class="text-end"><strong>Subtotal:</strong></td>
-                                <td class="text-end">@Model.OrderTotal.ToString("C", culture)</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="text-end"><strong>Shipping:</strong></td>
-                                <td class="text-end">Free</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="text-end"><strong>Total:</strong></td>
-                                <td class="text-end">
-                                    <h5 class="text-primary mb-0">@Model.OrderTotal.ToString("C", culture)</h5>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <!-- Estimated Delivery (with note about approval) -->
-                <div class="alert alert-info mt-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="bi bi-calendar-check fs-4 me-2"></i>
-                            <strong>Estimated Delivery:</strong>
-                        </div>
-                        <div>
-                            <span class="fw-bold">@DateTime.Now.AddDays(4).ToString("dd MMM")</span> -
-                            <span class="fw-bold">@DateTime.Now.AddDays(7).ToString("dd MMM yyyy")</span>
-                        </div>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.ShoppingCartList)
+                                {
+                                    var subtotal = item.ProductVariant.Price * item.Count;
+                                    <tr>
+                                        <td>
+                                            <strong>@item.ProductVariant.Product.Name</strong>
+                                            <br />
+                                            <div class="d-flex align-items-center mt-1">
+                                                <span class="badge me-1"
+                                                      style="background-color: @GetColorCode(item.ProductVariant.Color);
+                                                    color: @GetTextColor(item.ProductVariant.Color);">
+                                                    <i class="bi bi-droplet"></i> @item.ProductVariant.Color
+                                                </span>
+                                                @if (item.ProductVariant.SizeValue != null)
+                                                {
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-rulers"></i> @item.ProductVariant.SizeValue.DisplayText
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-dash"></i> No Size
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="text-center align-middle">@item.Count</td>
+                                        <td class="text-end align-middle">@subtotal.ToString("C", culture)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="2" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td class="text-end">@Model.OrderTotal.ToString("C", culture)</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="text-end"><strong>Shipping:</strong></td>
+                                    <td class="text-end">Free</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="text-end"><strong>Total:</strong></td>
+                                    <td class="text-end"><h5 class="text-primary mb-0">@Model.OrderTotal.ToString("C", culture)</h5></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-                    <p class="small text-muted mt-2 mb-0">
-                        <i class="bi bi-truck"></i> Standard shipping (3-5 business days) + 1 business day for order approval.
+
+                    <!-- PLACE ORDER FORM -->
+                    <form asp-action="PlaceOrder" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="OrderHeader.ApplicationUserId" />
+                        <input type="hidden" asp-for="OrderHeader.Name" />
+                        <input type="hidden" asp-for="OrderHeader.PhoneNumber" />
+                        <input type="hidden" asp-for="OrderHeader.StreetAddress" />
+                        <input type="hidden" asp-for="OrderHeader.City" />
+                        <input type="hidden" asp-for="OrderHeader.State" />
+                        <input type="hidden" asp-for="OrderHeader.PostalCode" />
+                        <input type="hidden" asp-for="OrderHeader.Country" />
+                        <input type="hidden" asp-for="OrderTotal" />
+
+                        <!-- Pay Now Checkbox for Company Users -->
+                        @if (User.IsInRole(SD.Role_Company))
+                        {
+                            <input type="hidden" id="payNowHidden" name="payNow" value="false" />
+                            <script>
+                                                        document.getElementById('payNowSwitch').addEventListener('change', function () {
+                                                            document.getElementById('payNowHidden').value = this.checked ? 'true' : 'false';
+                                                        });
+                            </script>
+                        }
+
+                        <button type="submit" class="btn btn-success w-100 mt-3 py-3">
+                            <i class="bi @(User.IsInRole(SD.Role_Company) ? "bi-building" : "bi-credit-card")"></i>
+                            @(User.IsInRole(SD.Role_Company) ? "Place Order" : "Confirm & Pay")
+                        </button>
+                    </form>
+
+                    <p class="text-muted small text-center mt-3">
+                        <i class="bi bi-shield-lock"></i>
+                        Your information is secure and encrypted
                     </p>
                 </div>
-
-                <!-- COMPANY PAYMENT MESSAGE -->
-                @if (User.IsInRole(SD.Role_Company))
-                {
-                    <div class="alert alert-success mt-3">
-                        <div class="d-flex">
-                            <i class="bi bi-building fs-4 me-3"></i>
-                            <div>
-                                <strong>Company Account Benefit:</strong>
-                                <p class="small mb-0">
-                                    No payment is required now. Payment is due within 30 days from the order date.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="alert alert-warning mt-3">
-                        <div class="d-flex">
-                            <i class="bi bi-exclamation-triangle fs-4 me-3"></i>
-                            <div>
-                                <strong>Payment Required Immediately:</strong>
-                                <p class="small mb-0">
-                                    You will be redirected to our secure payment gateway after placing this order.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                }
-
-                <!-- What You'll Get Card (updated) -->
-                <div class="card mt-3 border-0 bg-light">
-                    <div class="card-body p-3">
-                        <h6 class="fw-bold mb-2">
-                            <i class="bi bi-gift"></i> What You'll Get
-                        </h6>
-                        <div class="row">
-                            <div class="col-6">
-                                <ul class="list-unstyled small mb-0">
-                                    <li><i class="bi bi-envelope-check text-success me-2"></i> Order confirmation email</li>
-                                    <li><i class="bi bi-receipt text-primary me-2"></i> Digital receipt (QR code after approval)</li>
-                                </ul>
-                            </div>
-                            <div class="col-6">
-                                <ul class="list-unstyled small mb-0">
-                                    <li><i class="bi bi-sms text-info me-2"></i> SMS updates when order ships</li>
-                                    <li><i class="bi bi-geo-alt text-warning me-2"></i> Real-time tracking link (after approval)</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PLACE ORDER FORM -->
-                <form asp-action="PlaceOrder" method="post">
-                    @Html.AntiForgeryToken()
-
-                    <!-- Hidden fields required for POST -->
-                    <input type="hidden" asp-for="OrderHeader.ApplicationUserId" />
-                    <input type="hidden" asp-for="OrderHeader.Name" />
-                    <input type="hidden" asp-for="OrderHeader.PhoneNumber" />
-                    <input type="hidden" asp-for="OrderHeader.StreetAddress" />
-                    <input type="hidden" asp-for="OrderHeader.City" />
-                    <input type="hidden" asp-for="OrderHeader.State" />
-                    <input type="hidden" asp-for="OrderHeader.PostalCode" />
-                    <input type="hidden" asp-for="OrderHeader.Country" />   <!-- added -->
-                    <input type="hidden" asp-for="OrderTotal" />
-
-                    <button type="submit" class="btn btn-success w-100 mt-3 py-3">
-
-                        <i class="bi @(User.IsInRole(SD.Role_Company) ? "bi-building" : "bi-credit-card")"></i>
-                        @(User.IsInRole(SD.Role_Company) ? "Place Order" : "Confirm & Pay")
-                    </button>
-                </form>
-
-                <p class="text-muted small text-center mt-3">
-                    <i class="bi bi-shield-lock"></i>
-                    Your information is secure and encrypted
-                </p>
             </div>
         </div>
     </div>
-</div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-
-<style>
-    .img-thumbnail {
-        transition: transform 0.2s ease;
-        cursor: pointer;
-    }
-
-        .img-thumbnail:hover {
-            transform: scale(1.05);
-        }
-
-    .card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-        }
-</style>
 
 @functions {
     public string GetColorCode(string color)
