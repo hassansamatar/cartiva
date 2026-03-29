@@ -171,7 +171,7 @@
                         <p class="mb-1">@Model.Name</p>
                         <p class="mb-1">@Model.StreetAddress</p>
                         <p class="mb-1">@Model.City, @Model.State @Model.PostalCode</p>
-                        <p class="mb-1">@Model.Country</p>   <!-- NEW: Country -->
+                        <p class="mb-1">@Model.Country</p>
                         <p class="mb-0"><i class="bi bi-telephone"></i> @Model.PhoneNumber</p>
                     </div>
 
@@ -222,9 +222,8 @@
                 <div class="card-body">
                     <table class="table table-sm table-borderless">
                         <tr>
-                            <td width="40%">
-                                <strong>Payment Method:</strong>¹
-                                Whether
+                            <td width="40%"><strong>Payment Method:</strong></td>
+                            <td>
                                 @if (User.IsInRole(SD.Role_Company))
                                 {
                                     <span><i class="bi bi-building"></i> Company Account</span>
@@ -381,78 +380,83 @@
             </table>
         </div>
     </div>
-</div>
 
-<!-- ACTION BUTTONS -->
-<div class="d-flex flex-wrap gap-3 justify-content-between mt-4">
-    <div>
-        <a asp-action="History" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Orders
-        </a>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="@trackingUrl" target="_blank" class="btn btn-info text-white">
-            <i class="bi bi-geo-alt"></i> Track Order
-        </a>
-        @if (canCancel)
-        {
-            <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-outline-danger">
-                <i class="bi bi-x-circle"></i> Cancel Order
+    <!-- ACTION BUTTONS (Updated with Pay Now for Company users) -->
+    <div class="d-flex flex-wrap gap-3 justify-content-between mt-4">
+        <div>
+            <a asp-action="History" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Orders
             </a>
-        }
-        @if (Model.OrderStatus == SD.StatusDelivered)
-        {
-            <a href="#" class="btn btn-outline-warning">
-                <i class="bi bi-star"></i> Leave Review
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@trackingUrl" target="_blank" class="btn btn-info text-white">
+                <i class="bi bi-geo-alt"></i> Track Order
             </a>
-        }
-        <button class="btn btn-outline-primary" onclick="window.print()">
-            <i class="bi bi-printer"></i> Print
-        </button>
-    </div>
-</div>
-
-<!-- SHARE TRACKING SECTION -->
-<div class="card border-0 bg-light mt-4">
-    <div class="card-body text-center">
-        <h6 class="fw-bold mb-3">
-            <i class="bi bi-share"></i> Share Order Tracking
-        </h6>
-        <div class="d-flex justify-content-center gap-3">
-            <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
-                <i class="bi bi-link"></i> Copy Tracking Link
-            </button>
-            <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
-                   class="btn btn-outline-secondary">
-                <i class="bi bi-envelope"></i> Email
-            </a>
-            <button class="btn btn-outline-secondary" onclick="window.print()">
+            @if (canCancel)
+            {
+                <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle"></i> Cancel Order
+                </a>
+            }
+            @if (Model.OrderStatus == SD.StatusDelivered)
+            {
+                <a href="#" class="btn btn-outline-warning">
+                    <i class="bi bi-star"></i> Leave Review
+                </a>
+            }
+            @if (User.IsInRole(SD.Role_Company) && Model.PaymentStatus == SD.PaymentStatusDeferred)
+            {
+                <a asp-action="Payment" asp-route-orderId="@Model.Id" class="btn btn-success">
+                    <i class="bi bi-credit-card"></i> Pay Now
+                </a>
+            }
+            <button class="btn btn-outline-primary" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print
             </button>
         </div>
-        @if (!string.IsNullOrEmpty(qrCodeBase64))
-        {
-            <div class="mt-3">
-                <small class="text-muted">
-                    <i class="bi bi-qr-code"></i> Scan QR code with your phone for quick tracking
-                </small>
-            </div>
-        }
     </div>
-</div>
+
+    <!-- SHARE TRACKING SECTION -->
+    <div class="card border-0 bg-light mt-4">
+        <div class="card-body text-center">
+            <h6 class="fw-bold mb-3">
+                <i class="bi bi-share"></i> Share Order Tracking
+            </h6>
+            <div class="d-flex justify-content-center gap-3">
+                <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
+                    <i class="bi bi-link"></i> Copy Tracking Link
+                </button>
+                <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
+                       class="btn btn-outline-secondary">
+                    <i class="bi bi-envelope"></i> Email
+                </a>
+                <button class="btn btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(qrCodeBase64))
+            {
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-qr-code"></i> Scan QR code with your phone for quick tracking
+                    </small>
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                alert('Tracking link copied to clipboard!');
-            }).catch(function() {
-                alert('Failed to copy link');
-            });
-        }
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    alert('Tracking link copied to clipboard!');
+                }).catch(function() {
+                    alert('Failed to copy link');
+                });
+            }
 
-        console.log('Order details page loaded for order #@Model.Id');
+            console.log('Order details page loaded for order #@Model.Id');
     </script>
 }
 

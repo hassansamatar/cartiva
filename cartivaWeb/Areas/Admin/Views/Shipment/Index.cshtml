@@ -1,9 +1,11 @@
 ﻿@model IEnumerable<Shipment>
 @using MyUtility
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Shipment Management";
     var currentStatus = ViewBag.CurrentStatus as string;
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
 <div class="container mt-4">
@@ -37,7 +39,7 @@
                         <td>@s.Id</td>
                         <td>@s.OrderHeader.Id</td>
                         <td>@s.OrderHeader.Name</td>
-                        <td>@s.OrderHeader.OrderTotal.ToString("C")</td>
+                        <td>@s.OrderHeader.OrderTotal.ToString("C", culture)</td>
                         <td><span class="badge @SD.GetShipmentStatusBadgeClass(s.ShipmentStatus)">@s.ShipmentStatus</span></td>
                         <td>
                             @if (!string.IsNullOrEmpty(s.TrackingNumber))

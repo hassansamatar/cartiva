@@ -28,4 +28,5 @@ public class ProductVariant
     public Product Product { get; set; }  // Required - non-nullable
     public decimal? Weight { get; set; } // in kg
     public ICollection<Review>? Reviews { get; set; }
+    public string UserId { get; set; }
 }

@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace CartivaWeb.Areas.Customer.Controllers
 {
-    [Area("Customer")]
+   [Area("Customer")]
     public class HomeController : Controller
     {
         private readonly ApplicationDbContext _db;

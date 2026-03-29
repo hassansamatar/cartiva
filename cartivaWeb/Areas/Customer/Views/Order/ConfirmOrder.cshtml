@@ -337,6 +337,7 @@
                     <input type="hidden" asp-for="OrderTotal" />
 
                     <button type="submit" class="btn btn-success w-100 mt-3 py-3">
+
                         <i class="bi @(User.IsInRole(SD.Role_Company) ? "bi-building" : "bi-credit-card")"></i>
                         @(User.IsInRole(SD.Role_Company) ? "Place Order" : "Confirm & Pay")
                     </button>

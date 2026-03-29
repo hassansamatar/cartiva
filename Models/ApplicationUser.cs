@@ -28,5 +28,7 @@ namespace Models
         [ForeignKey("CompanyId")]
         [ValidateNever]
        public Company? Company { get; set; }
+      
+        public bool IsDeleted { get; set; } = false;
     }
 }

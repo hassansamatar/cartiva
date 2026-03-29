@@ -1,0 +1,68 @@
+﻿@model List<ApplicationUser>
+@using MyUtility
+@{
+    ViewData["Title"] = "User Management";
+    var userRoles = ViewBag.UserRoles as Dictionary<string, string>;
+    var showDeleted = ViewBag.ShowDeleted as bool? ?? false;
+}
+
+<div class="container mt-4">
+    <h2><i class="bi bi-people"></i> User Management</h2>
+    <div class="mb-3">
+        <a asp-action="Index" asp-route-showDeleted="false" class="btn @(!showDeleted ? "btn-primary" : "btn-outline-secondary")">Active Users</a>
+        <a asp-action="Index" asp-route-showDeleted="true" class="btn @(showDeleted ? "btn-primary" : "btn-outline-secondary")">Deactivated Users</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    var role = userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : "None";
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@user.Name</td>
+                        <td><span class="badge bg-secondary">@role</span></td>
+                        <td>
+                            <a asp-action="EditRoles" asp-route-id="@user.Id" class="btn btn-sm btn-warning">Edit Roles</a>
+                            @if (!user.IsDeleted)
+                            {
+                                <button class="btn btn-sm btn-danger" onclick="deactivateUser('@user.Id')">Deactivate</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-success" onclick="activateUser('@user.Id')">Activate</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function deactivateUser(id) {
+            if (confirm('Are you sure you want to deactivate this user?')) {
+                $.post('@Url.Action("Deactivate", "User")', { id: id })
+                    .done(function () { location.reload(); })
+                    .fail(function () { alert('Deactivation failed'); });
+            }
+        }
+        function activateUser(id) {
+            if (confirm('Are you sure you want to activate this user?')) {
+                $.post('@Url.Action("Activate", "User")', { id: id })
+                    .done(function () { location.reload(); })
+                    .fail(function () { alert('Activation failed'); });
+            }
+        }
+    </script>
+}

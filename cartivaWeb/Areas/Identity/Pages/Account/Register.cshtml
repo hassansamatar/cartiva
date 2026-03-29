@@ -122,21 +122,7 @@
                             <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
                         </div>
 
-                        <!-- ROLE & COMPANY -->
-                        <div class="col-md-6">
-                            <label class="form-label text-muted">Role</label>
-                            <select asp-for="Input.Role" asp-items="@Model.Input.RoleList" class="form-select" id="Input_Role">
-                                <option disabled selected>- Select Role -</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label text-muted">Company</label>
-                            <select asp-for="Input.CompanyId" asp-items="@Model.Input.CompanyList" class="form-select" id="Input_CompanyId" style="display:none;">
-                                <option disabled selected>- Select Company -</option>
-                            </select>
-                        </div>
-
+                        <!-- SUBMIT BUTTON -->
                         <div class="col-12 pt-3">
                             <button id="registerSubmit" type="submit" class="btn btn-dark w-100 btn-lg">
                                 <i class="bi bi-person-plus me-1"></i> Register
@@ -307,18 +293,6 @@
             document.addEventListener("click", function (event) {
                 if (suggestionsContainer && !suggestionsContainer.contains(event.target) && event.target !== streetInput) {
                     suggestionsContainer.style.display = "none";
-                }
-            });
-        });
-
-        // Role/Company toggle
-        $(document).ready(function () {
-            $('#Input_Role').change(function () {
-                var selection = $('#Input_Role option:selected').text();
-                if (selection == 'Company') {
-                    $('#Input_CompanyId').show();
-                } else {
-                    $('#Input_CompanyId').hide();
                 }
             });
         });

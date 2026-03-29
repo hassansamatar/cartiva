@@ -1,0 +1,34 @@
+﻿@using CartivaWeb.Areas.Admin.Controllers
+@model EditRolesViewModel
+
+@{
+    ViewData["Title"] = "Edit User Roles";
+}
+<div class="container mt-4">
+    <h2>Edit Roles</h2>
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+            User Information
+        </div>
+        <div class="card-body">
+            <p><strong>Name:</strong> @Model.UserName</p>
+            <p><strong>Email:</strong> @Model.UserEmail</p>
+            <p><strong>Current Role:</strong> <span class="badge bg-secondary">@Model.CurrentRole</span></p>
+        </div>
+    </div>
+    <form asp-action="EditRoles" method="post">
+        <input type="hidden" asp-for="UserId" />
+        <div class="mb-3">
+            <label class="form-label">Assign New Role</label>
+            <select asp-for="SelectedRole" class="form-select">
+                <option value="">-- None --</option>
+                @foreach (var role in Model.AvailableRoles)
+                {
+                    <option value="@role">@role</option>
+                }v
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>

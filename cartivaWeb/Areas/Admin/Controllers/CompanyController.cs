@@ -1,12 +1,14 @@
 ﻿using DataAccess;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Models;
+using MyUtility;
 using System.Linq;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    // [Authorize(Roles = SD.Role_Admin)]
+    [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class CompanyController : Controller
     {
         private readonly ApplicationDbContext _db;

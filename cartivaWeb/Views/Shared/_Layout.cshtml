@@ -106,7 +106,7 @@
                         </a>
                     </li>
                     
-                    @if (User.IsInRole(SD.Role_Admin))
+                    @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
                     {
                         <li class="nav-item dropdown">
 
@@ -142,9 +142,13 @@
                                     </a>
                                 </li>
 
-                              
+                              <li>
+                <a class="dropdown-item" asp-area="Admin" asp-controller="User" asp-action="Index">
+                    <i class="bi bi-people me-2"></i> Users
+                </a>
+            </li>
 
-                            </ul>
+                    </ul>
 
                         </li>
                     }

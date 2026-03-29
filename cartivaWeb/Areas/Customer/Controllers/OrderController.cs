@@ -113,7 +113,8 @@ public class OrderController : Controller
     // =============================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PlaceOrder(CheckoutVM model)
+   
+    public async Task<IActionResult> PlaceOrder(CheckoutVM model, bool payNow = false)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -195,7 +196,7 @@ public class OrderController : Controller
         _db.ShoppingCarts.RemoveRange(cartList);
         await _db.SaveChangesAsync();
 
-        // Redirect based on role
+        // Redirect based on role and payNow flag
         if (User.IsInRole(SD.Role_Company))
         {
             // Create a shipment record for company orders (pending approval)
@@ -225,11 +226,20 @@ public class OrderController : Controller
                 await _emailSender.SendEmailAsync(user.Email, subject, body);
             }
 
-            return RedirectToAction("Receipt", new { id = model.OrderHeader.Id });
+            if (payNow)
+            {
+                // Redirect to payment page for immediate payment
+                return RedirectToAction("Payment", new { orderId = model.OrderHeader.Id });
+            }
+            else
+            {
+                // Deferred payment – show receipt
+                return RedirectToAction("Receipt", new { id = model.OrderHeader.Id });
+            }
         }
         else
         {
-            // Create Stripe Payment Intent for regular customers
+            // Regular customer – always go to payment
             return RedirectToAction("Payment", new { orderId = model.OrderHeader.Id });
         }
     }
