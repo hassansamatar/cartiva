@@ -1,269 +1,310 @@
 ﻿@using MyUtility
+
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - CartivaWeb</title>
 
+    ```
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CartivaWeb.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    
-    <!-- Toastr CSS for notifications -->
+
+    <!-- Toastr CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+    ```
 
     <style>
-        /* Navbar */
-        .navbar-dark { background-color: #212529; }
-        .navbar-dark .navbar-brand,
-        .navbar-dark .nav-link { color: #ffffff; }
 
-        .navbar-dark .nav-link:hover,
-        .navbar-dark .nav-item.dropdown:hover > .nav-link { color: #ffc107; }
+            /* Navbar */
+            .navbar-dark {
+                background-color: #212529;
+            }
 
-        .dropdown-menu { border-radius: 0.5rem; }
+                .navbar-dark .navbar-brand,
+                .navbar-dark .nav-link {
+                    color: #ffffff;
+                }
 
-        /* Footer */
-        footer.footer {
-            padding: 1.5rem 0;
-            background-color: #f8f9fa;
-            color: #343a40;
-        }
+                    .navbar-dark .nav-link:hover,
+                    .navbar-dark .nav-item.dropdown:hover > .nav-link {
+                        color: #ffc107;
+                    }
 
-        footer.footer a {
-            color: #0d6efd;
-            text-decoration: none;
-        }
+                /* Improve visibility of Content Management */
+                .navbar-dark .nav-item.dropdown > .nav-link {
+                    font-weight: 600;
+                    letter-spacing: 0.3px;
+                }
 
-        footer.footer a:hover { text-decoration: underline; }
+            /* Dropdown styling */
+            .dropdown-menu {
+                border-radius: 0.5rem;
+            }
 
-        /* Content */
-        main.pb-3 { padding-top: 1rem; }
+                .dropdown-menu .dropdown-item {
+                    font-weight: 500;
+                    color: #212529;
+                    padding: 0.45rem 1rem;
+                }
 
-        /* Buttons */
-        .btn-primary { background-color: #0d6efd; border-color: #0d6efd; }
-        .btn-primary:hover { background-color: #0b5ed7; border-color: #0a58ca; }
+                    .dropdown-menu .dropdown-item:hover {
+                        font-weight: 600;
+                        background-color: #f8f9fa;
+                    }
 
-        .btn-dark { background-color: #343a40; border-color: #343a40; color: #ffffff; }
-        .btn-dark:hover { background-color: #23272b; border-color: #23272b; }
+                    .dropdown-menu .dropdown-item i {
+                        opacity: 0.85;
+                    }
 
-        .card, .table { margin-bottom: 1.5rem; }
-        
-        /* Cart Badge Animation */
-        .scale-up {
-            transform: scale(1.2);
-            transition: transform 0.2s ease;
-        }
-        #cartCount {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.4rem;
-            min-width: 1.3rem;
-            text-align: center;
-            background-color: #dc3545;
-            color: white;
-            border-radius: 50%;
-            top: 5px;
-            right: -5px;
-            display: none;
-        }
+            /* Footer */
+            footer.footer {
+                padding: 1.5rem 0;
+                background-color: #f8f9fa;
+                color: #343a40;
+            }
+
+                footer.footer a {
+                    color: #0d6efd;
+                    text-decoration: none;
+                }
+
+                    footer.footer a:hover {
+                        text-decoration: underline;
+                    }
+
+            /* Content spacing */
+            main.pb-3 {
+                padding-top: 1rem;
+            }
+
+            /* Buttons */
+            .btn-primary {
+                background-color: #0d6efd;
+                border-color: #0d6efd;
+            }
+
+                .btn-primary:hover {
+                    background-color: #0b5ed7;
+                    border-color: #0a58ca;
+                }
+
+            .btn-dark {
+                background-color: #343a40;
+                border-color: #343a40;
+                color: #ffffff;
+            }
+
+                .btn-dark:hover {
+                    background-color: #23272b;
+                    border-color: #23272b;
+                }
+
+            .card, .table {
+                margin-bottom: 1.5rem;
+            }
+
+            /* Cart Badge Animation */
+            .scale-up {
+                transform: scale(1.2);
+                transition: transform 0.2s ease;
+            }
+
+            #cartCount {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.4rem;
+                min-width: 1.3rem;
+                text-align: center;
+                background-color: #dc3545;
+                color: white;
+                border-radius: 50%;
+                top: 5px;
+                right: -5px;
+                display: none;
+            }
+
     </style>
+
 </head>
 
 <body>
 
-<header>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
 
-            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-cart4 me-2"></i> CartivaWeb
-            </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarContent">
-
-                <!-- LEFT MENU -->
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="Customer" asp-controller="Home" asp-action="Index">
-                            <i class="bi bi-house-door me-1"></i> Home
-                        </a>
-                    </li>
-                    
-                    <!-- Shopping Cart Icon with Badge -->
-                    <li class="nav-item">
-                        <a class="nav-link position-relative" asp-area="Customer" asp-controller="Cart" asp-action="Index">
-                            <i class="bi bi-cart3 fs-5"></i>
-                            <span id="cartCount" class="position-absolute translate-middle badge rounded-pill bg-danger">
-                                0
-                            </span>
-                        </a>
-                    </li>
-                    
-                    @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
-                    {
-                        <li class="nav-item dropdown">
-
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-gear me-1"></i> Content Management
-                            </a>
-
-                            <ul class="dropdown-menu">
-
-                                <li>
-                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">
-                                        <i class="bi bi-tags me-2"></i> Category
-                                    </a>
-                                </li>
-
-                                <li>
-                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">
-                                        <i class="bi bi-box-seam me-2"></i> Product
-                                    </a>
-                                </li>
-
-                                <li>
-                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Company" asp-action="Index">
-                                        <i class="bi bi-building me-2"></i> Company
-                                    </a>
-                                </li>
-
-                                <li><hr class="dropdown-divider"></li>
-
-                                <li>
-                                    <a class="dropdown-item" asp-area="Admin" asp-controller="Shipment" asp-action="Index">
-                                        <i class="bi bi-box-seam me-2"></i> Shipments
-                                    </a>
-                                </li>
-
-                              <li>
-                <a class="dropdown-item" asp-area="Admin" asp-controller="User" asp-action="Index">
-                    <i class="bi bi-people me-2"></i> Users
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-cart4 me-2"></i> CartivaWeb
                 </a>
-            </li>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+
+                    <!-- LEFT MENU -->
+
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="Customer" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-house-door me-1"></i> Home
+                            </a>
+                        </li>
+
+                        <!-- Cart -->
+
+                        <li class="nav-item">
+                            <a class="nav-link position-relative" asp-area="Customer" asp-controller="Cart" asp-action="Index">
+                                <i class="bi bi-cart3 fs-5"></i>
+                                <span id="cartCount" class="position-absolute translate-middle badge rounded-pill bg-danger">
+                                    0
+                                </span>
+                            </a>
+                        </li>
+
+                        @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
+                        {
+
+                            <li class="nav-item dropdown">
+
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-gear me-1"></i> Content Management
+                                </a>
+
+                                <ul class="dropdown-menu">
+
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Category" asp-action="Index">
+                                            <i class="bi bi-tags me-2"></i> Category
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Product" asp-action="Index">
+                                            <i class="bi bi-box-seam me-2"></i> Product
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Company" asp-action="Index">
+                                            <i class="bi bi-building me-2"></i> Company
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Shipment" asp-action="Index">
+                                            <i class="bi bi-truck me-2"></i> Shipments
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="User" asp-action="Index">
+                                            <i class="bi bi-people me-2"></i> Users
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </li>
+                        }
 
                     </ul>
 
+                    <!-- RIGHT MENU -->
+
+                    <ul class="navbar-nav ms-auto">
+
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
+                                <i class="bi bi-shield-lock me-1"></i> Privacy
+                            </a>
                         </li>
-                    }
 
-                </ul>
+                    </ul>
 
-                <!-- RIGHT MENU -->
-                <ul class="navbar-nav ms-auto">
+                    <partial name="_LoginPartial" />
 
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
-                            <i class="bi bi-shield-lock me-1"></i> Privacy
-                        </a>
-                    </li>
-
-                </ul>
-
-                <partial name="_LoginPartial" />
-
+                </div>
             </div>
-        </div>
-    </nav>
-</header>
+        </nav>
+    </header>
 
-<div class="container">
-    <main role="main" class="pb-3">
-        @RenderBody()
-    </main>
-</div>
-
-<footer class="footer text-center border-top">
     <div class="container">
-        &copy; 2026 - CartivaWeb -
-        <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
     </div>
-</footer>
 
-<!-- Scripts -->
-<script src="~/lib/jquery/dist/jquery.min.js"></script>
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="~/js/site.js" asp-append-version="true"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <footer class="footer text-center border-top">
+        <div class="container">
+            &copy; 2026 - CartivaWeb -
+            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
 
-<!-- Cart Count Update Script -->
-<script>
-    // Configure Toastr
-    toastr.options = {
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <script>
+
+        toastr.options = {
         "positionClass": "toast-top-right",
         "timeOut": "3000",
         "progressBar": true,
         "closeButton": true
-    };
+        };
 
-    // Function to update cart count
-    function updateCartCount() {
-        // Check if user is authenticated
+        function updateCartCount(){
+
         var isAuthenticated = @(User.Identity?.IsAuthenticated.ToString().ToLower() ?? "false");
-        
-        if (!isAuthenticated) {
-            const cartBadge = document.getElementById('cartCount');
-            if (cartBadge) cartBadge.style.display = 'none';
-            return;
+
+        if(!isAuthenticated){
+        const cartBadge=document.getElementById('cartCount');
+        if(cartBadge) cartBadge.style.display='none';
+        return;
         }
 
-        fetch('/Customer/Cart/GetCartCount', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+        fetch('/Customer/Cart/GetCartCount')
+        .then(r=>r.json())
+        .then(data=>{
+
+        const cartBadge=document.getElementById('cartCount');
+        if(!cartBadge) return;
+
+        if(data.count>0){
+        cartBadge.textContent=data.count;
+        cartBadge.style.display='inline';
+
+        cartBadge.classList.add('scale-up');
+        setTimeout(()=>cartBadge.classList.remove('scale-up'),300);
+        }
+        else{
+        cartBadge.style.display='none';
+        }
+
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            const cartBadge = document.getElementById('cartCount');
-            if (!cartBadge) return;
-            
-            if (data.count > 0) {
-                cartBadge.textContent = data.count;
-                cartBadge.style.display = 'inline';
-                // Add animation
-                cartBadge.classList.add('scale-up');
-                setTimeout(() => cartBadge.classList.remove('scale-up'), 300);
-            } else {
-                cartBadge.style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching cart count:', error);
-            const cartBadge = document.getElementById('cartCount');
-            if (cartBadge) cartBadge.style.display = 'none';
-        });
-    }
+        .catch(()=>{});
+        }
 
-    // Update cart count on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        updateCartCount();
-    });
+        document.addEventListener('DOMContentLoaded',updateCartCount);
+        document.addEventListener('cartUpdated',updateCartCount);
+        $(document).ajaxComplete(updateCartCount);
 
-    // Listen for custom event from cart updates
-    document.addEventListener('cartUpdated', function() {
-        updateCartCount();
-    });
+    </script>
 
-    // Optional: Update cart count after AJAX form submissions
-    $(document).ajaxComplete(function() {
-        updateCartCount();
-    });
-</script>
-
-@await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync("Scripts", required: false)
 
 </body>
 </html>

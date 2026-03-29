@@ -34,24 +34,17 @@ namespace CartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: /Admin/User/Index
-        public async Task<IActionResult> Index(bool showDeleted = false)
+        public async Task<IActionResult> Index()
         {
-            IQueryable<ApplicationUser> query = _userManager.Users;
-            if (!showDeleted)
-                query = query.Where(u => !u.IsDeleted);
-            else
-                query = query.Where(u => u.IsDeleted);
+            var users = await _userManager.Users.ToListAsync();
 
-            var users = await query.ToListAsync();
             var userRoles = new Dictionary<string, string>();
-
             foreach (var user in users)
             {
                 var roles = await _userManager.GetRolesAsync(user);
                 userRoles[user.Id] = roles.FirstOrDefault() ?? "None";
             }
 
-            ViewBag.ShowDeleted = showDeleted;
             ViewBag.UserRoles = userRoles;
             return View(users);
         }
@@ -72,16 +65,16 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             user.IsDeleted = true;
             var result = await _userManager.UpdateAsync(user);
+
             if (result.Succeeded)
-            {
                 TempData["Success"] = $"User {user.Email} has been deactivated.";
-            }
             else
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 _logger.LogError("Failed to deactivate user {Email}: {Errors}", user.Email, errors);
                 TempData["Error"] = $"Failed to deactivate user: {errors}";
             }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -95,16 +88,16 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             user.IsDeleted = false;
             var result = await _userManager.UpdateAsync(user);
+
             if (result.Succeeded)
-            {
                 TempData["Success"] = $"User {user.Email} has been activated.";
-            }
             else
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 _logger.LogError("Failed to activate user {Email}: {Errors}", user.Email, errors);
                 TempData["Error"] = $"Failed to activate user: {errors}";
             }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -116,14 +109,17 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             var currentRoles = await _userManager.GetRolesAsync(user);
             var allRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
+            var companies = await _db.Companies.ToListAsync();
 
             var model = new EditRolesViewModel
             {
                 UserId = user.Id,
                 UserEmail = user.Email,
                 UserName = user.Name ?? user.Email,
-                CurrentRole = currentRoles.FirstOrDefault() ?? "None",
-                AvailableRoles = allRoles
+                SelectedRole = currentRoles.FirstOrDefault() ?? "None",
+                AvailableRoles = allRoles,
+                Companies = companies,
+                CompanyId = user.CompanyId
             };
 
             return View(model);
@@ -137,18 +133,30 @@ namespace CartivaWeb.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null) return NotFound();
 
+            // Remove existing roles
             var currentRoles = await _userManager.GetRolesAsync(user);
             await _userManager.RemoveFromRolesAsync(user, currentRoles);
 
+            // Assign new role
             if (!string.IsNullOrEmpty(model.SelectedRole) && model.SelectedRole != "None")
             {
                 await _userManager.AddToRoleAsync(user, model.SelectedRole);
+
+                // If role is Company, assign selected company
+                if (model.SelectedRole == SD.Role_Company)
+                {
+                    user.CompanyId = model.CompanyId;
+                }
+                else
+                {
+                    user.CompanyId = null; // Remove company if role changed to non-company
+                }
+
+                await _userManager.UpdateAsync(user);
             }
 
             TempData["Success"] = $"User {user.Email} role updated to {model.SelectedRole ?? "None"}";
             return RedirectToAction(nameof(Index));
         }
     }
-
-  
 }
