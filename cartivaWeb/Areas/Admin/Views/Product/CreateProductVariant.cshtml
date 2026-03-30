@@ -279,12 +279,12 @@
             
             @if (Model.SizeSystem != null)
             {
-                    <text>
-                        $('#Variant_SizeValueId').change(function() {
-                            var selectedSize = $(this).find('option:selected').text();
-                            $('#previewSize').text(selectedSize || 'No size selected');
-                        });
-                    </text>
+                        <text>
+                                $('#Variant_SizeValueId').change(function() {
+                                    var selectedSize = $(this).find('option:selected').text();
+                                    $('#previewSize').text(selectedSize || 'No size selected');
+                                });
+                        </text>
             }
             
             $('#Variant_Price').on('input', function() {

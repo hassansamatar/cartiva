@@ -15,6 +15,9 @@ public static class DbInitializer
         // ======================
         // Seed Roles (if they don't exist)
         // ======================
+        // ======================
+        // Seed Roles (if they don't exist)
+        // ======================
         var roles = new[] { SD.Role_Customer, SD.Role_Employee, SD.Role_Admin, SD.Role_Company };
         foreach (var role in roles)
         {
