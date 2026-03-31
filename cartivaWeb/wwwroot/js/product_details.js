@@ -1,11 +1,5 @@
-﻿// product_details.js
-
-$(document).ready(function () {
+﻿$(document).ready(function () {
     'use strict';
-
-    // ======================
-    // Console Logging
-    // ======================
     console.log('Product details page loaded');
 
     // ======================
@@ -17,63 +11,81 @@ $(document).ready(function () {
         const minStock = parseInt(input.attr('min'));
         let value = parseInt(input.val());
 
-        if (isNaN(value)) {
-            value = minStock;
-        }
-
+        if (isNaN(value) || value < minStock) value = minStock;
         if (value > maxStock) {
             value = maxStock;
             alert(`Maximum quantity is ${maxStock}`);
-        }
-
-        if (value < minStock) {
-            value = minStock;
         }
 
         input.val(value);
     });
 
     // ======================
-    // Add to Cart Animation
+    // Add to Cart AJAX
     // ======================
     $('.add-to-cart-btn').on('click', function () {
         const button = $(this);
+        const variantId = button.data('variant-id');
+        const quantityInput = button.closest('.add-to-cart-wrapper').find('.quantity-input');
+        const quantity = parseInt(quantityInput.val());
+        const maxStock = parseInt(button.data('max-stock'));
+        const feedbackDiv = button.closest('.add-to-cart-wrapper').find('.add-to-cart-feedback');
+
+        if (isNaN(quantity) || quantity < 1) {
+            feedbackDiv.text('Please enter a valid quantity').show().fadeOut(2000);
+            return;
+        }
+
+        if (quantity > maxStock) {
+            feedbackDiv.text(`Only ${maxStock} available`).show().fadeOut(2000);
+            return;
+        }
+
         const originalHtml = button.html();
+        button.html('<span class="loading-spinner"></span>').prop('disabled', true);
+        feedbackDiv.hide();
 
-        button.html('<span class="spinner-border spinner-border-sm"></span>');
-        button.prop('disabled', true);
+        // Get the anti-forgery token from the page
+        const token = $('input[name="__RequestVerificationToken"]').val();
 
-        setTimeout(function () {
-            if (button.prop('disabled')) {
-                button.html(originalHtml);
-                button.prop('disabled', false);
+        $.ajax({
+            url: '/Cart/AddToCart',
+            type: 'POST',
+            data: {
+                productVariantId: variantId,
+                count: quantity,
+                __RequestVerificationToken: token
+            },
+            success: function (response) {
+                if (response.success) {
+                    feedbackDiv.html('<i class="bi bi-check-circle"></i> Added to cart!')
+                        .addClass('text-success')
+                        .show();
+
+                    if (typeof updateCartCount === 'function') updateCartCount();
+                    else document.dispatchEvent(new CustomEvent('cartUpdated'));
+
+                    setTimeout(() => {
+                        button.html(originalHtml).prop('disabled', false);
+                        feedbackDiv.fadeOut(2000);
+                    }, 1500);
+                } else {
+                    feedbackDiv.html('<i class="bi bi-exclamation-circle"></i> ' + (response.message || 'Error adding to cart'))
+                        .removeClass('text-success')
+                        .addClass('text-danger')
+                        .show();
+                    button.html(originalHtml).prop('disabled', false);
+                    setTimeout(() => feedbackDiv.fadeOut(2000), 3000);
+                }
+            },
+            error: function () {
+                feedbackDiv.html('<i class="bi bi-exclamation-circle"></i> Network error. Please try again.')
+                    .removeClass('text-success')
+                    .addClass('text-danger')
+                    .show();
+                button.html(originalHtml).prop('disabled', false);
+                setTimeout(() => feedbackDiv.fadeOut(2000), 3000);
             }
-        }, 2000);
+        });
     });
-
-    // ======================
-    // Stock Warning Hover Effect
-    // ======================
-    $('.stock-low').on('mouseenter', function () {
-        $(this).css('transform', 'scale(1.05)');
-    }).on('mouseleave', function () {
-        $(this).css('transform', 'scale(1)');
-    });
-
-    // ======================
-    // Smooth Scroll to Variants
-    // ======================
-    if (window.location.hash === '#variants') {
-        $('html, body').animate({
-            scrollTop: $('.variants-list').offset().top - 100
-        }, 500);
-    }
-
-    // ======================
-    // Auto-focus on first available quantity input
-    // ======================
-    const firstAvailableInput = $('.variant-card:not(.variant-out-of-stock) .quantity-input').first();
-    if (firstAvailableInput.length) {
-        firstAvailableInput.focus();
-    }
 });

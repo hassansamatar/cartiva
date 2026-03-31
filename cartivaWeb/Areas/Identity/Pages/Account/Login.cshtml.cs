@@ -107,16 +107,6 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
             {
                 _logger.LogInformation("User logged in.");
 
-                if (user != null)
-                {
-                    bool hasOrders = _context.OrderHeaders
-                        .Any(o => o.ApplicationUserId == user.Id);
-
-                    if (hasOrders)
-                    {
-                        return Redirect("/Customer/Order/History");
-                    }
-                }
 
                 return LocalRedirect(Url.Content("~/"));
             }

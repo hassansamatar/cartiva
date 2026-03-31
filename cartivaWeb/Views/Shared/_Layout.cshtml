@@ -1,27 +1,35 @@
-﻿@using MyUtility
+﻿@using DataAccess
+@using MyUtility
+@using System.Security.Claims
+@inject ApplicationDbContext _context
+
+@{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    bool hasOrders = false;
+
+    if (User.Identity.IsAuthenticated && userId != null)
+    {
+        hasOrders = _context.OrderHeaders.Any(o => o.ApplicationUserId == userId);
+    }
+}
 
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - CartivaWeb</title>
 
-    ```
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CartivaWeb.styles.css" asp-append-version="true" />
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 
-    <!-- Toastr CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
-    ```
 
     <style>
 
-            /* Navbar */
             .navbar-dark {
                 background-color: #212529;
             }
@@ -36,21 +44,19 @@
                         color: #ffc107;
                     }
 
-                /* Improve visibility of Content Management */
                 .navbar-dark .nav-item.dropdown > .nav-link {
                     font-weight: 600;
-                    letter-spacing: 0.3px;
+                    letter-spacing: .3px;
                 }
 
-            /* Dropdown styling */
             .dropdown-menu {
-                border-radius: 0.5rem;
+                border-radius: .5rem;
             }
 
                 .dropdown-menu .dropdown-item {
                     font-weight: 500;
                     color: #212529;
-                    padding: 0.45rem 1rem;
+                    padding: .45rem 1rem;
                 }
 
                     .dropdown-menu .dropdown-item:hover {
@@ -59,10 +65,9 @@
                     }
 
                     .dropdown-menu .dropdown-item i {
-                        opacity: 0.85;
+                        opacity: .85;
                     }
 
-            /* Footer */
             footer.footer {
                 padding: 1.5rem 0;
                 background-color: #f8f9fa;
@@ -78,12 +83,10 @@
                         text-decoration: underline;
                     }
 
-            /* Content spacing */
             main.pb-3 {
                 padding-top: 1rem;
             }
 
-            /* Buttons */
             .btn-primary {
                 background-color: #0d6efd;
                 border-color: #0d6efd;
@@ -109,15 +112,14 @@
                 margin-bottom: 1.5rem;
             }
 
-            /* Cart Badge Animation */
             .scale-up {
                 transform: scale(1.2);
-                transition: transform 0.2s ease;
+                transition: transform .2s ease;
             }
 
             #cartCount {
-                font-size: 0.7rem;
-                padding: 0.2rem 0.4rem;
+                font-size: .7rem;
+                padding: .2rem .4rem;
                 min-width: 1.3rem;
                 text-align: center;
                 background-color: #dc3545;
@@ -135,7 +137,9 @@
 <body>
 
     <header>
+
         <nav class="navbar navbar-expand-lg navbar-dark">
+
             <div class="container-fluid">
 
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
@@ -148,8 +152,6 @@
 
                 <div class="collapse navbar-collapse" id="navbarContent">
 
-                    <!-- LEFT MENU -->
-
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
                         <li class="nav-item">
@@ -158,10 +160,17 @@
                             </a>
                         </li>
 
-                        <!-- Cart -->
+                        @if (hasOrders)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="Customer" asp-controller="Order" asp-action="History" title="My Orders">
+                                    <i class="bi bi-bag fs-5"></i>
+                                </a>
+                            </li>
+                        }
 
                         <li class="nav-item">
-                            <a class="nav-link position-relative" asp-area="Customer" asp-controller="Cart" asp-action="Index">
+                            <a class="nav-link position-relative" asp-area="Customer" asp-controller="Cart" asp-action="Index" title="My Cart">
                                 <i class="bi bi-cart3 fs-5"></i>
                                 <span id="cartCount" class="position-absolute translate-middle badge rounded-pill bg-danger">
                                     0
@@ -171,7 +180,6 @@
 
                         @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
                         {
-
                             <li class="nav-item dropdown">
 
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -218,8 +226,6 @@
 
                     </ul>
 
-                    <!-- RIGHT MENU -->
-
                     <ul class="navbar-nav ms-auto">
 
                         <li class="nav-item">
@@ -235,6 +241,7 @@
                 </div>
             </div>
         </nav>
+
     </header>
 
     <div class="container">
@@ -251,8 +258,6 @@
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    
-
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -261,16 +266,16 @@
 
     <script>
 
-        toastr.options = {
-        "positionClass": "toast-top-right",
-        "timeOut": "3000",
-        "progressBar": true,
-        "closeButton": true
+        toastr.options={
+        "positionClass":"toast-top-right",
+        "timeOut":"3000",
+        "progressBar":true,
+        "closeButton":true
         };
 
         function updateCartCount(){
 
-        var isAuthenticated = @(User.Identity?.IsAuthenticated.ToString().ToLower() ?? "false");
+        var isAuthenticated=@(User.Identity?.IsAuthenticated.ToString().ToLower() ?? "false");
 
         if(!isAuthenticated){
         const cartBadge=document.getElementById('cartCount');
@@ -298,12 +303,13 @@
 
         })
         .catch(()=>{});
+
         }
 
         document.addEventListener('DOMContentLoaded',updateCartCount);
         document.addEventListener('cartUpdated',updateCartCount);
         $(document).ajaxComplete(updateCartCount);
-       
+
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
