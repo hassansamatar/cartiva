@@ -28,8 +28,9 @@ namespace Models
 public string Country { get; set; } = "Norway";
         [Display(Name = "Phone Number")]
         public string PhoneNumber { get; set; }
+        public bool IsActive { get; set; } = true;
 
-       
-       
+
+
     }
 }

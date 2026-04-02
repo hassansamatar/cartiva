@@ -67,16 +67,23 @@
                         <span asp-validation-for="PostalCode" class="text-danger"></span>
                     </div>
 
-                    <!-- Phone (Moved to end) -->
+                    <!-- Phone -->
                     <div class="form-floating col-md-6">
                         <input asp-for="PhoneNumber" class="form-control" placeholder="Phone Number" />
                         <label asp-for="PhoneNumber">Phone Number</label>
                         <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                     </div>
 
+                    <!-- Active / Inactive -->
+                    <div class="form-check form-switch col-md-12 mt-3">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" />
+                        <label asp-for="IsActive" class="form-check-label">
+                            @(Model.IsActive ? "Active" : "Inactive")
+                        </label>
+                    </div>
+
                     <!-- Buttons -->
                     <div class="col-12 mt-3 d-flex justify-content-between">
-
                         <button type="submit" class="btn btn-dark btn-lg px-4">
                             @(Model.Id != 0 ? "Update Company" : "Create Company")
                         </button>
@@ -87,7 +94,6 @@
                                class="btn btn-outline-secondary btn-lg">
                             Back to List
                         </a>
-
                     </div>
 
                 </form>
@@ -113,6 +119,11 @@
                 unhighlight: function (element) {
                     $(element).removeClass('is-invalid');
                 }
+            });
+
+            // Update label text on toggle
+            $('input[name="IsActive"]').on('change', function () {
+                $(this).next('label').text(this.checked ? 'Active' : 'Inactive');
             });
 
         });

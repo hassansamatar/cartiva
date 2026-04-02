@@ -1,4 +1,8 @@
-﻿@model IEnumerable<Company>
+﻿@model IEnumerable<CompanyListVM>
+
+@{
+    ViewData["Title"] = "Company List";
+}
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
@@ -31,31 +35,71 @@
             <thead class="table-dark">
                 <tr>
                     <th>Name</th>
+                    <th>Address, Postal Code</th>
                     <th>City</th>
-                    <th>State</th>
-                    <th>Postal Code</th>
                     <th>Phone</th>
-                   
+                    <th>Contact Person</th>
+                    <th>Payment Status</th>
+                    <th>Status</th> <!-- New column -->
                     <th style="width:150px">Actions</th>
                 </tr>
             </thead>
+
             <tbody>
-                @foreach (var company in Model)
+                @foreach (var item in Model)
                 {
                     <tr>
-                        <td>@company.Name</td>
-                        <td>@company.City</td>
-                        <td>@company.State</td>
-                        <td>@company.PostalCode</td>
-                        <td>@company.PhoneNumber</td>
-                        
+                        <td>@item.Company.Name</td>
+                        <td>@item.Company.StreetAddress, @item.Company.PostalCode</td>
+                        <td>@item.Company.City</td>
+                        <td>@item.Company.PhoneNumber</td>
+                        <td>@item.ContactPerson</td>
+
+                        <td>
+                            @if (item.PaymentStatus == "Paid")
+                            {
+                                <span class="badge bg-success">Paid</span>
+                            }
+                            else if (item.PaymentStatus == "Pending")
+                            {
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            }
+                            else if (item.PaymentStatus == "Overdue")
+                            {
+                                <span class="badge bg-danger">Overdue</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No Orders</span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (item.Company.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+
                         <td>
                             <div class="text-center">
-                                <a asp-area="Admin" asp-controller="Company" asp-action="Upsert" asp-route-id="@company.Id" class="btn btn-sm btn-dark me-2">
+                                <a asp-area="Admin"
+                                       asp-controller="Company"
+                                       asp-action="Upsert"
+                                       asp-route-id="@item.Company.Id"
+                                       class="btn btn-sm btn-dark me-2">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
 
-                                <a asp-area="Admin" asp-controller="Company" asp-action="Delete" asp-route-id="@company.Id" class="btn btn-sm btn-danger">
+                                <a asp-area="Admin"
+                                       asp-controller="Company"
+                                       asp-action="Delete"
+                                       asp-route-id="@item.Company.Id"
+                                       class="btn btn-sm btn-danger">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </div>
@@ -71,15 +115,18 @@
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    
+
     <script>
         $(document).ready(function () {
         $('#tblCompany').DataTable({
-        "paging": true,
-        "searching": true,
-        "ordering": true,
-        "lengthChange": true,
-        "pageLength": 10
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthChange: true,
+        pageLength: 10,
+        columnDefs: [
+        { orderable: false, targets: 7 } // Actions column index (last column)
+        ]
         });
         });
     </script>
