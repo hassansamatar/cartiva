@@ -228,6 +228,16 @@
 
                     <ul class="navbar-nav ms-auto">
 
+                        @* NEW: My Account link – visible only to logged-in users *@
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="Identity" asp-page="/Account/Manage/Index" title="My Account">
+                                    <i class="bi bi-person-circle me-1"></i> My Account
+                                </a>
+                            </li>
+                        }
+
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
                                 <i class="bi bi-shield-lock me-1"></i> Privacy
