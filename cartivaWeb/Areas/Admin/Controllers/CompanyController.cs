@@ -166,6 +166,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             {
                 // Cannot delete: mark inactive instead
                 company.IsActive = false;
+                
                 _db.Companies.Update(company);
                 _db.SaveChanges();
 

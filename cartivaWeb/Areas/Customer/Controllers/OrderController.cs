@@ -105,6 +105,21 @@ public class OrderController : Controller
         model.ShoppingCartList = cartList;
         model.OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
 
+        // --- NEW: Show warning for inactive company accounts ---
+        if (User.IsInRole(SD.Role_Company))
+        {
+            var user = await _db.Users.FindAsync(userId);
+            if (user?.CompanyId != null)
+            {
+                var company = await _db.Companies.FindAsync(user.CompanyId);
+                if (company != null && !company.IsActive)
+                {
+                    TempData["Warning"] = "Your company account is inactive. Payment must be completed immediately (upfront).";
+                    TempData["CompanyInactive"] = true;
+                }
+            }
+        }
+
         return View(model);
     }
 
@@ -113,11 +128,11 @@ public class OrderController : Controller
     // =============================
     [HttpPost]
     [ValidateAntiForgeryToken]
-   
     public async Task<IActionResult> PlaceOrder(CheckoutVM model, bool payNow = false)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+        // Fetch the cart items
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.Product)
@@ -138,10 +153,7 @@ public class OrderController : Controller
             var variant = cart.ProductVariant;
             if (variant.Stock < cart.Count)
             {
-                string sizeDisplay = variant.SizeValue != null
-                    ? variant.SizeValue.DisplayText
-                    : "No Size";
-
+                string sizeDisplay = variant.SizeValue != null ? variant.SizeValue.DisplayText : "No Size";
                 TempData["Error"] = $"Not enough stock for {variant.Product?.Name} ({variant.Color}/{sizeDisplay}). Only {variant.Stock} left.";
                 return RedirectToAction("Checkout");
             }
@@ -155,15 +167,33 @@ public class OrderController : Controller
         model.OrderHeader.OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
         model.OrderHeader.Country = user?.Country ?? "Norway";
 
-        // Company vs Regular customer logic
-        if (User.IsInRole(SD.Role_Company))
+        // Determine payment logic
+        if (User.IsInRole(SD.Role_Company) && user?.CompanyId != null)
         {
-            model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
-            model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval;
-            model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
+            var company = await _db.Companies.FindAsync(user.CompanyId);
+
+            if (company != null && !company.IsActive)
+            {
+                // Inactive company – force upfront payment
+                model.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+                model.OrderHeader.OrderStatus = SD.StatusPending;
+                model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
+
+                // Flag for UI logic (ConfirmOrder page)
+                TempData["Warning"] = "Your company account is inactive. Payment must be completed immediately.";
+                TempData["CompanyInactive"] = true;
+            }
+            else
+            {
+                // Active company – allow deferred payment
+                model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
+                model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval;
+                model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
+            }
         }
         else
         {
+            // Regular customer – payment required
             model.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
             model.OrderHeader.OrderStatus = SD.StatusPending;
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
@@ -199,7 +229,7 @@ public class OrderController : Controller
         // Redirect based on role and payNow flag
         if (User.IsInRole(SD.Role_Company))
         {
-            // Create a shipment record for company orders (pending approval)
+            // Create shipment record for company orders
             var shipment = new Shipment
             {
                 OrderHeaderId = model.OrderHeader.Id,
@@ -208,7 +238,7 @@ public class OrderController : Controller
             _db.Shipments.Add(shipment);
             await _db.SaveChangesAsync();
 
-            // Send order confirmation email for company users
+            // Send order confirmation email
             if (user != null && !string.IsNullOrEmpty(user.Email))
             {
                 var trackingUrl = Url.Action("Track", "Order", new { id = model.OrderHeader.Id, area = "Customer" }, Request.Scheme);
@@ -226,14 +256,13 @@ public class OrderController : Controller
                 await _emailSender.SendEmailAsync(user.Email, subject, body);
             }
 
-            if (payNow)
+            // Decide redirect based on company status
+            if (payNow || model.OrderHeader.PaymentStatus != SD.PaymentStatusDeferred)
             {
-                // Redirect to payment page for immediate payment
                 return RedirectToAction("Payment", new { orderId = model.OrderHeader.Id });
             }
             else
             {
-                // Deferred payment – show receipt
                 return RedirectToAction("Receipt", new { id = model.OrderHeader.Id });
             }
         }

@@ -7,7 +7,7 @@
 @{
     ViewData["Title"] = "Checkout";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
-
+   
     // Placeholder QR code (the real QR code will be generated after payment)
     var placeholderOrderId = 99999;
     var placeholderQrCodeBase64 = QrCodeService.GenerateOrderQrCode(placeholderOrderId);
