@@ -140,22 +140,6 @@
 </div>
 
 @section Scripts {
-    @{
-        <partial name="_ValidationScriptsPartial" />
-    }
-    
-    <script>
-        $(document).ready(function() {
-            // Optional: Show selected size system info
-            $('#SizeSystemId').change(function() {
-                var selectedText = $(this).find('option:selected').text();
-                if (selectedText && selectedText !== '-- No Default Size System --') {
-                    console.log('Selected size system: ' + selectedText);
-                }
-            });
-            
-            // Focus on name field
-            $('#Name').focus();
-        });
-    </script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/admin-category-create.js" asp-append-version="true"></script>
 }

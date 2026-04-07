@@ -201,12 +201,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        // Optional: Add confirmation for delete
-        document.querySelector('form')?.addEventListener('submit', function(e) {
-            if (!confirm('Are you absolutely sure you want to delete this category?')) {
-                e.preventDefault();
-            }
-        });
-    </script>
+    <script src="~/js/admin-category-delete.js" asp-append-version="true"></script>
 }

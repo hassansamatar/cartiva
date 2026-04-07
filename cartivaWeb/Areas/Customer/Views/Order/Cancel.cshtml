@@ -339,15 +339,7 @@
 @section Scripts {
     <link rel="stylesheet" href="~/css/cancel.css" />
     <script src="~/js/cancel.js"></script>
-    <script>
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                alert('Tracking link copied to clipboard!');
-            }).catch(function() {
-                alert('Failed to copy link');
-            });
-        }
-    </script>
+    <script src="~/js/order-details.js" asp-append-version="true"></script>
 }
 
 @functions {

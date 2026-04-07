@@ -1,0 +1,38 @@
+/* Product Details Styles */
+.variant-card {
+    transition: all 0.2s ease-in-out;
+}
+
+    .variant-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+.variant-best-price {
+    border: 2px solid #198754;
+    background-color: #f8f9fa;
+}
+
+.add-to-cart-btn {
+    transition: all 0.2s;
+}
+
+    .add-to-cart-btn:active {
+        transform: scale(0.95);
+    }
+
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

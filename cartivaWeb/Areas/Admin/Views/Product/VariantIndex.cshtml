@@ -233,18 +233,7 @@
 </div>
 
 @section Scripts {
-    <script>
-        // Log page info
-        console.log('Variant page loaded - size system: @(sizeSystemName) (@(sizeSystemType))');
-        
-        // Optional: Add tooltips if needed
-        document.addEventListener('DOMContentLoaded', function() {
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function(tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        });
-    </script>
+    <script src="~/js/admin-product-variant-index.js" asp-append-version="true"></script>
 }
 
 @functions {

@@ -31,7 +31,7 @@
         <!-- Role Selection -->
         <div class="mb-3">
             <label class="form-label">Assign New Role</label>
-            <select name="SelectedRole" id="roleSelect" class="form-select">
+            <select name="SelectedRole" id="roleSelect" class="form-select" data-company-role="@SD.Role_Company">
                 <option value="">-- None --</option>
                 @foreach (var role in Model.AvailableRoles)
                 {
@@ -73,18 +73,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const roleSelect = document.getElementById('roleSelect');
-            const companyDiv = document.getElementById('companyDiv');
-
-            roleSelect.addEventListener('change', function () {
-                if (this.value === '@SD.Role_Company') {
-                    companyDiv.style.display = 'block';
-                } else {
-                    companyDiv.style.display = 'none';
-                }
-            });
-        });
-    </script>
+    <script src="~/js/admin-user-editroles.js" asp-append-version="true"></script>
 }

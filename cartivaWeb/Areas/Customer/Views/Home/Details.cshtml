@@ -15,45 +15,7 @@
     var lowestPrice = lowestPriceVariant?.Price;
 }
 
-<style>
-    /* Product Details Styles */
-    .variant-card {
-        transition: all 0.2s ease-in-out;
-    }
-
-        .variant-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-
-    .variant-best-price {
-        border: 2px solid #198754;
-        background-color: #f8f9fa;
-    }
-
-    .add-to-cart-btn {
-        transition: all 0.2s;
-    }
-
-        .add-to-cart-btn:active {
-            transform: scale(0.95);
-        }
-
-    .loading-spinner {
-        display: inline-block;
-        width: 1rem;
-        height: 1rem;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        border-top-color: transparent;
-        animation: spin 0.6s linear infinite;
-    }
-    keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-</style>
+<link rel="stylesheet" href="~/css/home-details.css" asp-append-version="true" />
 
 <div class="container mt-4">
     <!-- Breadcrumb -->
@@ -154,7 +116,7 @@
                             }
                         </div>
                         
-                        <div class="row" id="variants-container">
+                        <div class="row" id="variants-container" data-add-to-cart-url="@Url.Action("AddToCart", "Cart")">
                             @foreach (var v in Model.Variants.OrderBy(v => v.Price))
                             {
                                 var inCart = 0;
@@ -288,102 +250,7 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function() {
-            console.log('Product details loaded');
-
-            // ======================
-            // ADD TO CART AJAX
-            // ======================
-            $('.add-to-cart-btn').on('click', function() {
-                const button = $(this);
-                const variantId = button.data('variant-id');
-                const quantityInput = button.closest('.add-to-cart-wrapper').find('.quantity-input');
-                const quantity = parseInt(quantityInput.val());
-                const maxStock = parseInt(button.data('max-stock'));
-                const feedbackDiv = button.closest('.add-to-cart-wrapper').find('.add-to-cart-feedback');
-                
-                // Validate quantity
-                if (isNaN(quantity) || quantity < 1) {
-                    feedbackDiv.text('Please enter a valid quantity').show().fadeOut(2000);
-                    return;
-                }
-                
-                if (quantity > maxStock) {
-                    feedbackDiv.text(`Only ${maxStock} available`).show().fadeOut(2000);
-                    return;
-                }
-                
-                // Disable button and show loading
-                const originalHtml = button.html();
-                button.html('<span class="loading-spinner"></span>').prop('disabled', true);
-                feedbackDiv.hide();
-                
-                // AJAX request
-                $.ajax({
-                    url: '@Url.Action("AddToCart", "Cart")',
-                    type: 'POST',
-                    data: {
-                        productVariantId: variantId,
-                        count: quantity,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            // Show success message
-                            feedbackDiv.html('<i class="bi bi-check-circle"></i> Added to cart!').addClass('text-success').show();
-                            
-                            // Update cart count in navbar
-                            if (typeof updateCartCount === 'function') {
-                                updateCartCount();
-                            } else {
-                                // Dispatch custom event
-                                document.dispatchEvent(new CustomEvent('cartUpdated'));
-                            }
-                            
-                            // Update stock display
-                            const stockSpan = button.closest('.variant-card').find('.stock-count');
-                            if (stockSpan.length) {
-                                const newStock = response.cartCount ? 'Updated' : '';
-                            }
-                            
-                            // Reset button
-                            setTimeout(() => {
-                                button.html(originalHtml).prop('disabled', false);
-                                feedbackDiv.fadeOut(2000);
-                            }, 1500);
-                        } else {
-                            feedbackDiv.html('<i class="bi bi-exclamation-circle"></i> ' + (response.message || 'Error adding to cart')).removeClass('text-success').addClass('text-danger').show();
-                            button.html(originalHtml).prop('disabled', false);
-                            setTimeout(() => feedbackDiv.fadeOut(2000), 3000);
-                        }
-                    },
-                    error: function() {
-                        feedbackDiv.html('<i class="bi bi-exclamation-circle"></i> Network error. Please try again.').removeClass('text-success').addClass('text-danger').show();
-                        button.html(originalHtml).prop('disabled', false);
-                        setTimeout(() => feedbackDiv.fadeOut(2000), 3000);
-                    }
-                });
-            });
-            
-            // ======================
-            // QUANTITY INPUT VALIDATION
-            // ======================
-            $('.quantity-input').on('change', function() {
-                const input = $(this);
-                const maxStock = parseInt(input.attr('max'));
-                let value = parseInt(input.val());
-                
-                if (isNaN(value) || value < 1) {
-                    value = 1;
-                }
-                if (value > maxStock) {
-                    value = maxStock;
-                }
-                input.val(value);
-            });
-        });
-    </script>
+    <script src="~/js/home-details.js" asp-append-version="true"></script>
 }
 
 @functions {

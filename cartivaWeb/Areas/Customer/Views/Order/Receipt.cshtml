@@ -439,20 +439,7 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function() {
-            console.log('Receipt page loaded for order #@Model.Id');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                alert('Tracking link copied to clipboard!');
-            }).catch(function() {
-                alert('Failed to copy link');
-            });
-        }
-    </script>
+    <script src="~/js/order-receipt.js" asp-append-version="true"></script>
 }
 
 @functions {

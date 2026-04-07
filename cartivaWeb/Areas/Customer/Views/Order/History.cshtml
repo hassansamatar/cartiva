@@ -197,31 +197,9 @@
 </div>
 
 @section Scripts {
-    <script>
-        function cancelOrder(orderId) {
-            if (confirm('Are you sure you want to cancel this order?')) {
-                $.post('@Url.Action("CancelOrder", "Order")', { id: orderId })
-                    .done(function () { location.reload(); });
-            }
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                alert('Tracking link copied to clipboard!');
-            }).catch(function() {
-                alert('Failed to copy link');
-            });
-        }
-    </script>
-    <style>
-        .img-thumbnail {
-            transition: transform 0.2s ease;
-        }
-
-            .img-thumbnail:hover {
-                transform: scale(1.05);
-            }
-    </style>
+    <input type="hidden" id="cancelOrderUrl" value="@Url.Action("CancelOrder", "Order")" />
+    <link rel="stylesheet" href="~/css/order-history.css" asp-append-version="true" />
+    <script src="~/js/order-history.js" asp-append-version="true"></script>
 }
 
 @functions {

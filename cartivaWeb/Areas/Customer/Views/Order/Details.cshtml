@@ -447,17 +447,7 @@
 </div>
 
 @section Scripts {
-    <script>
-            function copyToClipboard(text) {
-                navigator.clipboard.writeText(text).then(function() {
-                    alert('Tracking link copied to clipboard!');
-                }).catch(function() {
-                    alert('Failed to copy link');
-                });
-            }
-
-            console.log('Order details page loaded for order #@Model.Id');
-    </script>
+    <script src="~/js/order-details.js" asp-append-version="true"></script>
 }
 
 @functions {

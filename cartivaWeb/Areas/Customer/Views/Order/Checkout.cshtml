@@ -335,33 +335,9 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        $(document).ready(function() {
-            console.log('Checkout page loaded');
-        });
-    </script>
 }
 
-<style>
-    .img-thumbnail {
-        transition: transform 0.2s ease;
-        cursor: pointer;
-    }
-
-        .img-thumbnail:hover {
-            transform: scale(1.05);
-        }
-
-    .card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-        }
-</style>
+<link rel="stylesheet" href="~/css/checkout.css" asp-append-version="true" />
 
 @functions {
     public string GetColorCode(string color)

@@ -1,0 +1,46 @@
+/* Cart Page Styles */
+.cart-item {
+    transition: all 0.3s ease;
+}
+
+.cart-item-removing {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+.quantity-btn:active {
+    transform: scale(0.95);
+}
+
+.loading-spinner-small {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1055;
+}
+
+.cart-table th,
+.cart-table td {
+    vertical-align: middle;
+}
+
+.quantity-input {
+    width: 60px;
+    text-align: center;
+}
