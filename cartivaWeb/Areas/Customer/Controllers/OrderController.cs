@@ -23,12 +23,14 @@ public class OrderController : Controller
     private readonly IQrCodeService _qrCodeService;
     private readonly ILogger<OrderController> _logger;
     private readonly IEmailSender _emailSender;
+    private readonly IEmailTemplateService _emailTemplateService;
 
     public OrderController(ApplicationDbContext db,
                            IOptions<StripeSettings> stripeSettings,
                            IQrCodeService qrCodeService,
                            ILogger<OrderController> logger,
-                           IEmailSender emailSender)
+                           IEmailSender emailSender,
+                           IEmailTemplateService emailTemplateService)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
@@ -36,6 +38,7 @@ public class OrderController : Controller
         _qrCodeService = qrCodeService;
         _logger = logger;
         _emailSender = emailSender;
+        _emailTemplateService = emailTemplateService;
     }
 
     // =============================
@@ -637,15 +640,14 @@ public class OrderController : Controller
 
         var trackingUrl = Url.Action("Track", "Order", new { id = orderId, area = "Customer" }, Request.Scheme);
         var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(orderId);
-        var body = $@"
-<h2>Thank you for your order!</h2>
-<p>Your order <strong>#{orderId}</strong> has been confirmed.</p>
-<p>We'll notify you when it ships.</p>
-<p>You can track your order status at any time: <a href='{trackingUrl}'>Track Order</a></p>
-<p>Or scan the QR code below with your phone:</p>
-<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
-<p>Thank you for shopping with us!</p>
-";
+
+        var body = await _emailTemplateService.RenderTemplateAsync("order-confirmation", new Dictionary<string, string>
+        {
+            { "OrderId", orderId.ToString() },
+            { "TrackingUrl", trackingUrl ?? "" },
+            { "QrCodeBase64", qrCodeBase64 }
+        });
+
         await _emailSender.SendEmailAsync(user.Email, "Order Confirmation", body);
     }
 }

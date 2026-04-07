@@ -20,18 +20,21 @@ namespace CartivaWeb.Areas.Admin.Controllers
         private readonly IBringShippingService _bringShippingService;
         private readonly IEmailSender _emailSender;
         private readonly IQrCodeService _qrCodeService;
+        private readonly IEmailTemplateService _emailTemplateService;
 
         public ShipmentController(ApplicationDbContext db,
                                   ILogger<ShipmentController> logger,
                                   IBringShippingService bringShippingService,
                                   IEmailSender emailSender,
-                                  IQrCodeService qrCodeService)
+                                  IQrCodeService qrCodeService,
+                                  IEmailTemplateService emailTemplateService)
         {
             _db = db;
             _logger = logger;
             _bringShippingService = bringShippingService;
             _emailSender = emailSender;
             _qrCodeService = qrCodeService;
+            _emailTemplateService = emailTemplateService;
         }
 
         // GET: /Admin/Shipment/Index
@@ -151,36 +154,31 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
                     var trackingUrl = Url.Action("Track", "Order", new { id = shipment.OrderHeader.Id, area = "Customer" }, Request.Scheme);
-                    var qrCodeBytes = _qrCodeService.GenerateOrderQrCodeBytes(shipment.OrderHeader.Id);
                     var subject = "Your order has shipped!";
-                    var body = $@"
-<h2>Good news!</h2>
-<p>Your order <strong>#{shipment.OrderHeader.Id}</strong> has been shipped.</p>
-<p><strong>Tracking number:</strong> {shipment.TrackingNumber}</p>
-<p>Track your order: <a href='{trackingUrl}'>Click here</a></p>
-<p>Or scan the QR code below with your phone:</p>
-<img src='cid:qrCode' width='150' />
-<p>Thank you for shopping with us!</p>
-";
 
                     if (_emailSender is ApplicationUtility.EmailSender emailSender)
                     {
+                        var qrCodeBytes = _qrCodeService.GenerateOrderQrCodeBytes(shipment.OrderHeader.Id);
+                        var body = await _emailTemplateService.RenderTemplateAsync("shipment-confirmation", new Dictionary<string, string>
+                        {
+                            { "OrderId", shipment.OrderHeader.Id.ToString() },
+                            { "TrackingNumber", shipment.TrackingNumber ?? "" },
+                            { "TrackingUrl", trackingUrl ?? "" },
+                            { "QrCodeSrc", "cid:qrCode" }
+                        });
                         await emailSender.SendEmailWithInlineImageAsync(user.Email, subject, body, qrCodeBytes);
                     }
                     else
                     {
-                        // Fallback to base64 image
                         var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(shipment.OrderHeader.Id);
-                        var fallbackBody = $@"
-<h2>Good news!</h2>
-<p>Your order <strong>#{shipment.OrderHeader.Id}</strong> has been shipped.</p>
-<p><strong>Tracking number:</strong> {shipment.TrackingNumber}</p>
-<p>Track your order: <a href='{trackingUrl}'>Click here</a></p>
-<p>Or scan the QR code below with your phone:</p>
-<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
-<p>Thank you for shopping with us!</p>
-";
-                        await _emailSender.SendEmailAsync(user.Email, subject, fallbackBody);
+                        var body = await _emailTemplateService.RenderTemplateAsync("shipment-confirmation", new Dictionary<string, string>
+                        {
+                            { "OrderId", shipment.OrderHeader.Id.ToString() },
+                            { "TrackingNumber", shipment.TrackingNumber ?? "" },
+                            { "TrackingUrl", trackingUrl ?? "" },
+                            { "QrCodeSrc", $"data:image/png;base64,{qrCodeBase64}" }
+                        });
+                        await _emailSender.SendEmailAsync(user.Email, subject, body);
                     }
                 }
 

@@ -36,6 +36,7 @@ builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Str
 Stripe.StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe")["SecretKey"];
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 // Bring shipping service typed client
 builder.Services.AddHttpClient<Models.Interfaces.IBringShippingService, BringShippingService>(client =>
