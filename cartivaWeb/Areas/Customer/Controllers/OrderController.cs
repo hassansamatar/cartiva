@@ -12,7 +12,10 @@ using Stripe;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 
+using Microsoft.AspNetCore.Authorization;
+
 [Area("Customer")]
+[Authorize]
 public class OrderController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -68,7 +71,7 @@ public class OrderController : Controller
                 PhoneNumber = user?.PhoneNumber,
                 StreetAddress = user?.StreetAddress,
                 City = user?.City,
-                State = user?.State,
+                State = user?.State ?? user?.City,
                 PostalCode = user?.PostalCode,
                 Country = user?.Country ?? "Norway"
             },
@@ -199,32 +202,43 @@ public class OrderController : Controller
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
         }
 
-        _db.OrderHeaders.Add(model.OrderHeader);
-        await _db.SaveChangesAsync();
-
-        // Create OrderDetails and update stock
-        var orderDetails = new List<OrderDetail>();
-        foreach (var cart in cartList)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            var orderDetail = new OrderDetail
+            _db.OrderHeaders.Add(model.OrderHeader);
+            await _db.SaveChangesAsync();
+
+            // Create OrderDetails and update stock
+            var orderDetails = new List<OrderDetail>();
+            foreach (var cart in cartList)
             {
-                OrderHeaderId = model.OrderHeader.Id,
-                ProductVariantId = cart.ProductVariantId,
-                Count = cart.Count,
-                Price = cart.ProductVariant.Price
-            };
-            orderDetails.Add(orderDetail);
+                var orderDetail = new OrderDetail
+                {
+                    OrderHeaderId = model.OrderHeader.Id,
+                    ProductVariantId = cart.ProductVariantId,
+                    Count = cart.Count,
+                    Price = cart.ProductVariant.Price
+                };
+                orderDetails.Add(orderDetail);
 
-            // Update stock
-            cart.ProductVariant.Stock -= cart.Count;
+                // Update stock
+                cart.ProductVariant.Stock -= cart.Count;
+            }
+
+            _db.OrderDetails.AddRange(orderDetails);
+
+            // Clear cart
+            _db.ShoppingCarts.RemoveRange(cartList);
+            await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
         }
-
-        _db.OrderDetails.AddRange(orderDetails);
-        await _db.SaveChangesAsync();
-
-        // Clear cart
-        _db.ShoppingCarts.RemoveRange(cartList);
-        await _db.SaveChangesAsync();
+        catch
+        {
+            await transaction.RollbackAsync();
+            TempData["Error"] = "An error occurred while placing your order. Please try again.";
+            return RedirectToAction("Checkout");
+        }
 
         // Redirect based on role and payNow flag
         if (User.IsInRole(SD.Role_Company))
@@ -239,22 +253,7 @@ public class OrderController : Controller
             await _db.SaveChangesAsync();
 
             // Send order confirmation email
-            if (user != null && !string.IsNullOrEmpty(user.Email))
-            {
-                var trackingUrl = Url.Action("Track", "Order", new { id = model.OrderHeader.Id, area = "Customer" }, Request.Scheme);
-                var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(model.OrderHeader.Id);
-                var subject = "Order Confirmation";
-                var body = $@"
-<h2>Thank you for your order!</h2>
-<p>Your order <strong>#{model.OrderHeader.Id}</strong> has been confirmed.</p>
-<p>We'll notify you when it ships.</p>
-<p>You can track your order status at any time: <a href='{trackingUrl}'>Track Order</a></p>
-<p>Or scan the QR code below with your phone:</p>
-<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
-<p>Thank you for shopping with us!</p>
-";
-                await _emailSender.SendEmailAsync(user.Email, subject, body);
-            }
+            await SendOrderConfirmationEmailAsync(model.OrderHeader.Id, userId);
 
             // Decide redirect based on company status
             if (payNow || model.OrderHeader.PaymentStatus != SD.PaymentStatusDeferred)
@@ -371,23 +370,7 @@ public class OrderController : Controller
                 _logger.LogInformation($"Order {orderId} updated to AwaitingShipmentApproval with pending shipment.");
 
                 // Send order confirmation email for regular customers
-                var user = await _db.Users.FindAsync(userId);
-                if (user != null && !string.IsNullOrEmpty(user.Email))
-                {
-                    var trackingUrl = Url.Action("Track", "Order", new { id = order.Id, area = "Customer" }, Request.Scheme);
-                    var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(order.Id);
-                    var subject = "Order Confirmation";
-                    var body = $@"
-<h2>Thank you for your order!</h2>
-<p>Your order <strong>#{order.Id}</strong> has been confirmed.</p>
-<p>We'll notify you when it ships.</p>
-<p>You can track your order status at any time: <a href='{trackingUrl}'>Track Order</a></p>
-<p>Or scan the QR code below with your phone:</p>
-<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
-<p>Thank you for shopping with us!</p>
-";
-                    await _emailSender.SendEmailAsync(user.Email, subject, body);
-                }
+                await SendOrderConfirmationEmailAsync(order.Id, userId);
 
                 TempData["Success"] = "Payment successful! Your order is being prepared for shipment.";
                 return RedirectToAction("ShipmentPending", new { id = order.Id });
@@ -617,6 +600,7 @@ public class OrderController : Controller
     // QR CODE TRACKING PAGE
     // =============================
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> Track(int id)
     {
         var order = await _db.OrderHeaders
@@ -639,8 +623,29 @@ public class OrderController : Controller
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult TrackTest()
     {
         return Content("Track action is working!");
+    }
+
+    private async Task SendOrderConfirmationEmailAsync(int orderId, string? userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null || string.IsNullOrEmpty(user.Email))
+            return;
+
+        var trackingUrl = Url.Action("Track", "Order", new { id = orderId, area = "Customer" }, Request.Scheme);
+        var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(orderId);
+        var body = $@"
+<h2>Thank you for your order!</h2>
+<p>Your order <strong>#{orderId}</strong> has been confirmed.</p>
+<p>We'll notify you when it ships.</p>
+<p>You can track your order status at any time: <a href='{trackingUrl}'>Track Order</a></p>
+<p>Or scan the QR code below with your phone:</p>
+<img src='data:image/png;base64,{qrCodeBase64}' width='150' />
+<p>Thank you for shopping with us!</p>
+";
+        await _emailSender.SendEmailAsync(user.Email, "Order Confirmation", body);
     }
 }

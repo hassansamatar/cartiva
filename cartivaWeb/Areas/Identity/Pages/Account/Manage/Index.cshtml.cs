@@ -50,8 +50,8 @@ namespace CartivaWeb.Areas.Identity.Pages.Account.Manage
             [Display(Name = "City")]
             public string City { get; set; }
 
-            [Display(Name = "State")]
-            public string State { get; set; }
+            [Display(Name = "State / Region")]
+            public string? State { get; set; }
 
             [Display(Name = "Postal Code")]
             public string PostalCode { get; set; }

@@ -2,6 +2,7 @@
 using ApplicationUtility;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Models
@@ -14,7 +15,7 @@ namespace Models
         }
 
         // Constructor for required fields
-        public OrderHeader(string applicationUserId, string name, string phoneNumber, string streetAddress, string city, string state, string postalCode)
+        public OrderHeader(string applicationUserId, string name, string phoneNumber, string streetAddress, string city, string? state, string postalCode)
         {
             ApplicationUserId = applicationUserId;
             Name = name;
@@ -48,9 +49,10 @@ namespace Models
         public string PhoneNumber { get; set; }
         public string StreetAddress { get; set; }
         public string City { get; set; }
-        public string State { get; set; }
+        [Display(Name = "State / Region")]
+        public string? State { get; set; }
         public string PostalCode { get; set; }
-        // In Models/ApplicationUser.cs
+
         public string Country { get; set; } = "Norway";
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();

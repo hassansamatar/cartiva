@@ -342,7 +342,7 @@
             <div class="card-body">
                 <p class="mb-0 fw-bold">@Model.Name</p>
                 <p class="mb-0">@Model.StreetAddress</p>
-                <p class="mb-0">@Model.City, @Model.State @Model.PostalCode</p>
+                <p class="mb-0">@Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "") @Model.PostalCode</p>
                 <p class="mb-0">@Model.Country</p>
                 <p class="mb-0">Phone: @Model.PhoneNumber</p>
             </div>

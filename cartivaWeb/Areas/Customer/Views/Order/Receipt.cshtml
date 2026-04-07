@@ -182,7 +182,7 @@
                         </tr>
                         <tr>
                             <td><strong><i class="bi bi-building me-2"></i>City/State:</strong></td>
-                            <td>@Model.City, @Model.State</td>
+                            <td>@Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "")</td>
                         </tr>
                         <tr>
                             <td><strong><i class="bi bi-mailbox me-2"></i>Postal Code:</strong></td>

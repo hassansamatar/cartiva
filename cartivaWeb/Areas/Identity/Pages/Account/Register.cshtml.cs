@@ -83,6 +83,7 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
 
             public string? StreetAddress { get; set; }
             public string? City { get; set; }
+            [Display(Name = "State / Region")]
             public string? State { get; set; }
             public string? PostalCode { get; set; }
             public string? PhoneNumber { get; set; }

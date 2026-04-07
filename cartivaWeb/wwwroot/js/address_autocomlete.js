@@ -94,7 +94,7 @@
                 streetInput.value = streetText;
                 postalCodeInput.value = postalCode;
                 cityInput.value = city;
-                stateInput.value = a.fylke || city;      // set state (region)
+                if (stateInput) stateInput.value = city;
                 if (countryInput) countryInput.value = "Norway";
 
                 suggestionsContainer.style.display = "none";

@@ -23,11 +23,12 @@ namespace Models
         [Display(Name = "Postal Code")]
         public string? PostalCode { get; set; }
 
+        [Display(Name = "State / Region")]
         public string? State { get; set; }
-          // In Models/ApplicationUser.cs
-public string Country { get; set; } = "Norway";
+
+        public string Country { get; set; } = "Norway";
         [Display(Name = "Phone Number")]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
         public bool IsActive { get; set; } = true;
 
 

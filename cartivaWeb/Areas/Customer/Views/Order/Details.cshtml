@@ -170,7 +170,7 @@
                         <h6 class="fw-bold">Delivery Address</h6>
                         <p class="mb-1">@Model.Name</p>
                         <p class="mb-1">@Model.StreetAddress</p>
-                        <p class="mb-1">@Model.City, @Model.State @Model.PostalCode</p>
+                        <p class="mb-1">@Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "") @Model.PostalCode</p>
                         <p class="mb-1">@Model.Country</p>
                         <p class="mb-0"><i class="bi bi-telephone"></i> @Model.PhoneNumber</p>
                     </div>

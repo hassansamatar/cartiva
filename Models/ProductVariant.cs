@@ -25,10 +25,7 @@ public class ProductVariant
     public int ProductId { get; set; }
 
     [ForeignKey("ProductId")]
-    public Product Product { get; set; }  // Required - non-nullable
-  //  public decimal? Weight { get; set; } // in kg
-   /// <summary>
-   /// public string? UserId { get; set; }
-   /// </summary>
+    public Product Product { get; set; }
+
     public ICollection<Review>? Reviews { get; set; }
 }

@@ -57,8 +57,7 @@
                         <dt class="col-sm-4">Address</dt>
                         <dd class="col-sm-8">
                             @Model.OrderHeader.StreetAddress,<br />
-                            @Model.OrderHeader.PostalCode @Model.OrderHeader.City,<br />
-                            @Model.OrderHeader.State
+                            @Model.OrderHeader.PostalCode @Model.OrderHeader.City@(!string.IsNullOrEmpty(Model.OrderHeader.State) ? $", {Model.OrderHeader.State}" : "")
                         </dd>
 
                         <dt class="col-sm-4">Order Total</dt>

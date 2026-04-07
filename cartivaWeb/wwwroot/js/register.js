@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 streetInput.value = streetText;
                 postalCodeInput.value = postalCode;
                 cityInput.value = city;
-                stateInput.value = a.fylke || city;
+                if (stateInput) stateInput.value = city;
                 if (countryInput) countryInput.value = "Norway";
 
                 suggestionsContainer.style.display = "none";

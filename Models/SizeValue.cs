@@ -26,7 +26,7 @@ namespace Models
 
         [StringLength(200)]
         [DisplayName("Description")]
-        public string Description { get; set; }  // "UK 38\" / L"
+        public string? Description { get; set; }
 
         [DisplayName("Sort Order")]
         public int SortOrder { get; set; }  // For consistent ordering in dropdowns

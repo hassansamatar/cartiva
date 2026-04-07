@@ -21,6 +21,7 @@ namespace Models
         public string? StreetAddress { get; set; }
         public string? City { get; set; }
         public string? PostalCode { get; set; }
+        [Display(Name = "State / Region")]
         public string? State { get; set; }
        
        public string Country { get; set; } = "Norway";

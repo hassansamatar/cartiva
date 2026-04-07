@@ -25,17 +25,17 @@ namespace CartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: Company List
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var companies = _db.Companies.ToList();
+            var companies = await _db.Companies.ToListAsync();
 
-            var companyUsers = _db.Users
+            var companyUsers = await _db.Users
                 .Where(u => u.CompanyId != null)
-                .ToList();
+                .ToListAsync();
 
-            var orders = _db.OrderHeaders
+            var orders = await _db.OrderHeaders
                 .Include(o => o.ApplicationUser)
-                .ToList();
+                .ToListAsync();
 
             var companyList = companies.Select(company =>
             {
@@ -43,7 +43,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
                     .FirstOrDefault(u => u.CompanyId == company.Id);
 
                 var companyOrders = orders
-                    .Where(o => o.ApplicationUser.CompanyId == company.Id)
+                    .Where(o => o.ApplicationUser != null && o.ApplicationUser.CompanyId == company.Id)
                     .ToList();
 
                 string paymentStatus = "No Orders";
@@ -81,16 +81,16 @@ namespace CartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: Upsert (Create/Edit)
-        public IActionResult Upsert(int? id)
+        public async Task<IActionResult> Upsert(int? id)
         {
             if (id == null || id == 0)
             {
                 // Create new company
-                return View(new Company { IsActive = true }); // default active
+                return View(new Company { IsActive = true });
             }
 
             // Edit existing company
-            var companyObj = _db.Companies.FirstOrDefault(c => c.Id == id);
+            var companyObj = await _db.Companies.FirstOrDefaultAsync(c => c.Id == id);
             if (companyObj == null) return NotFound();
 
             return View(companyObj);
@@ -99,7 +99,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: Upsert (Create/Edit)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Upsert(Company companyObj)
+        public async Task<IActionResult> Upsert(Company companyObj)
         {
             if (!ModelState.IsValid)
                 return View(companyObj);
@@ -113,7 +113,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             else
             {
                 // Update existing company
-                var existingCompany = _db.Companies.Find(companyObj.Id);
+                var existingCompany = await _db.Companies.FindAsync(companyObj.Id);
                 if (existingCompany == null) return NotFound();
 
                 existingCompany.Name = companyObj.Name;
@@ -128,16 +128,16 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 TempData["success"] = "Company updated successfully";
             }
 
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
             return RedirectToAction("Index");
         }
 
         // GET: Delete
-        public IActionResult Delete(int? id)
+        public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
 
-            var companyObj = _db.Companies.FirstOrDefault(c => c.Id == id);
+            var companyObj = await _db.Companies.FirstOrDefaultAsync(c => c.Id == id);
             if (companyObj == null) return NotFound();
 
             return View(companyObj);
@@ -146,29 +146,29 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: Delete
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public IActionResult DeletePOST(int? id)
+        public async Task<IActionResult> DeletePOST(int? id)
         {
             if (id == null) return NotFound();
 
-            var company = _db.Companies.FirstOrDefault(c => c.Id == id);
+            var company = await _db.Companies.FirstOrDefaultAsync(c => c.Id == id);
             if (company == null) return NotFound();
 
             // Check if any user under this company has orders
-            bool hasOrders = _db.OrderHeaders
+            bool hasOrders = await _db.OrderHeaders
                 .Include(o => o.ApplicationUser)
-                .Any(o => o.ApplicationUser.CompanyId == company.Id);
+                .AnyAsync(o => o.ApplicationUser != null && o.ApplicationUser.CompanyId == company.Id);
 
             // Check if any active user is assigned to this company
-            bool hasActiveUsers = _db.Users
-                .Any(u => u.CompanyId == company.Id && u.IsInactive);
+            bool hasActiveUsers = await _db.Users
+                .AnyAsync(u => u.CompanyId == company.Id && !u.IsInactive);
 
             if (hasOrders || hasActiveUsers)
             {
                 // Cannot delete: mark inactive instead
                 company.IsActive = false;
-                
+
                 _db.Companies.Update(company);
-                _db.SaveChanges();
+                await _db.SaveChangesAsync();
 
                 TempData["error"] = "Company has order history or active users and cannot be deleted. It has been marked inactive instead.";
                 return RedirectToAction("Delete", new { id = company.Id });
@@ -176,7 +176,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             // Safe to delete
             _db.Companies.Remove(company);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             TempData["success"] = "Company deleted successfully.";
             return RedirectToAction("Index");
@@ -184,14 +184,14 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         // Optional: Toggle Active/Inactive directly from Index
         [HttpPost]
-        public IActionResult ToggleStatus(int id)
+        public async Task<IActionResult> ToggleStatus(int id)
         {
-            var company = _db.Companies.Find(id);
+            var company = await _db.Companies.FindAsync(id);
             if (company == null) return NotFound();
 
             company.IsActive = !company.IsActive;
             _db.Companies.Update(company);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             TempData["success"] = $"Company status updated to {(company.IsActive ? "Active" : "Inactive")}.";
             return RedirectToAction("Index");

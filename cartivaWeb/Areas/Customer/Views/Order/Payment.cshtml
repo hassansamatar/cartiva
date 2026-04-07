@@ -132,7 +132,7 @@
                     </h6>
                     <p class="mb-0">@Model.Order.Name</p>
                     <p class="mb-0">@Model.Order.StreetAddress</p>
-                    <p class="mb-0">@Model.Order.City, @Model.Order.State @Model.Order.PostalCode</p>
+                    <p class="mb-0">@Model.Order.City@(!string.IsNullOrEmpty(Model.Order.State) ? $", {Model.Order.State}" : "") @Model.Order.PostalCode</p>
                     <p class="mb-0">@Model.Order.Country</p>
                     <p class="mb-0"><i class="bi bi-telephone"></i> @Model.Order.PhoneNumber</p>
                 </div>
