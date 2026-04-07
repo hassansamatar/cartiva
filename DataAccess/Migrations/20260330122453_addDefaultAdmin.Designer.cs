@@ -210,7 +210,7 @@ namespace DataAccess.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsDeleted")
+                    b.Property<bool>("IsInactive")
                         .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")

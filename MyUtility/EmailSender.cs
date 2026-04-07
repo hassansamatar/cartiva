@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 
-namespace MyUtility
+namespace ApplicationUtility
 {
     public class EmailSender : IEmailSender
     {

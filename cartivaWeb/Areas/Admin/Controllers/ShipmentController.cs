@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.Interfaces;
-using MyUtility;
+using ApplicationUtility;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -163,7 +163,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 <p>Thank you for shopping with us!</p>
 ";
 
-                    if (_emailSender is MyUtility.EmailSender emailSender)
+                    if (_emailSender is ApplicationUtility.EmailSender emailSender)
                     {
                         await emailSender.SendEmailWithInlineImageAsync(user.Email, subject, body, qrCodeBytes);
                     }

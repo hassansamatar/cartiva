@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.ViewModels;
 using Models.Interfaces;
-using MyUtility;
+using ApplicationUtility;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {

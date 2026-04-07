@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Models;
-using MyUtility;
+using ApplicationUtility;
 
 public static class DbInitializer
 {
@@ -44,7 +44,7 @@ public static class DbInitializer
             Email = adminEmail,
             Name = "Admin",
             Country = "Norway",
-            IsDeleted = false
+            IsInactive = false
         };
         var createResult = userManager.CreateAsync(adminUser, "Admin12#").Result;
         if (createResult.Succeeded)

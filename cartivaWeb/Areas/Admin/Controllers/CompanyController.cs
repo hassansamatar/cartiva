@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.ViewModels;
-using MyUtility;
+using ApplicationUtility;
 using System;
 using System.Linq;
 
@@ -160,7 +160,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             // Check if any active user is assigned to this company
             bool hasActiveUsers = _db.Users
-                .Any(u => u.CompanyId == company.Id && u.IsDeleted);
+                .Any(u => u.CompanyId == company.Id && u.IsInactive);
 
             if (hasOrders || hasActiveUsers)
             {

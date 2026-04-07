@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Models;
-using MyUtility;
+using ApplicationUtility;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {

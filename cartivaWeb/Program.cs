@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Models;
 using Models.Interfaces;
 using Models.Services;
-using MyUtility;
+using ApplicationUtility;
 using Services;
 
 var builder = WebApplication.CreateBuilder(args);

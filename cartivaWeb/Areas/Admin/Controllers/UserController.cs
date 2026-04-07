@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Models;
 using Models.ViewModels;
-using MyUtility;
+using ApplicationUtility;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -63,7 +63,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            user.IsDeleted = true;
+            user.IsInactive = true;
             var result = await _userManager.UpdateAsync(user);
 
             if (result.Succeeded)
@@ -86,7 +86,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            user.IsDeleted = false;
+            user.IsInactive = false;
             var result = await _userManager.UpdateAsync(user);
 
             if (result.Succeeded)

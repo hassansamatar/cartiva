@@ -33,7 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DataAccess\DataAccess.csproj" />
     <ProjectReference Include="..\Models\Models.csproj" />
-    <ProjectReference Include="..\MyUtility\MyUtility.csproj" />
+    <ProjectReference Include="..\MyUtility\ApplicationUtility.csproj" />
   </ItemGroup>
 
   <ItemGroup>

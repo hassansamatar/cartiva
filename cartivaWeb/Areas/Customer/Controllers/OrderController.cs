@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 using Models;
 using Models.Interfaces;
 using Models.ViewModels;
-using MyUtility;
+using ApplicationUtility;
 using Stripe;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;

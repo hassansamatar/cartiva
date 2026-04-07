@@ -29,6 +29,6 @@ namespace Models
         [ValidateNever]
        public Company? Company { get; set; }
       
-        public bool IsDeleted { get; set; } = false;
+        public bool IsInactive { get; set; } = false;
     }
 }
