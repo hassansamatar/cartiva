@@ -5,9 +5,86 @@
 @{
     ViewData["Title"] = "Home";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var activePromotions = ViewBag.ActivePromotions as List<Models.Promotion> ?? new List<Models.Promotion>();
+    var promotedCategoryIds = activePromotions.Select(p => p.CategoryId).ToHashSet();
 }
 
 <div class="container-fluid mt-4 px-2">
+
+    <!-- Promotion Banners -->
+    @if (activePromotions.Any())
+    {
+        <div class="promo-banner mb-4 shadow-sm">
+            <div class="promo-track">
+                <div class="promo-content">
+                    @foreach (var promo in activePromotions)
+                    {
+                        <span class="promo-item">
+                            <i class="bi bi-gift"></i>
+                            <strong>@promo.DisplayText!</strong>
+                            <span class="mx-1">—</span>
+                            <span>@promo.Category?.Name</span>
+                            <small class="opacity-75 ms-2">
+                                <i class="bi bi-clock"></i> Ends @promo.EndDate.ToString("dd MMM yyyy")
+                            </small>
+                        </span>
+                    }
+                    @* Duplicate for seamless loop *@
+                    @foreach (var promo in activePromotions)
+                    {
+                        <span class="promo-item">
+                            <i class="bi bi-gift"></i>
+                            <strong>@promo.DisplayText!</strong>
+                            <span class="mx-1">—</span>
+                            <span>@promo.Category?.Name</span>
+                            <small class="opacity-75 ms-2">
+                                <i class="bi bi-clock"></i> Ends @promo.EndDate.ToString("dd MMM yyyy")
+                            </small>
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .promo-banner {
+                background: linear-gradient(135deg, #198754, #20c997);
+                color: white;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                padding: 0.75rem 0;
+            }
+
+            .promo-track {
+                overflow: hidden;
+                position: relative;
+            }
+
+            .promo-content {
+                display: flex;
+                white-space: nowrap;
+                animation: promo-scroll 20s linear infinite;
+                width: max-content;
+            }
+
+            .promo-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0 2.5rem;
+                font-size: 1rem;
+            }
+
+            .promo-banner:hover .promo-content {
+                animation-play-state: paused;
+            }
+
+            @@keyframes promo-scroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+            }
+        </style>
+    }
 
     <!-- Page Header -->
     <div class="row mb-4">
@@ -28,11 +105,22 @@
                     ? product.Variants.Min(v => v.Price)
                     : (decimal?)null;
 
+                var promo = activePromotions.FirstOrDefault(p => p.CategoryId == product.CategoryId);
+
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                     <div class="card h-100 shadow-sm position-relative">
 
-                        <!-- Optional: Sale Badge -->
-                        @if (lowestPrice.HasValue && lowestPrice.Value < 100)
+                        <!-- Promotion Badge -->
+                        @if (promo != null)
+                        {
+                            <span class="badge bg-success position-absolute top-0 start-0 m-2 px-2 py-1 z-1">
+                                <i class="bi bi-gift"></i> @promo.DisplayText
+                                <br /><small>Ends @promo.EndDate.ToString("dd MMM")</small>
+                            </span>
+                        }
+
+                        <!-- Sale Badge -->
+                        @if (lowestPrice.HasValue && lowestPrice.Value < 100 && promo == null)
                         {
                             <span class="badge bg-danger position-absolute top-0 end-0 m-2 px-2 py-1">
                                 <i class="bi bi-tag"></i> Sale

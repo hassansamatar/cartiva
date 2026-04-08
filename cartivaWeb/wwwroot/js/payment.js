@@ -121,7 +121,7 @@
                         throw error;
                     }
                 } catch (err) {
-            alert('Failed to start Vipps payment: ' + err.message);
+            swalError('Payment Failed', 'Failed to start Vipps payment: ' + err.message);
         console.error('Vipps error:', err);
         vippsButton.prop('disabled', false).html('<i class="bi bi-phone me-2"></i>Continue with Vipps');
                 }

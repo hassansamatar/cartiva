@@ -28,6 +28,14 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 .AsNoTracking()
                 .ToListAsync();
 
+            var activePromotions = await _db.Promotions
+                .Include(p => p.Category)
+                .Where(p => p.IsActive && p.StartDate <= DateTime.Now && p.EndDate >= DateTime.Now)
+                .AsNoTracking()
+                .ToListAsync();
+
+            ViewBag.ActivePromotions = activePromotions;
+
             return View(products);
         }
 

@@ -24,13 +24,15 @@ public class OrderController : Controller
     private readonly ILogger<OrderController> _logger;
     private readonly IEmailSender _emailSender;
     private readonly IEmailTemplateService _emailTemplateService;
+    private readonly IPromotionService _promotionService;
 
     public OrderController(ApplicationDbContext db,
                            IOptions<StripeSettings> stripeSettings,
                            IQrCodeService qrCodeService,
                            ILogger<OrderController> logger,
                            IEmailSender emailSender,
-                           IEmailTemplateService emailTemplateService)
+                           IEmailTemplateService emailTemplateService,
+                           IPromotionService promotionService)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
@@ -39,6 +41,7 @@ public class OrderController : Controller
         _logger = logger;
         _emailSender = emailSender;
         _emailTemplateService = emailTemplateService;
+        _promotionService = promotionService;
     }
 
     // =============================
@@ -52,6 +55,7 @@ public class OrderController : Controller
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.Product)
+                    .ThenInclude(p => p.Category)
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.SizeValue)
                     .ThenInclude(sv => sv.SizeSystem)
@@ -65,6 +69,8 @@ public class OrderController : Controller
         }
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        var discount = await _promotionService.CalculateDiscountAsync(cartList);
+        var subtotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
 
         var vm = new CheckoutVM
         {
@@ -79,8 +85,11 @@ public class OrderController : Controller
                 Country = user?.Country ?? "Norway"
             },
             ShoppingCartList = cartList,
-            OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count)
+            OrderTotal = subtotal - discount.TotalDiscount
         };
+
+        ViewBag.PromotionDiscount = discount;
+        ViewBag.Subtotal = subtotal;
 
         return View(vm);
     }
@@ -97,6 +106,7 @@ public class OrderController : Controller
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.Product)
+                    .ThenInclude(p => p.Category)
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.SizeValue)
                     .ThenInclude(sv => sv.SizeSystem)
@@ -108,8 +118,14 @@ public class OrderController : Controller
             return RedirectToAction("Index", "Cart");
         }
 
+        var discount = await _promotionService.CalculateDiscountAsync(cartList);
+        var subtotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+
         model.ShoppingCartList = cartList;
-        model.OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+        model.OrderTotal = subtotal - discount.TotalDiscount;
+
+        ViewBag.PromotionDiscount = discount;
+        ViewBag.Subtotal = subtotal;
 
         // --- NEW: Show warning for inactive company accounts ---
         if (User.IsInRole(SD.Role_Company))
@@ -142,6 +158,7 @@ public class OrderController : Controller
         var cartList = await _db.ShoppingCarts
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.Product)
+                    .ThenInclude(p => p.Category)
             .Include(c => c.ProductVariant)
                 .ThenInclude(v => v.SizeValue)
             .Where(c => c.ApplicationUserId == userId)
@@ -167,10 +184,14 @@ public class OrderController : Controller
 
         var user = await _db.Users.FindAsync(userId);
 
+        // Calculate promotion discount
+        var discount = await _promotionService.CalculateDiscountAsync(cartList);
+        var subtotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+
         // Create OrderHeader
         model.OrderHeader.ApplicationUserId = userId;
         model.OrderHeader.OrderDate = DateTime.Now;
-        model.OrderHeader.OrderTotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+        model.OrderHeader.OrderTotal = subtotal - discount.TotalDiscount;
         model.OrderHeader.Country = user?.Country ?? "Norway";
 
         // Determine payment logic

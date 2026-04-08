@@ -6,6 +6,8 @@ $(document).ready(function () {
     var removeUrl = cartConfig.data('remove-url');
     var removeAllUrl = cartConfig.data('remove-all-url');
 
+    var promoUrl = cartConfig.data('promo-url');
+
     // Helper Functions
     function formatCurrency(amount) {
         return new Intl.NumberFormat('nb-NO', {
@@ -15,45 +17,50 @@ $(document).ready(function () {
     }
 
     function showToast(message, type) {
-        type = type || 'success';
-        var bgColor = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-warning');
-        var icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-triangle' : 'info-circle');
-
-        var toast = $(
-            '<div class="toast align-items-center text-white ' + bgColor + ' border-0 show" role="alert" data-bs-autohide="true" data-bs-delay="3000">' +
-                '<div class="d-flex">' +
-                    '<div class="toast-body">' +
-                        '<i class="bi bi-' + icon + ' me-2"></i> ' + message +
-                    '</div>' +
-                    '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>' +
-                '</div>' +
-            '</div>'
-        );
-
-        $('.toast-container').append(toast);
-
-        setTimeout(function () {
-            toast.fadeOut(300, function () { toast.remove(); });
-        }, 3000);
+        swalToast(message, type || 'success');
     }
 
     function updateCartTotals() {
-        var total = 0;
-        var itemCount = 0;
-
-        $('.cart-item').each(function () {
-            var price = parseFloat($(this).data('price'));
-            var qty = parseInt($(this).find('.quantity-display').text());
-            total += price * qty;
-            itemCount++;
-        });
-
-        $('#cartTotal').text(formatCurrency(total));
+        var itemCount = $('.cart-item').length;
         $('#totalItemsBadge').text(itemCount + (itemCount === 1 ? ' item' : ' items'));
 
         if (typeof window.updateCartCount === 'function') {
             window.updateCartCount();
         }
+
+        // Fetch promotion-aware totals from server
+        $.ajax({
+            url: promoUrl,
+            type: 'GET',
+            success: function (data) {
+                $('#cartSubtotal').text(formatCurrency(data.subtotal));
+                $('#cartTotal').text(formatCurrency(data.finalTotal));
+
+                // Update promotion rows
+                var promoHtml = '';
+                if (data.promotions && data.promotions.length > 0) {
+                    $.each(data.promotions, function (i, p) {
+                        var label = p.freeItemCount === 1 ? 'item' : 'items';
+                        promoHtml +=
+                            '<tr class="table-success">' +
+                                '<td colspan="4" class="text-end">' +
+                                    '<i class="bi bi-gift text-success"></i> ' +
+                                    '<strong class="text-success">' + p.displayText + '</strong> ' +
+                                    '<small class="text-muted">(' + p.categoryName + ' \u2014 ' + p.freeItemCount + ' free ' + label + ')</small>' +
+                                '</td>' +
+                                '<td colspan="2">' +
+                                    '<span class="text-success fw-bold">-' + formatCurrency(p.discount) + '</span>' +
+                                '</td>' +
+                            '</tr>';
+                    });
+                    $('#savingsAmount').text(formatCurrency(data.totalDiscount));
+                    $('#cartSavings').show();
+                } else {
+                    $('#cartSavings').hide();
+                }
+                $('#promo-rows').html(promoHtml);
+            }
+        });
     }
 
     function updateSubtotal(itemId, newQty) {
@@ -231,9 +238,10 @@ $(document).ready(function () {
         var itemId = btn.data('item-id');
         var productName = btn.data('product-name');
 
-        if (confirm('Remove ' + productName + ' from your cart?')) {
-            btn.prop('disabled', true);
-            btn.html('<span class="loading-spinner-small"></span>');
+        swalConfirm('Remove ' + productName + '?', 'This item will be removed from your cart.', 'Yes, remove it!', 'Cancel').then(function (result) {
+            if (result.isConfirmed) {
+                btn.prop('disabled', true);
+                btn.html('<span class="loading-spinner-small"></span>');
 
             $.ajax({
                 url: removeUrl,
@@ -245,51 +253,54 @@ $(document).ready(function () {
                             $(this).remove();
                             updateCartTotals();
                             if ($('.cart-item').length === 0) location.reload();
-                            showToast(productName + ' removed');
+                            swalToast(productName + ' removed', 'success');
                         });
                     } else {
-                        showToast(response.message || 'Failed to remove', 'error');
+                        swalToast(response.message || 'Failed to remove', 'error');
                         btn.prop('disabled', false);
                         btn.html('<i class="bi bi-trash"></i>');
                     }
                 },
                 error: function () {
-                    showToast('Network error', 'error');
+                    swalToast('Network error', 'error');
                     btn.prop('disabled', false);
                     btn.html('<i class="bi bi-trash"></i>');
                 }
             });
-        }
+            }
+        });
     });
 
     // Clear Cart
     $('#clearCartBtn').click(function () {
-        if (confirm('Remove all items from your cart?')) {
-            var btn = $(this);
-            btn.prop('disabled', true);
-            btn.html('<span class="spinner-border spinner-border-sm"></span> Clearing...');
+        swalConfirm('Clear your cart?', 'All items will be removed.', 'Yes, clear it!', 'Cancel').then(function (result) {
+            if (result.isConfirmed) {
+                var btn = $('#clearCartBtn');
+                btn.prop('disabled', true);
+                btn.html('<span class="spinner-border spinner-border-sm"></span> Clearing...');
 
-            $.ajax({
-                url: removeAllUrl,
-                type: 'POST',
-                data: { __RequestVerificationToken: getToken() },
-                success: function (response) {
-                    if (response.success) {
-                        showToast('Cart cleared');
-                        setTimeout(function () { location.reload(); }, 1000);
-                    } else {
-                        showToast(response.message || 'Failed to clear', 'error');
+                $.ajax({
+                    url: removeAllUrl,
+                    type: 'POST',
+                    data: { __RequestVerificationToken: getToken() },
+                    success: function (response) {
+                        if (response.success) {
+                            swalToast('Cart cleared', 'success');
+                            setTimeout(function () { location.reload(); }, 1000);
+                        } else {
+                            swalToast(response.message || 'Failed to clear', 'error');
+                            btn.prop('disabled', false);
+                            btn.html('<i class="bi bi-trash"></i> Clear Cart');
+                        }
+                    },
+                    error: function () {
+                        swalToast('Network error', 'error');
                         btn.prop('disabled', false);
                         btn.html('<i class="bi bi-trash"></i> Clear Cart');
                     }
-                },
-                error: function () {
-                    showToast('Network error', 'error');
-                    btn.prop('disabled', false);
-                    btn.html('<i class="bi bi-trash"></i> Clear Cart');
-                }
-            });
-        }
+                });
+            }
+        });
     });
 
     // Enter key on quantity input

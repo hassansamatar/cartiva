@@ -113,10 +113,21 @@
                                 <div class="col-md-5 mt-3 mt-md-0">
                                     <div class="bg-light p-3 rounded">
                                         <h6 class="fw-bold mb-2">Order Summary</h6>
+                                        @{
+                                            var historySubtotal = order.OrderDetails.Sum(d => d.Price * d.Count);
+                                            var historyDiscount = historySubtotal - order.OrderTotal;
+                                        }
                                         <div class="d-flex justify-content-between">
                                             <span>Subtotal:</span>
-                                            <span>@order.OrderDetails.Sum(d => d.Price * d.Count).ToString("C", culture)</span>
+                                            <span>@historySubtotal.ToString("C", culture)</span>
                                         </div>
+                                        @if (historyDiscount > 0)
+                                        {
+                                            <div class="d-flex justify-content-between text-success">
+                                                <span><i class="bi bi-gift"></i> Discount:</span>
+                                                <span>-@historyDiscount.ToString("C", culture)</span>
+                                            </div>
+                                        }
                                         <div class="d-flex justify-content-between">
                                             <span>Shipping:</span>
                                             <span class="text-success">Free</span>
@@ -126,6 +137,10 @@
                                             <span>Total:</span>
                                             <span>@order.OrderTotal.ToString("C", culture)</span>
                                         </div>
+                                        @if (historyDiscount > 0)
+                                        {
+                                            <small class="text-success"><i class="bi bi-check-circle"></i> You saved @historyDiscount.ToString("C", culture)</small>
+                                        }
                                         <!-- Country -->
                                         <div class="d-flex justify-content-between mt-2">
                                             <span>Country:</span>

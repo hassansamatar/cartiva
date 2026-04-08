@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
+using Models.Interfaces;
 using System.Security.Claims;
 
 namespace CartivaWeb.Areas.Customer.Controllers
@@ -12,10 +13,12 @@ namespace CartivaWeb.Areas.Customer.Controllers
     public class CartController : Controller
     {
         private readonly ApplicationDbContext _db;
+        private readonly IPromotionService _promotionService;
 
-        public CartController(ApplicationDbContext db)
+        public CartController(ApplicationDbContext db, IPromotionService promotionService)
         {
             _db = db;
+            _promotionService = promotionService;
         }
 
         // Display shopping cart
@@ -33,7 +36,41 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 .Where(c => c.ApplicationUserId == userId)
                 .ToListAsync();
 
+            var discount = await _promotionService.CalculateDiscountAsync(cartItems);
+            ViewBag.PromotionDiscount = discount;
+
             return View(cartItems);
+        }
+
+        // GET: Recalculate promotion discount for AJAX calls
+        [HttpGet]
+        public async Task<IActionResult> GetPromotionDiscount()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var cartItems = await _db.ShoppingCarts
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.Product)
+                        .ThenInclude(p => p.Category)
+                .Where(c => c.ApplicationUserId == userId)
+                .ToListAsync();
+
+            var discount = await _promotionService.CalculateDiscountAsync(cartItems);
+            var subtotal = cartItems.Sum(c => c.ProductVariant.Price * c.Count);
+
+            return Json(new
+            {
+                subtotal,
+                totalDiscount = discount.TotalDiscount,
+                finalTotal = subtotal - discount.TotalDiscount,
+                promotions = discount.AppliedPromotions.Select(p => new
+                {
+                    p.DisplayText,
+                    p.CategoryName,
+                    p.Discount,
+                    p.FreeItemCount
+                })
+            });
         }
 
         // GET: Get cart count for navbar badge

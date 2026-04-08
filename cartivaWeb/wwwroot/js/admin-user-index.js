@@ -1,35 +1,39 @@
 function deactivateUser(id) {
-    if (confirm('Are you sure you want to deactivate this user?')) {
-        var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-        var url = document.getElementById('deactivateUrl').value;
+    swalConfirm('Deactivate this user?', 'They will no longer be able to log in.', 'Yes, deactivate!', 'Cancel').then(function (result) {
+        if (result.isConfirmed) {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var url = document.getElementById('deactivateUrl').value;
 
-        $.post(url, {
-            id: id,
-            __RequestVerificationToken: token
-        })
-        .done(function () {
-            location.reload();
-        })
-        .fail(function () {
-            alert('Deactivation failed');
-        });
-    }
+            $.post(url, {
+                id: id,
+                __RequestVerificationToken: token
+            })
+            .done(function () {
+                location.reload();
+            })
+            .fail(function () {
+                swalToast('Deactivation failed', 'error');
+            });
+        }
+    });
 }
 
 function activateUser(id) {
-    if (confirm('Are you sure you want to activate this user?')) {
-        var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-        var url = document.getElementById('activateUrl').value;
+    swalConfirm('Activate this user?', 'They will be able to log in again.', 'Yes, activate!', 'Cancel').then(function (result) {
+        if (result.isConfirmed) {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var url = document.getElementById('activateUrl').value;
 
-        $.post(url, {
-            id: id,
-            __RequestVerificationToken: token
-        })
-        .done(function () {
-            location.reload();
-        })
-        .fail(function () {
-            alert('Activation failed');
-        });
-    }
+            $.post(url, {
+                id: id,
+                __RequestVerificationToken: token
+            })
+            .done(function () {
+                location.reload();
+            })
+            .fail(function () {
+                swalToast('Activation failed', 'error');
+            });
+        }
+    });
 }

@@ -58,7 +58,8 @@
                        data-decrement-url="@Url.Action("Decrement", "Cart")"
                        data-update-count-url="@Url.Action("UpdateCount", "Cart")"
                        data-remove-url="@Url.Action("Remove", "Cart")"
-                       data-remove-all-url="@Url.Action("RemoveAll", "Cart")">
+                       data-remove-all-url="@Url.Action("RemoveAll", "Cart")"
+                       data-promo-url="@Url.Action("GetPromotionDiscount", "Cart")">
                     @foreach (var item in Model)
                     {
                         <tr id="cart-item-@item.Id" class="cart-item" data-item-id="@item.Id" data-price="@item.ProductVariant.Price" data-stock="@item.ProductVariant.Stock">
@@ -149,15 +150,45 @@
                          </tr>
                     }
                 </tbody>
-                <tfoot class="table-light">
-                     <tr>
+                @{
+                    var discount = ViewBag.PromotionDiscount as Models.Interfaces.PromotionDiscount;
+                    var subtotal = Model.Sum(i => i.ProductVariant.Price * i.Count);
+                    var finalTotal = subtotal - (discount?.TotalDiscount ?? 0);
+                }
+                <tfoot class="table-light" id="cart-footer">
+                    <tr>
+                        <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                        <td colspan="2">
+                            <span class="fs-5" id="cartSubtotal">@subtotal.ToString("C", culture)</span>
+                        </td>
+                    </tr>
+                    <tbody id="promo-rows">
+                    @if (discount != null && discount.TotalDiscount > 0)
+                    {
+                        @foreach (var applied in discount.AppliedPromotions)
+                        {
+                            <tr class="table-success">
+                                <td colspan="4" class="text-end">
+                                    <i class="bi bi-gift text-success"></i>
+                                    <strong class="text-success">@applied.DisplayText</strong>
+                                    <small class="text-muted">(@applied.CategoryName — @applied.FreeItemCount free item@(applied.FreeItemCount > 1 ? "s" : ""))</small>
+                                </td>
+                                <td colspan="2">
+                                    <span class="text-success fw-bold">-@applied.Discount.ToString("C", culture)</span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                    <tr>
                         <td colspan="4" class="text-end"><strong>Total:</strong></td>
                         <td colspan="2">
-                            <h4 class="text-primary mb-0" id="cartTotal">
-                                @Model.Sum(i => i.ProductVariant.Price * i.Count).ToString("C", culture)
-                            </h4>
+                            <h4 class="text-primary mb-0" id="cartTotal">@finalTotal.ToString("C", culture)</h4>
+                            <small class="text-success" id="cartSavings" style="@(discount == null || discount.TotalDiscount <= 0 ? "display:none" : "")">
+                                <i class="bi bi-check-circle"></i> You save <span id="savingsAmount">@((discount?.TotalDiscount ?? 0).ToString("C", culture))</span>!
+                            </small>
                         </td>
-                     </tr>
+                    </tr>
                 </tfoot>
              </table>
         </div>

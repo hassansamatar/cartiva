@@ -230,8 +230,9 @@
                                     </a>
                                     <a asp-action="DeleteProductVariant"
                                            asp-route-id="@v.Id"
-                                           class="btn btn-danger btn-sm"
-                                           onclick="return confirm('Are you sure you want to delete this variant?')">
+                                           class="btn btn-danger btn-sm btn-swal-confirm"
+                                           data-swal-title="Delete this variant?"
+                                           data-swal-text="This action cannot be undone.">
                                         <i class="bi bi-trash"></i> Delete
                                     </a>
                                 </div>

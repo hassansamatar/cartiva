@@ -364,10 +364,24 @@
                         }
                     </tbody>
                     <tfoot class="table-light">
+                        @{
+                            var itemSubtotal = Model.OrderDetails.Sum(d => d.Price * d.Count);
+                            var receiptDiscount = itemSubtotal - Model.OrderTotal;
+                        }
                         <tr>
                             <td colspan="3" class="text-end py-3"><strong class="fs-5">Subtotal:</strong></td>
-                            <td class="text-end py-3"><strong class="fs-5">@Model.OrderDetails.Sum(d => d.Price * d.Count).ToString("C", culture)</strong></td>
+                            <td class="text-end py-3"><strong class="fs-5">@itemSubtotal.ToString("C", culture)</strong></td>
                         </tr>
+                        @if (receiptDiscount > 0)
+                        {
+                            <tr class="table-success">
+                                <td colspan="3" class="text-end py-2">
+                                    <i class="bi bi-gift text-success"></i>
+                                    <strong class="text-success">Promotion Discount:</strong>
+                                </td>
+                                <td class="text-end py-2"><strong class="text-success">-@receiptDiscount.ToString("C", culture)</strong></td>
+                            </tr>
+                        }
                         <tr>
                             <td colspan="3" class="text-end py-2"><strong>Shipping:</strong></td>
                             <td class="text-end py-2"><span class="text-success">Free</span></td>
@@ -376,6 +390,10 @@
                             <td colspan="3" class="text-end py-3"><strong class="fs-4">Total:</strong></td>
                             <td class="text-end py-3">
                                 <h4 class="text-primary mb-0 fw-bold">@Model.OrderTotal.ToString("C", culture)</h4>
+                                @if (receiptDiscount > 0)
+                                {
+                                    <small class="text-success"><i class="bi bi-check-circle"></i> You saved @receiptDiscount.ToString("C", culture)!</small>
+                                }
                             </td>
                         </tr>
                     </tfoot>

@@ -14,7 +14,7 @@
         if (isNaN(value) || value < minStock) value = minStock;
         if (value > maxStock) {
             value = maxStock;
-            alert(`Maximum quantity is ${maxStock}`);
+            swalToast('Maximum quantity is ' + maxStock, 'warning');
         }
 
         input.val(value);

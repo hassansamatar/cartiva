@@ -103,6 +103,12 @@
                                         </a>
                                     </li>
 
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Promotion" asp-action="Index">
+                                            <i class="bi bi-gift me-2"></i> Promotions
+                                        </a>
+                                    </li>
+
                                     <li><hr class="dropdown-divider"></li>
 
                                     <li>
@@ -170,8 +176,32 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/swal-helpers.js" asp-append-version="true"></script>
 
     <script src="~/js/layout.js" asp-append-version="true"></script>
+
+    @* Global TempData → SweetAlert *@
+    @if (TempData["success"] != null)
+    {
+        <script>swalToast('@Html.Raw(TempData["success"].ToString().Replace("'", "\\'"))', 'success');</script>
+    }
+    @if (TempData["error"] != null)
+    {
+        <script>swalToast('@Html.Raw(TempData["error"].ToString().Replace("'", "\\'"))', 'error');</script>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <script>swalToast('@Html.Raw(TempData["Success"].ToString().Replace("'", "\\'"))', 'success');</script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>swalToast('@Html.Raw(TempData["Error"].ToString().Replace("'", "\\'"))', 'error');</script>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <script>swalToast('@Html.Raw(TempData["Warning"].ToString().Replace("'", "\\'"))', 'warning');</script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 

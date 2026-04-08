@@ -32,6 +32,7 @@ namespace DataAccess
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<Shipment> Shipments { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<Promotion> Promotions { get; set; }
 
         // ======================
         // Configure relationships

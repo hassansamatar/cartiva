@@ -36,24 +36,14 @@ $(document).ready(function () {
             },
             success: function (response) {
                 if (response.success) {
-                    // Show success message
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.message);
-                    } else {
-                        alert('Success: ' + response.message);
-                    }
+                    swalToast(response.message, 'success');
 
                     // Redirect to order details after delay
                     setTimeout(function () {
                         window.location.href = `/Customer/Order/Details/${orderId}`;
                     }, 2000);
                 } else {
-                    // Show error message
-                    if (typeof toastr !== 'undefined') {
-                        toastr.error(response.message);
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
+                    swalToast(response.message, 'error');
 
                     // Reset button
                     resetButton(button, originalText);
@@ -62,13 +52,7 @@ $(document).ready(function () {
             },
             error: function (xhr, status, error) {
                 console.error('AJAX Error:', error);
-
-                // Show error message
-                if (typeof toastr !== 'undefined') {
-                    toastr.error('An error occurred while cancelling the order.');
-                } else {
-                    alert('An error occurred while cancelling the order.');
-                }
+                swalToast('An error occurred while cancelling the order.', 'error');
 
                 // Reset button
                 resetButton(button, originalText);

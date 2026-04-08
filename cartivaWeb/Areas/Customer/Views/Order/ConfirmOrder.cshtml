@@ -30,22 +30,6 @@
         <i class="bi bi-check-circle"></i> Confirm Your Order
     </h2>
 
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    @if (TempData["Warning"] != null)
-    {
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Warning"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
     <div class="row">
         <!-- SHIPPING INFO -->
         <div class="col-md-6">
@@ -235,17 +219,41 @@
                                 }
                             </tbody>
                             <tfoot class="table-light">
+                                @{
+                                    var confirmDiscount = ViewBag.PromotionDiscount as Models.Interfaces.PromotionDiscount;
+                                    var confirmSubtotal = ViewBag.Subtotal as decimal? ?? Model.OrderTotal;
+                                }
                                 <tr>
                                     <td colspan="2" class="text-end"><strong>Subtotal:</strong></td>
-                                    <td class="text-end">@Model.OrderTotal.ToString("C", culture)</td>
+                                    <td class="text-end">@confirmSubtotal.ToString("C", culture)</td>
                                 </tr>
+                                @if (confirmDiscount != null && confirmDiscount.TotalDiscount > 0)
+                                {
+                                    @foreach (var applied in confirmDiscount.AppliedPromotions)
+                                    {
+                                        <tr class="table-success">
+                                            <td colspan="2" class="text-end">
+                                                <i class="bi bi-gift text-success"></i>
+                                                <strong class="text-success">@applied.DisplayText</strong>
+                                                <small class="text-muted">(@applied.CategoryName)</small>
+                                            </td>
+                                            <td class="text-end text-success fw-bold">-@applied.Discount.ToString("C", culture)</td>
+                                        </tr>
+                                    }
+                                }
                                 <tr>
                                     <td colspan="2" class="text-end"><strong>Shipping:</strong></td>
                                     <td class="text-end">Free</td>
                                 </tr>
                                 <tr>
                                     <td colspan="2" class="text-end"><strong>Total:</strong></td>
-                                    <td class="text-end"><h5 class="text-primary mb-0">@Model.OrderTotal.ToString("C", culture)</h5></td>
+                                    <td class="text-end">
+                                        <h5 class="text-primary mb-0">@Model.OrderTotal.ToString("C", culture)</h5>
+                                        @if (confirmDiscount != null && confirmDiscount.TotalDiscount > 0)
+                                        {
+                                            <small class="text-success"><i class="bi bi-check-circle"></i> You save @confirmDiscount.TotalDiscount.ToString("C", culture)!</small>
+                                        }
+                                    </td>
                                 </tr>
                             </tfoot>
                         </table>
