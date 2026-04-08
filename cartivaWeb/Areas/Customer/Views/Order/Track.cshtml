@@ -18,6 +18,13 @@
     var shippedDate = shipment?.ShippedDate;
     var deliveredDate = shipment?.DeliveredDate;
 
+    // Determine shipped/delivered status from either shipment dates or order status
+    var isShipped = shippedDate.HasValue
+        || Model.OrderStatus == SD.StatusShipped
+        || Model.OrderStatus == SD.StatusDelivered;
+    var isDelivered = deliveredDate.HasValue
+        || Model.OrderStatus == SD.StatusDelivered;
+
     // Calculate progress percentage based on order status (using SD helper)
     int progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
 
@@ -155,19 +162,19 @@
                         }
 
                         <!-- Step 4: Order Shipped -->
-                        <div class="timeline-step @(shippedDate.HasValue ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
+                        <div class="timeline-step @(isShipped ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(shippedDate.HasValue ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
+                                <div class="step-icon bg-@(isShipped ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
                                     <i class="bi bi-truck"></i>
                                 </div>
                             </div>
                             <div class="step-content">
                                 <h6 class="fw-bold mb-1">Order Shipped</h6>
                                 <p class="text-muted small mb-0">
-                                    @(shippedDate?.ToString("dd MMM yyyy HH:mm") ?? "Not yet shipped")
+                                    @(shippedDate?.ToString("dd MMM yyyy HH:mm") ?? (isShipped ? "Shipped" : "Not yet shipped"))
                                 </p>
                                 <p class="small mb-0">
-                                    @if (shippedDate.HasValue)
+                                    @if (isShipped)
                                     {
                                         <span>Your order is on its way!</span>
                                         if (!string.IsNullOrEmpty(trackingNumber))
@@ -188,19 +195,19 @@
                         </div>
 
                         <!-- Step 5: Delivered -->
-                        <div class="timeline-step @(deliveredDate.HasValue ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
+                        <div class="timeline-step @(isDelivered ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(deliveredDate.HasValue ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
+                                <div class="step-icon bg-@(isDelivered ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
                                     <i class="bi bi-house-check"></i>
                                 </div>
                             </div>
                             <div class="step-content">
                                 <h6 class="fw-bold mb-1">Delivered</h6>
                                 <p class="text-muted small mb-0">
-                                    @(deliveredDate?.ToString("dd MMM yyyy HH:mm") ?? "Awaiting delivery")
+                                    @(deliveredDate?.ToString("dd MMM yyyy HH:mm") ?? (isDelivered ? "Delivered" : "Awaiting delivery"))
                                 </p>
                                 <p class="small mb-0">
-                                    @if (deliveredDate.HasValue)
+                                    @if (isDelivered)
                                     {
                                         <span>Your order has been delivered. Enjoy your purchase!</span>
                                     }
@@ -208,7 +215,7 @@
                                     {
                                         <span>Order cancelled</span>
                                     }
-                                    else if (shippedDate.HasValue)
+                                    else if (isShipped)
                                     {
                                         <span>Expected delivery: @DateTime.Now.AddDays(3).ToString("dd MMM yyyy")</span>
                                     }
@@ -234,7 +241,7 @@
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
-                                32
+                                <tr>
                                 <th>Product</th>
                                 <th>Details</th>
                                 <th class="text-center">Quantity</th>

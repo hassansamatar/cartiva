@@ -90,7 +90,7 @@
                         <h6 class="text-muted border-bottom pb-2 mt-2">Contact Information</h6>
 
                         <div class="form-floating col-md-12">
-                            <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Phone Number" />
+                            <input asp-for="Input.PhoneNumber" class="form-control" type="tel" placeholder="+47 12345678" />
                             <label asp-for="Input.PhoneNumber"></label>
                             <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
                         </div>

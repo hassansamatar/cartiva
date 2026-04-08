@@ -29,6 +29,7 @@
     <div class="row">
         <div class="col-md-8">
             <form asp-controller="Product" asp-action="EditProductVariant" method="post" data-has-size-system="@(Model.SizeSystem != null ? "true" : "false")">
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="Variant.Id" />
                 <input type="hidden" asp-for="Variant.ProductId" />

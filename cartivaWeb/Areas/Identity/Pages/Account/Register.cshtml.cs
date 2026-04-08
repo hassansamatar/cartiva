@@ -62,8 +62,9 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
 
         public class InputModel
         {
-            [Required]
-            [EmailAddress]
+            [Required(ErrorMessage = "Email is required.")]
+            [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+            [StringLength(256, ErrorMessage = "Email cannot exceed 256 characters.")]
             [Display(Name = "Email")]
             public string Email { get; set; }
 
@@ -78,16 +79,28 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
 
-            [Required]
+            [Required(ErrorMessage = "Name is required.")]
+            [StringLength(50, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 50 characters.")]
+            [RegularExpression(@"^[a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\s\-']+$", ErrorMessage = "Name can only contain letters, spaces, hyphens and apostrophes.")]
+            [Display(Name = "Full Name")]
             public string Name { get; set; }
 
+            [StringLength(100)]
             public string? StreetAddress { get; set; }
+            [StringLength(50)]
             public string? City { get; set; }
             [Display(Name = "State / Region")]
+            [StringLength(50)]
             public string? State { get; set; }
+            [StringLength(10)]
+            [RegularExpression(@"^\d{4,10}$", ErrorMessage = "Postal code must be 4-10 digits.")]
             public string? PostalCode { get; set; }
+            [RegularExpression(@"^\+?\d[\d\s\-]{6,18}\d$", ErrorMessage = "Please enter a valid phone number (e.g. +47 12345678).")]
+            [StringLength(20)]
+            [Display(Name = "Phone Number")]
             public string? PhoneNumber { get; set; }
             [Required]
+            [StringLength(50)]
             public string Country { get; set; } = "Norway";
 
             // Role and CompanyId removed – all new users become Customers

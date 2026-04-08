@@ -328,7 +328,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         /// <summary>
         /// Checks if a category exists by name (case insensitive)
-        /// </summary>
+       
         private bool CategoryExists(string name, int? excludeId = null)
         {
             if (excludeId.HasValue)

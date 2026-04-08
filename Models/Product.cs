@@ -10,12 +10,15 @@ namespace Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Product name is required.")]
         [DisplayName("Product Name")]
-        [MaxLength(30)]
+        [StringLength(30, MinimumLength = 2, ErrorMessage = "Product name must be between 2 and 30 characters.")]
+        [RegularExpression(@"^(?=.*[a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff])[a-zA-Z0-9\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\s\-&']+$", ErrorMessage = "Product name must contain at least one letter.")]
         public string Name { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Brand is required.")]
+        [StringLength(50, MinimumLength = 2, ErrorMessage = "Brand must be between 2 and 50 characters.")]
+        [RegularExpression(@"^(?=.*[a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff])[a-zA-Z0-9\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\s\-&'.]+$", ErrorMessage = "Brand must contain at least one letter.")]
         public string Brand { get; set; }
 
         public string? Description { get; set; }

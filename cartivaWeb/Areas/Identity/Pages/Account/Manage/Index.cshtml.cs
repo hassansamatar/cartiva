@@ -36,26 +36,35 @@ namespace CartivaWeb.Areas.Identity.Pages.Account.Manage
 
         public class InputModel
         {
-            [Required]
+            [Required(ErrorMessage = "Name is required.")]
+            [StringLength(50, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 50 characters.")]
+            [RegularExpression(@"^[a-zA-Z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\s\-']+$", ErrorMessage = "Name can only contain letters, spaces, hyphens and apostrophes.")]
             [Display(Name = "Full Name")]
             public string Name { get; set; }
 
-            [Phone]
+            [RegularExpression(@"^\+?\d[\d\s\-]{6,18}\d$", ErrorMessage = "Please enter a valid phone number (e.g. +47 12345678).")]
+            [StringLength(20)]
             [Display(Name = "Phone number")]
             public string PhoneNumber { get; set; }
 
+            [StringLength(100)]
             [Display(Name = "Street Address")]
             public string StreetAddress { get; set; }
 
+            [StringLength(50)]
             [Display(Name = "City")]
             public string City { get; set; }
 
+            [StringLength(50)]
             [Display(Name = "State / Region")]
             public string? State { get; set; }
 
+            [StringLength(10)]
+            [RegularExpression(@"^\d{4,10}$", ErrorMessage = "Postal code must be 4-10 digits.")]
             [Display(Name = "Postal Code")]
             public string PostalCode { get; set; }
 
+            [StringLength(50)]
             [Display(Name = "Country")]
             public string Country { get; set; }
         }

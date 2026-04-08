@@ -20,6 +20,13 @@
     var shipment = Model.Shipments?.OrderBy(s => s.Id).FirstOrDefault();
     var shippedDate = shipment?.ShippedDate;
     var deliveredDate = shipment?.DeliveredDate;
+
+    // Determine shipped/delivered status from either shipment dates or order status
+    var isShipped = shippedDate.HasValue
+        || Model.OrderStatus == SD.StatusShipped
+        || Model.OrderStatus == SD.StatusDelivered;
+    var isDelivered = deliveredDate.HasValue
+        || Model.OrderStatus == SD.StatusDelivered;
 }
 
 <div class="container mt-4 mb-5">
@@ -136,7 +143,7 @@
                         </div>
                         <h6 class="fw-bold">Shipped</h6>
                         <small class="text-muted">
-                            @(shippedDate?.ToString("dd MMM") ?? "Pending")
+                            @(shippedDate?.ToString("dd MMM") ?? (isShipped ? "Shipped" : "Pending"))
                         </small>
                     </div>
                 </div>
@@ -148,7 +155,8 @@
                         <h6 class="fw-bold">Delivered</h6>
                         <small class="text-muted">
                             @(deliveredDate?.ToString("dd MMM") ??
-                              (Model.OrderStatus == SD.StatusShipped ? "Est. " + DateTime.Now.AddDays(3).ToString("dd MMM") : "Pending"))
+                              (isDelivered ? "Delivered" :
+                               isShipped ? "Est. " + DateTime.Now.AddDays(3).ToString("dd MMM") : "Pending"))
                         </small>
                     </div>
                 </div>

@@ -6,7 +6,8 @@ public class ProductVariant
 {
     public int Id { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "Color is required.")]
+    [StringLength(30)]
     public string Color { get; set; }
 
     // Nullable for products without sizes (accessories)

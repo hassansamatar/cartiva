@@ -49,6 +49,7 @@
                 <div class="card-body">
                     <form asp-controller="Order"   asp-action="ConfirmOrder" method="post">
                         @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
 
                         <input asp-for="OrderHeader.ApplicationUserId" type="hidden" />
 
@@ -69,7 +70,7 @@
                                 <span class="input-group-text">
                                     <i class="bi bi-telephone"></i>
                                 </span>
-                                <input asp-for="OrderHeader.PhoneNumber" class="form-control" placeholder="Phone number" />
+                                <input asp-for="OrderHeader.PhoneNumber" class="form-control" type="tel" placeholder="+47 12345678" />
                             </div>
                             <span asp-validation-for="OrderHeader.PhoneNumber" class="text-danger"></span>
                         </div>

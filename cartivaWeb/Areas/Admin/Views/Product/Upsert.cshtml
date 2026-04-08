@@ -6,6 +6,7 @@
 }
 
 <form method="post" asp-action="Upsert" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
     <input asp-for="Product.Id" hidden />
     
     <div class="row">
