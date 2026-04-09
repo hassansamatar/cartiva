@@ -1,0 +1,100 @@
+@model List<Review>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Product</th>
+                <th>Reviewer</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th class="text-center" style="width: 220px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var review in Model)
+            {
+                <tr>
+                    <td>
+                        <strong>@(review.ProductVariant?.Product?.Name ?? "Unknown")</strong>
+                        <br />
+                        <small class="text-muted">@review.ProductVariant?.Color</small>
+                    </td>
+                    <td>
+                        <i class="bi bi-person me-1"></i>
+                        @(review.ApplicationUser?.Name ?? review.ApplicationUser?.Email ?? "Unknown")
+                    </td>
+                    <td>
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            if (i <= review.Rating)
+                            {
+                                <i class="bi bi-star-fill text-warning"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-star text-muted"></i>
+                            }
+                        }
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(review.Comment))
+                        {
+                            <span title="@review.Comment">
+                                @(review.Comment.Length > 60 ? review.Comment.Substring(0, 60) + "..." : review.Comment)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">No comment</span>
+                        }
+                    </td>
+                    <td>
+                        <small>@review.ReviewDate.ToString("dd MMM yyyy")</small>
+                    </td>
+                    <td>
+                        @if (review.IsApproved)
+                        {
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Approved</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                            @if (!review.IsApproved)
+                            {
+                                <form asp-area="Admin" asp-controller="Review" asp-action="Approve" asp-route-id="@review.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Approve">
+                                        <i class="bi bi-check-lg"></i> Approve
+                                    </button>
+                                </form>
+                            }
+                            @if (review.IsApproved)
+                            {
+                                <form asp-area="Admin" asp-controller="Review" asp-action="Reject" asp-route-id="@review.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Reject">
+                                        <i class="bi bi-x-lg"></i> Reject
+                                    </button>
+                                </form>
+                            }
+                            <form asp-area="Admin" asp-controller="Review" asp-action="Delete" asp-route-id="@review.Id" method="post"
+                                  class="btn-swal-confirm-form" data-swal-title="Delete this review?" data-swal-text="This cannot be undone.">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

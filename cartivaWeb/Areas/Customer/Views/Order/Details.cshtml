@@ -2,12 +2,15 @@
 @using System.Globalization
 @using ApplicationUtility
 @using Models.Interfaces
+@using DataAccess
 @inject IQrCodeService QrCodeService
+@inject ApplicationDbContext _reviewDb
 
 @{
     ViewData["Title"] = $"Order Details #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var canCancel = Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusApproved;
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
     // Generate QR Code and Tracking URL
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
@@ -423,9 +426,9 @@
             }
             @if (Model.OrderStatus == SD.StatusDelivered)
             {
-                <a href="#" class="btn btn-outline-warning">
+                <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reviewModal">
                     <i class="bi bi-star"></i> Leave Review
-                </a>
+                </button>
             }
             @if (User.IsInRole(SD.Role_Company) && Model.PaymentStatus == SD.PaymentStatusDeferred)
             {
@@ -469,8 +472,145 @@
     </div>
 </div>
 
+@if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+{
+    var reviewedVariantIds = _reviewDb.Reviews
+        .Where(r => r.ApplicationUserId == currentUserId)
+        .Select(r => r.ProductVariantId)
+        .ToHashSet();
+
+    var reviewableItems = Model.OrderDetails
+        .Where(od => !reviewedVariantIds.Contains(od.ProductVariantId))
+        .ToList();
+
+    if (reviewableItems.Any())
+    {
+        <!-- Review Modal -->
+        <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning bg-opacity-10">
+                        <h5 class="modal-title" id="reviewModalLabel">
+                            <i class="bi bi-star-fill text-warning"></i> Leave a Review
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form asp-area="Customer" asp-controller="Review" asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="orderId" value="@Model.Id" />
+                        <div class="modal-body">
+                            <!-- Select Product -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Which product would you like to review?</label>
+                                <select name="productVariantId" class="form-select" required>
+                                    @foreach (var item in reviewableItems)
+                                    {
+                                        var name = item.ProductVariant?.Product?.Name ?? "Product";
+                                        var color = item.ProductVariant?.Color;
+                                        var size = item.ProductVariant?.SizeValue?.DisplayText;
+                                        var label = $"{name} — {color}";
+                                        if (!string.IsNullOrEmpty(size))
+                                        {
+                                            label += $" / {size}";
+                                        }
+                                        <option value="@item.ProductVariantId">@label</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Star Rating -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Rating</label>
+                                <div class="d-flex gap-1" id="starRating">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi bi-star fs-3 text-muted" data-value="@i"
+                                           style="cursor:pointer;" role="button"></i>
+                                    }
+                                </div>
+                                <input type="hidden" name="rating" id="ratingInput" value="0" required />
+                                <div class="invalid-feedback" id="ratingError" style="display:none;">
+                                    Please select a rating.
+                                </div>
+                            </div>
+
+                            <!-- Comment -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Comment <small class="text-muted">(optional)</small></label>
+                                <textarea name="comment" class="form-control" rows="3" maxlength="500"
+                                          placeholder="Share your experience with this product..."></textarea>
+                                <small class="text-muted"><span id="charCount">0</span>/500</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning" id="submitReviewBtn">
+                                <i class="bi bi-star-fill"></i> Submit Review
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+}
+
 @section Scripts {
     <script src="~/js/order-details.js" asp-append-version="true"></script>
+    <script>
+        // Star rating interaction
+        document.querySelectorAll('#starRating i').forEach(star => {
+            star.addEventListener('click', function () {
+                var value = parseInt(this.dataset.value);
+                document.getElementById('ratingInput').value = value;
+                document.getElementById('ratingError').style.display = 'none';
+                document.querySelectorAll('#starRating i').forEach((s, idx) => {
+                    if (idx < value) {
+                        s.classList.remove('bi-star', 'text-muted');
+                        s.classList.add('bi-star-fill', 'text-warning');
+                    } else {
+                        s.classList.remove('bi-star-fill', 'text-warning');
+                        s.classList.add('bi-star', 'text-muted');
+                    }
+                });
+            });
+            star.addEventListener('mouseenter', function () {
+                var value = parseInt(this.dataset.value);
+                document.querySelectorAll('#starRating i').forEach((s, idx) => {
+                    if (idx < value) {
+                        s.classList.add('text-warning');
+                    }
+                });
+            });
+            star.addEventListener('mouseleave', function () {
+                var current = parseInt(document.getElementById('ratingInput').value);
+                document.querySelectorAll('#starRating i').forEach((s, idx) => {
+                    if (idx >= current) {
+                        s.classList.remove('text-warning');
+                    }
+                });
+            });
+        });
+
+        // Character count
+        var textarea = document.querySelector('#reviewModal textarea[name="comment"]');
+        if (textarea) {
+            textarea.addEventListener('input', function () {
+                document.getElementById('charCount').textContent = this.value.length;
+            });
+        }
+
+        // Validate rating before submit
+        var form = document.querySelector('#reviewModal form');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (document.getElementById('ratingInput').value === '0') {
+                    e.preventDefault();
+                    document.getElementById('ratingError').style.display = 'block';
+                }
+            });
+        }
+    </script>
 }
 
 @functions {

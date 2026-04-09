@@ -25,6 +25,8 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.SizeValue)
                         .ThenInclude(sv => sv.SizeSystem)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.Reviews!.Where(r => r.IsApproved))
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -48,6 +50,9 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.SizeValue)
                         .ThenInclude(sv => sv.SizeSystem)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.Reviews!.Where(r => r.IsApproved))
+                        .ThenInclude(r => r.ApplicationUser)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)

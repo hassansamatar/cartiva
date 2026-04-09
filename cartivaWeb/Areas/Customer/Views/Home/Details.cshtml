@@ -247,6 +247,104 @@
             </div>
         </div>
     </div>
+
+    <!-- Customer Reviews Section -->
+    @{
+        var allReviews = Model.Variants?
+            .Where(v => v.Reviews != null)
+            .SelectMany(v => v.Reviews!)
+            .OrderByDescending(r => r.ReviewDate)
+            .ToList() ?? new List<Review>();
+        var avgRating = allReviews.Any() ? allReviews.Average(r => r.Rating) : 0;
+    }
+
+    <div class="row mt-4 mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-chat-quote"></i> Customer Reviews
+                            <span class="badge bg-secondary ms-1">@allReviews.Count</span>
+                        </h5>
+                        @if (allReviews.Any())
+                        {
+                            <div>
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    if (i <= Math.Round(avgRating))
+                                    {
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-star text-muted"></i>
+                                    }
+                                }
+                                <span class="ms-1 fw-bold">@avgRating.ToString("0.0")</span>
+                                <small class="text-muted">(@allReviews.Count reviews)</small>
+                            </div>
+                        }
+                    </div>
+
+                    @if (!allReviews.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-chat-dots" style="font-size: 2.5rem;"></i>
+                            <p class="mt-2 mb-0">No reviews yet. Be the first to review this product!</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var review in allReviews)
+                        {
+                            var variant = Model.Variants?.FirstOrDefault(v => v.Id == review.ProductVariantId);
+                            <div class="border-bottom py-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <strong>
+                                                <i class="bi bi-person-circle"></i>
+                                                @(review.ApplicationUser?.Name ?? "Customer")
+                                            </strong>
+                                            @if (variant != null)
+                                            {
+                                                <span class="badge bg-light text-dark border">
+                                                    @variant.Color
+                                                    @if (variant.SizeValue != null)
+                                                    {
+                                                        <span>/ @variant.SizeValue.DisplayText</span>
+                                                    }
+                                                </span>
+                                            }
+                                        </div>
+                                        <div>
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                if (i <= review.Rating)
+                                                {
+                                                    <i class="bi bi-star-fill text-warning"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-star text-muted"></i>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">@review.ReviewDate.ToString("dd MMM yyyy")</small>
+                                </div>
+                                @if (!string.IsNullOrEmpty(review.Comment))
+                                {
+                                    <p class="mt-2 mb-0 text-muted">@review.Comment</p>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
