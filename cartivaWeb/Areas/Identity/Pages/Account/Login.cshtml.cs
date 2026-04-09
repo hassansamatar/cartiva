@@ -90,7 +90,7 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
 
             var user = await _userManager.FindByEmailAsync(Input.Email);
 
-            if (user != null && user.IsInactive)
+            if (user != null && !user.IsActive)
             {
                 ModelState.AddModelError(string.Empty,
                     "Your account has been deactivated. Please contact support.");

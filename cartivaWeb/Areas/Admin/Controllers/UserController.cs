@@ -72,7 +72,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            user.IsInactive = true;
+            user.IsActive = false;
             var result = await _userManager.UpdateAsync(user);
 
             if (result.Succeeded)
@@ -95,7 +95,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            user.IsInactive = false;
+            user.IsActive = true;
             var result = await _userManager.UpdateAsync(user);
 
             if (result.Succeeded)

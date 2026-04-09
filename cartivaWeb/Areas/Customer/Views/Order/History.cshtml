@@ -7,6 +7,9 @@
 @{
     ViewData["Title"] = "My Order History";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var companyOrders = ViewBag.CompanyOrders as List<OrderHeader>;
+    var companyName = ViewBag.CompanyName as string;
+    var hasCompanyOrders = companyOrders != null && companyOrders.Any();
 }
 
 <div class="container mt-4 mb-5">
@@ -19,7 +22,27 @@
 
     <h2 class="text-primary mb-4"><i class="bi bi-clock-history"></i> My Order History</h2>
 
-    @if (!Model.Any())
+    @if (hasCompanyOrders)
+    {
+        <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="my-orders-tab" data-bs-toggle="tab" data-bs-target="#my-orders"
+                        type="button" role="tab" aria-controls="my-orders" aria-selected="true">
+                    <i class="bi bi-person"></i> My Orders
+                    <span class="badge bg-primary ms-1">@Model.Count()</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="company-orders-tab" data-bs-toggle="tab" data-bs-target="#company-orders"
+                        type="button" role="tab" aria-controls="company-orders" aria-selected="false">
+                    <i class="bi bi-building"></i> @companyName Orders
+                    <span class="badge bg-secondary ms-1">@companyOrders!.Count</span>
+                </button>
+            </li>
+        </ul>
+    }
+
+    @if (!Model.Any() && !hasCompanyOrders)
     {
         <div class="text-center py-5">
             <i class="bi bi-box-seam" style="font-size: 5rem; color: #dee2e6;"></i>
@@ -31,6 +54,8 @@
     }
     else
     {
+        <div class="@(hasCompanyOrders ? "tab-content" : "")">
+            <div class="@(hasCompanyOrders ? "tab-pane fade show active" : "")" id="my-orders" role="tabpanel">
         <div class="row g-4">
             @foreach (var order in Model.OrderByDescending(o => o.OrderDate))
             {
@@ -204,6 +229,111 @@
                                 <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(@order.Id)">Cancel</button>
                             }
                         </div>
+                    </div>
+                </div>
+            }
+        </div>
+            </div>
+
+            @if (hasCompanyOrders)
+            {
+                <div class="tab-pane fade" id="company-orders" role="tabpanel">
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-building me-1"></i>
+                        Showing orders from your colleagues at <strong>@companyName</strong>.
+                        You can view details and pay outstanding invoices.
+                    </div>
+                    <div class="row g-4">
+                        @foreach (var coOrder in companyOrders!.OrderBy(o => o.PaymentDueDate ?? DateOnly.MaxValue).ThenByDescending(o => o.OrderDate))
+                        {
+                            var coStatusIcon = SD.GetOrderStatusIcon(coOrder.OrderStatus);
+                            var coStatusBadgeClass = SD.GetOrderStatusBadgeClass(coOrder.OrderStatus);
+
+                            <div class="col-12">
+                                <div class="card shadow-sm border-start border-4 @(coOrder.PaymentStatus == SD.PaymentStatusDeferred && coOrder.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now) ? "border-danger" : coOrder.PaymentStatus == SD.PaymentStatusDeferred ? "border-warning" : "border-success")">
+                                    <!-- Order Header -->
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-0">
+                                                Order #@coOrder.Id
+                                                <small class="text-muted ms-2">
+                                                    <i class="bi bi-person"></i> @(coOrder.ApplicationUser?.Name ?? coOrder.ApplicationUser?.Email ?? "Colleague")
+                                                </small>
+                                            </h5>
+                                            <small class="text-muted">@coOrder.OrderDate.ToString("dd MMM yyyy 'at' HH:mm")</small>
+                                            @if (coOrder.PaymentDueDate != null)
+                                            {
+                                                var daysLeft = coOrder.PaymentDueDate.Value.DayNumber - DateOnly.FromDateTime(DateTime.Now).DayNumber;
+                                                if (daysLeft < 0)
+                                                {
+                                                    <span class="badge bg-danger ms-2">
+                                                        <i class="bi bi-exclamation-triangle"></i> Overdue by @Math.Abs(daysLeft) days
+                                                    </span>
+                                                }
+                                                else if (daysLeft <= 7)
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-2">
+                                                        <i class="bi bi-clock"></i> Due in @daysLeft days
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info text-dark ms-2">
+                                                        <i class="bi bi-calendar"></i> Due @coOrder.PaymentDueDate.Value.ToString("dd MMM yyyy")
+                                                    </span>
+                                                }
+                                            }
+                                        </div>
+                                        <div>
+                                            <span class="badge @coStatusBadgeClass">
+                                                <i class="bi @coStatusIcon"></i> @coOrder.OrderStatus
+                                            </span>
+                                            <span class="badge @SD.GetPaymentStatusBadgeClass(coOrder.PaymentStatus)">
+                                                <i class="bi bi-credit-card"></i> @coOrder.PaymentStatus
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Compact Body -->
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="text-muted">@(coOrder.OrderDetails?.Sum(d => d.Count) ?? 0) items</span>
+                                                @foreach (var item in coOrder.OrderDetails.Take(3))
+                                                {
+                                                    <span class="badge bg-light text-dark border ms-1">@(item.ProductVariant?.Product?.Name ?? "Item")</span>
+                                                }
+                                                @if (coOrder.OrderDetails?.Count() > 3)
+                                                {
+                                                    <span class="text-muted small">+@(coOrder.OrderDetails.Count() - 3) more</span>
+                                                }
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="fs-5 fw-bold">@coOrder.OrderTotal.ToString("C", culture)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Footer -->
+                                    <div class="card-footer d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a asp-action="Details" asp-route-id="@coOrder.Id" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> View Details
+                                            </a>
+                                            @if (User.IsInRole(SD.Role_Company) && coOrder.PaymentStatus == SD.PaymentStatusDeferred)
+                                            {
+                                                <a asp-action="Payment" asp-route-orderId="@coOrder.Id" class="btn btn-sm btn-success ms-2">
+                                                    <i class="bi bi-credit-card"></i> Pay Now
+                                                </a>
+                                            }
+                                        </div>
+                                        <small class="text-muted">
+                                            Ordered by @(coOrder.ApplicationUser?.Name ?? "Colleague")
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             }

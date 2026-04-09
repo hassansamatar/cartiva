@@ -305,14 +305,33 @@ public class OrderController : Controller
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var order = await _db.OrderHeaders
+            .Include(o => o.ApplicationUser)
             .Include(o => o.OrderDetails)
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.Product)
-            .FirstOrDefaultAsync(o => o.Id == orderId && o.ApplicationUserId == userId);
+            .FirstOrDefaultAsync(o => o.Id == orderId);
 
         if (order == null)
         {
             return NotFound();
+        }
+
+        // Authorization: own order, or same-company colleague paying a deferred invoice
+        if (order.ApplicationUserId != userId)
+        {
+            if (User.IsInRole(SD.Role_Company)
+                && order.PaymentStatus == SD.PaymentStatusDeferred)
+            {
+                var currentUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (currentUser?.CompanyId == null || order.ApplicationUser?.CompanyId != currentUser.CompanyId)
+                {
+                    return Forbid();
+                }
+            }
+            else
+            {
+                return Forbid();
+            }
         }
 
         // Create Stripe PaymentIntent
@@ -352,11 +371,29 @@ public class OrderController : Controller
         _logger.LogInformation($"ConfirmPayment called with orderId={orderId}, paymentIntentId={paymentIntentId}, userId={userId}");
 
         var order = await _db.OrderHeaders
-            .FirstOrDefaultAsync(o => o.Id == orderId && o.ApplicationUserId == userId);
+            .Include(o => o.ApplicationUser)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
         if (order == null)
         {
-            _logger.LogWarning($"Order not found for id {orderId} and user {userId}");
+            _logger.LogWarning($"Order not found for id {orderId}");
             return NotFound();
+        }
+
+        // Authorization: own order or same-company colleague
+        if (order.ApplicationUserId != userId)
+        {
+            if (User.IsInRole(SD.Role_Company))
+            {
+                var currentUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (currentUser?.CompanyId == null || order.ApplicationUser?.CompanyId != currentUser.CompanyId)
+                {
+                    return Forbid();
+                }
+            }
+            else
+            {
+                return Forbid();
+            }
         }
 
         if (string.IsNullOrEmpty(paymentIntentId))
@@ -476,6 +513,31 @@ public class OrderController : Controller
             .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
 
+        // For company users, fetch colleague orders
+        if (User.IsInRole(SD.Role_Company))
+        {
+            var currentUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (currentUser?.CompanyId != null)
+            {
+                var companyOrders = await _db.OrderHeaders
+                    .Where(o => o.ApplicationUser!.CompanyId == currentUser.CompanyId
+                                && o.ApplicationUserId != userId)
+                    .Include(o => o.ApplicationUser)
+                    .Include(o => o.OrderDetails)
+                        .ThenInclude(d => d.ProductVariant)
+                            .ThenInclude(pv => pv.Product)
+                    .Include(o => o.OrderDetails)
+                        .ThenInclude(d => d.ProductVariant)
+                            .ThenInclude(pv => pv.SizeValue)
+                    .OrderByDescending(o => o.OrderDate)
+                    .ToListAsync();
+
+                var company = await _db.Companies.FindAsync(currentUser.CompanyId);
+                ViewBag.CompanyOrders = companyOrders;
+                ViewBag.CompanyName = company?.Name;
+            }
+        }
+
         return View(orders);
     }
 
@@ -486,6 +548,7 @@ public class OrderController : Controller
     public async Task<IActionResult> Details(int id)
     {
         var orderHeader = await _db.OrderHeaders
+            .Include(o => o.ApplicationUser)
             .Include(o => o.OrderDetails)
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.Product)
@@ -499,6 +562,27 @@ public class OrderController : Controller
         if (orderHeader == null)
         {
             return NotFound();
+        }
+
+        // Authorization: own order, admin, or same-company colleague
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (orderHeader.ApplicationUserId != userId && !User.IsInRole(SD.Role_Admin))
+        {
+            if (User.IsInRole(SD.Role_Company))
+            {
+                var currentUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                var orderOwner = orderHeader.ApplicationUser;
+                if (currentUser?.CompanyId == null || orderOwner?.CompanyId != currentUser.CompanyId)
+                {
+                    return Forbid();
+                }
+                ViewBag.IsColleagueOrder = true;
+                ViewBag.OrderOwnerName = orderOwner?.Name ?? orderOwner?.Email;
+            }
+            else
+            {
+                return Forbid();
+            }
         }
 
         return View(orderHeader);

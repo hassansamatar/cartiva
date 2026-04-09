@@ -39,6 +39,21 @@
         </ol>
     </nav>
 
+    @{
+        var isColleagueOrder = ViewBag.IsColleagueOrder as bool? ?? false;
+        var orderOwnerName = ViewBag.OrderOwnerName as string;
+    }
+    @if (isColleagueOrder)
+    {
+        <div class="alert alert-info d-flex align-items-center mb-3">
+            <i class="bi bi-building me-2 fs-5"></i>
+            <div>
+                <strong>Company Order</strong> — This order was placed by <strong>@orderOwnerName</strong>.
+                You can view details and pay outstanding invoices for your company.
+            </div>
+        </div>
+    }
+
     <!-- Header with Status and QR Code -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
         <div>

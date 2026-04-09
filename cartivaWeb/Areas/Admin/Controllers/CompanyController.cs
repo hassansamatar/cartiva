@@ -165,7 +165,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             // Check if any active user is assigned to this company
             bool hasActiveUsers = await _db.Users
-                .AnyAsync(u => u.CompanyId == company.Id && !u.IsInactive);
+                .AnyAsync(u => u.CompanyId == company.Id && u.IsActive);
 
             if (hasOrders || hasActiveUsers)
             {

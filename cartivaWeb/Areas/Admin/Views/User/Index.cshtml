@@ -42,7 +42,7 @@
                         @foreach (var user in Model)
                         {
                             var role = userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : "None";
-                            var rowClass = user.IsInactive ? "table-danger" : "";
+                            var rowClass = !user.IsActive ? "table-danger" : "";
 
                             <tr class="@rowClass">
 
@@ -98,7 +98,7 @@
                                 </td>
 
                                 <td>
-                                    @if (!user.IsInactive)
+                                    @if (user.IsActive)
                                     {
                                         <span class="badge bg-success">
                                             <i class="bi bi-check-circle"></i> Active
@@ -122,7 +122,7 @@
                                             <i class="bi bi-shield-lock"></i> Roles
                                         </a>
 
-                                        @if (!user.IsInactive)
+                                        @if (user.IsActive)
                                         {
                                             <button class="btn btn-sm btn-outline-danger"
                                                     onclick="deactivateUser('@user.Id')">

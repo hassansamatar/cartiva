@@ -44,7 +44,7 @@ public static class DbInitializer
             Email = adminEmail,
             Name = "Admin",
             Country = "Norway",
-            IsInactive = false
+            IsActive = true
         };
         var createResult = userManager.CreateAsync(adminUser, "Admin12#").Result;
         if (createResult.Succeeded)
