@@ -54,7 +54,29 @@
                         <td>@item.Company.StreetAddress, @item.Company.PostalCode</td>
                         <td>@item.Company.City</td>
                         <td>@item.Company.PhoneNumber</td>
-                        <td>@item.ContactPerson</td>
+                        <td>
+                            <span>@item.ContactPerson</span>
+                            @if (item.Users.Count > 1)
+                            {
+                                <details class="mt-1">
+                                    <summary class="text-muted small" style="cursor:pointer;">
+                                        <i class="bi bi-people"></i> @item.Users.Count users total
+                                    </summary>
+                                    <ul class="list-unstyled mb-0 mt-1 ms-2">
+                                        @foreach (var u in item.Users)
+                                        {
+                                            <li class="small text-muted">
+                                                <i class="bi bi-person me-1"></i>@(u.Name ?? u.Email)
+                                                @if (!string.IsNullOrEmpty(u.Name))
+                                                {
+                                                    <span class="opacity-75">(@u.Email)</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                </details>
+                            }
+                        </td>
 
                         <td>
                             @if (item.PaymentStatus == "Paid")

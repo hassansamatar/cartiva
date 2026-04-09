@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "User Management";
     var userRoles = ViewBag.UserRoles as Dictionary<string, string>;
+    var companyUsers = ViewBag.CompanyUsers as Dictionary<int, List<ApplicationUser>>;
 }
 
 <div class="container mt-4">
@@ -30,6 +31,7 @@
                             <th>Email</th>
                             <th>Name</th>
                             <th>Role</th>
+                            <th>Company</th>
                             <th>Status</th>
                             <th class="text-center" style="width:260px;">Actions</th>
                         </tr>
@@ -52,6 +54,47 @@
                                     <span class="badge bg-secondary">
                                         @role
                                     </span>
+                                </td>
+
+                                <td>
+                                    @if (user.Company != null)
+                                    {
+                                        var colleagues = companyUsers != null && companyUsers.ContainsKey(user.CompanyId!.Value)
+                                            ? companyUsers[user.CompanyId.Value].Where(u => u.Id != user.Id).ToList()
+                                            : new List<ApplicationUser>();
+
+                                        <div>
+                                            <span class="fw-bold">
+                                                <i class="bi bi-building me-1"></i>@user.Company.Name
+                                            </span>
+                                        </div>
+                                        if (colleagues.Any())
+                                        {
+                                            <details class="mt-1">
+                                                <summary class="text-muted small" style="cursor:pointer;">
+                                                    <i class="bi bi-people"></i> @colleagues.Count other member@(colleagues.Count > 1 ? "s" : "")
+                                                </summary>
+                                                <ul class="list-unstyled mb-0 mt-1 ms-2">
+                                                    @foreach (var c in colleagues)
+                                                    {
+                                                        <li class="small text-muted">
+                                                            <i class="bi bi-person me-1"></i>@(c.Name ?? c.Email)
+                                                            @if (!string.IsNullOrEmpty(c.Name))
+                                                            {
+                                                                <span class="text-muted opacity-75">(@c.Email)</span>
+                                                            }
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </details>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">
+                                            <i class="bi bi-dash"></i> None
+                                        </span>
+                                    }
                                 </td>
 
                                 <td>

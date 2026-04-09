@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cartiva — Entity Relationship Diagram</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+            .legend { page-break-before: always; }
+        }
+        @page { size: landscape; margin: 10mm; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fff;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        .legend h2 {
+            color: #1a1a2e;
+            border-bottom: 2px solid #198754;
+            padding-bottom: 5px;
+        }
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 12px;
+            margin: 0;
+        }
+        .section-identity { background: #cfe2ff; color: #084298; }
+        .section-app { background: #d1e7dd; color: #0f5132; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.82rem;
+        }
+        th {
+            background: #1a1a2e;
+            color: white;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        td {
+            padding: 6px 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.73rem;
+            font-weight: bold;
+        }
+        .badge-pk { background: #ffc107; color: #000; }
+        .badge-fk { background: #0d6efd; color: #fff; }
+        .badge-opt { background: #6c757d; color: #fff; }
+        .badge-identity { background: #cfe2ff; color: #084298; border: 1px solid #084298; }
+        .badge-app { background: #d1e7dd; color: #0f5132; border: 1px solid #0f5132; }
+        .btn-print {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 30px;
+            background: #198754;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .btn-print:hover { background: #157347; }
+        .footer {
+            text-align: center;
+            color: #999;
+            font-size: 0.8rem;
+            margin-top: 40px;
+        }
+        .role-data {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .role-data h3 { margin-top: 0; color: #1a1a2e; }
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            margin: 3px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .role-admin { background: #dc3545; color: #fff; }
+        .role-employee { background: #fd7e14; color: #fff; }
+        .role-company { background: #0d6efd; color: #fff; }
+        .role-customer { background: #198754; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <h1>Cartiva — Entity Relationship Diagram</h1>
+    <p class="subtitle">
+        Models + ASP.NET Identity | .NET 10 |
+        <span class="badge badge-identity">7 Identity Tables</span>
+        <span class="badge badge-app">13 Application Tables</span>
+        | 20 Tables Total | 22 Relationships
+    </p>
+
+    <button class="btn-print no-print" onclick="window.print()">Print / Save as PDF</button>
+
+    <div class="no-print" style="text-align:center; margin-bottom: 20px;">
+        <a href="er-diagram-identity.html" style="color:#0d6efd; font-size:0.95rem;">
+            View ASP.NET Identity Tables separately &rarr;
+        </a>
+    </div>
+     <div class="no-print" style="text-align:center; margin-bottom: 20px;">
+        <a href="er-diagram-application.html" style="color:#0d6efd; font-size:0.95rem;">
+            View Application Tables separately &rarr;
+        </a>
+    </div>
+
+    <div class="mermaid">
+erDiagram
+
+    AspNetRoles {
+        string Id PK
+        string Name
+        string NormalizedName
+        string ConcurrencyStamp
+    }
+
+    AspNetUsers_IdentityBase {
+        string Id PK
+        string UserName
+        string NormalizedUserName
+        string Email
+        string NormalizedEmail
+        bool EmailConfirmed
+        string PasswordHash
+        string SecurityStamp
+        string ConcurrencyStamp
+        string PhoneNumber
+        bool PhoneNumberConfirmed
+        bool TwoFactorEnabled
+        datetime LockoutEnd
+        bool LockoutEnabled
+        int AccessFailedCount
+    }
+
+    AspNetUserRoles {
+        string UserId FK
+        string RoleId FK
+    }
+
+    AspNetUserClaims {
+        int Id PK
+        string UserId FK
+        string ClaimType
+        string ClaimValue
+    }
+
+    AspNetUserLogins {
+        string LoginProvider PK
+        string ProviderKey PK
+        string UserId FK
+        string ProviderDisplayName
+    }
+
+    AspNetUserTokens {
+        string UserId PK
+        string LoginProvider PK
+        string Name PK
+        string Value
+    }
+
+    AspNetRoleClaims {
+        int Id PK
+        string RoleId FK
+        string ClaimType
+        string ClaimValue
+    }
+
+    Company {
+        int Id PK
+        string Name
+        string StreetAddress
+        string City
+        string PostalCode
+        string State
+        string Country
+        string PhoneNumber
+        bool IsActive
+    }
+
+    ApplicationUser {
+        string Id PK
+        string Name
+        string StreetAddress
+        string City
+        string PostalCode
+        string State
+        string Country
+        int CompanyId FK
+        bool IsInactive
+    }
+
+    SizeSystem {
+        int Id PK
+        string Name
+        string SizeType
+        string Description
+        string IconClass
+        string AlertClass
+    }
+
+    SizeValue {
+        int Id PK
+        int SizeSystemId FK
+        string Value
+        string DisplayText
+        string Description
+        int SortOrder
+    }
+
+    Category {
+        int Id PK
+        string Name
+        int SizeSystemId FK
+    }
+
+    Product {
+        int Id PK
+        string Name
+        string Brand
+        string Description
+        string ImageUrl
+        int CategoryId FK
+    }
+
+    ProductVariant {
+        int Id PK
+        string Color
+        decimal Price
+        int Stock
+        int ProductId FK
+        int SizeValueId FK
+    }
+
+    Promotion {
+        int Id PK
+        string Name
+        string Description
+        int BuyQuantity
+        int GetQuantity
+        int CategoryId FK
+        datetime StartDate
+        datetime EndDate
+        bool IsActive
+    }
+
+    ShoppingCart {
+        int Id PK
+        string ApplicationUserId FK
+        int ProductVariantId FK
+        int Count
+        datetime DateAdded
+        datetime LastUpdated
+    }
+
+    OrderHeader {
+        int Id PK
+        string ApplicationUserId FK
+        datetime OrderDate
+        decimal OrderTotal
+        string OrderStatus
+        string PaymentStatus
+        datetime PaymentDate
+        date PaymentDueDate
+        string PaymentIntentId
+        string Name
+        string PhoneNumber
+        string StreetAddress
+        string City
+        string State
+        string PostalCode
+        string Country
+    }
+
+    OrderDetail {
+        int Id PK
+        int OrderHeaderId FK
+        int ProductVariantId FK
+        int Count
+        decimal Price
+    }
+
+    Shipment {
+        int Id PK
+        int OrderHeaderId FK
+        string TrackingNumber
+        string Carrier
+        string Service
+        string TrackingUrl
+        datetime ShippingDate
+        datetime ShippedDate
+        datetime DeliveredDate
+        string ShipmentStatus
+        string LabelUrl
+        string CarrierData
+        decimal Weight
+        string PackageType
+    }
+
+    Review {
+        int Id PK
+        string ApplicationUserId FK
+        int ProductVariantId FK
+        int Rating
+        string Comment
+        datetime ReviewDate
+        bool IsApproved
+    }
+
+    AspNetUsers_IdentityBase ||--|| ApplicationUser : "extends"
+    AspNetUsers_IdentityBase ||--o{ AspNetUserRoles : "assigned"
+    AspNetRoles ||--o{ AspNetUserRoles : "has members"
+    AspNetRoles ||--o{ AspNetRoleClaims : "has claims"
+    AspNetUsers_IdentityBase ||--o{ AspNetUserClaims : "has claims"
+    AspNetUsers_IdentityBase ||--o{ AspNetUserLogins : "external logins"
+    AspNetUsers_IdentityBase ||--o{ AspNetUserTokens : "has tokens"
+
+    Company ||--o{ ApplicationUser : "has employees"
+    ApplicationUser ||--o{ ShoppingCart : "has cart items"
+    ApplicationUser ||--o{ OrderHeader : "places orders"
+    ApplicationUser ||--o{ Review : "writes reviews"
+
+    SizeSystem ||--o{ SizeValue : "defines sizes"
+    SizeSystem ||--o{ Category : "default for"
+
+    Category ||--o{ Product : "contains"
+    Category ||--o{ Promotion : "has promotions"
+
+    Product ||--o{ ProductVariant : "has variants"
+    SizeValue ||--o{ ProductVariant : "sizes variant"
+
+    ProductVariant ||--o{ ShoppingCart : "added to cart"
+    ProductVariant ||--o{ OrderDetail : "ordered as"
+    ProductVariant ||--o{ Review : "reviewed on"
+
+    OrderHeader ||--o{ OrderDetail : "contains items"
+    OrderHeader ||--o{ Shipment : "shipped via"
+
+    </div>
+
+    <div class="legend">
+        <h2>ASP.NET Identity Tables (7)</h2>
+        <p>Created automatically by <code>IdentityDbContext&lt;ApplicationUser, IdentityRole, string&gt;</code>. No model classes needed.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Purpose</th>
+                    <th>Key Columns</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>AspNetUsers</strong></td><td>Base user data (email, password hash, phone, lockout). Your <code>ApplicationUser</code> extends this with Name, Address, CompanyId.</td><td><span class="badge badge-pk">Id</span> UserName, Email, PasswordHash</td></tr>
+                <tr><td><strong>AspNetRoles</strong></td><td>Role definitions</td><td><span class="badge badge-pk">Id</span> Name</td></tr>
+                <tr><td><strong>AspNetUserRoles</strong></td><td>Many-to-many join: which users have which roles</td><td><span class="badge badge-fk">UserId</span> <span class="badge badge-fk">RoleId</span></td></tr>
+                <tr><td><strong>AspNetUserClaims</strong></td><td>Custom claims per user (key-value pairs)</td><td><span class="badge badge-pk">Id</span> <span class="badge badge-fk">UserId</span></td></tr>
+                <tr><td><strong>AspNetRoleClaims</strong></td><td>Custom claims per role</td><td><span class="badge badge-pk">Id</span> <span class="badge badge-fk">RoleId</span></td></tr>
+                <tr><td><strong>AspNetUserLogins</strong></td><td>External login providers (Google, Microsoft, etc.)</td><td><span class="badge badge-fk">UserId</span> LoginProvider, ProviderKey</td></tr>
+                <tr><td><strong>AspNetUserTokens</strong></td><td>Authentication tokens (refresh tokens, 2FA)</td><td><span class="badge badge-fk">UserId</span> LoginProvider, Name</td></tr>
+            </tbody>
+        </table>
+
+        <div class="role-data">
+            <h3>Your Roles (SD constants seeded into AspNetRoles)</h3>
+            <span class="role-badge role-admin">Admin</span>
+            <span class="role-badge role-employee">Employee</span>
+            <span class="role-badge role-company">Company</span>
+            <span class="role-badge role-customer">Customer</span>
+            <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.85rem; color: #666;">
+                Defined in <code>SD.cs</code> as constants: <code>Role_Admin</code>, <code>Role_Employee</code>, <code>Role_Company</code>, <code>Role_Customer</code>.
+                Seeded into <code>AspNetRoles</code> table. Users assigned roles via <code>AspNetUserRoles</code> join table.
+            </p>
+        </div>
+
+        <h2>Application Relationships (15)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Type</th>
+                    <th>Foreign Key</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>ApplicationUser</td><td>Company</td><td>N : 1</td><td><span class="badge badge-fk">CompanyId?</span></td><td><span class="badge badge-opt">Optional</span> — only company users</td></tr>
+                <tr><td>ApplicationUser</td><td>OrderHeader</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User places many orders</td></tr>
+                <tr><td>ApplicationUser</td><td>ShoppingCart</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User has many cart items</td></tr>
+                <tr><td>ApplicationUser</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User writes many reviews</td></tr>
+                <tr><td>Category</td><td>Product</td><td>1 : N</td><td><span class="badge badge-fk">CategoryId</span></td><td></td></tr>
+                <tr><td>Category</td><td>Promotion</td><td>1 : N</td><td><span class="badge badge-fk">CategoryId</span></td><td>Buy X Get Y offers</td></tr>
+                <tr><td>SizeSystem</td><td>Category</td><td>1 : N</td><td><span class="badge badge-fk">SizeSystemId?</span></td><td><span class="badge badge-opt">Optional</span> — accessories have no sizes</td></tr>
+                <tr><td>SizeSystem</td><td>SizeValue</td><td>1 : N</td><td><span class="badge badge-fk">SizeSystemId</span></td><td></td></tr>
+                <tr><td>Product</td><td>ProductVariant</td><td>1 : N</td><td><span class="badge badge-fk">ProductId</span></td><td></td></tr>
+                <tr><td>SizeValue</td><td>ProductVariant</td><td>1 : N</td><td><span class="badge badge-fk">SizeValueId?</span></td><td><span class="badge badge-opt">Optional</span> — accessories</td></tr>
+                <tr><td>ProductVariant</td><td>ShoppingCart</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>ProductVariant</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>ProductVariant</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>OrderHeader</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+                <tr><td>OrderHeader</td><td>Shipment</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+            </tbody>
+        </table>
+
+        <h2>All Tables Summary (20)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Source</th>
+                    <th>Primary Key</th>
+                    <th>Foreign Keys</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="section-identity"><td colspan="5" class="section-label">ASP.NET Identity (auto-generated by IdentityDbContext)</td></tr>
+                <tr><td>AspNetUsers</td><td><span class="badge badge-identity">Identity</span></td><td>Id (string)</td><td>--</td><td>Base user table extended by ApplicationUser</td></tr>
+                <tr><td>AspNetRoles</td><td><span class="badge badge-identity">Identity</span></td><td>Id (string)</td><td>--</td><td>Admin, Employee, Company, Customer</td></tr>
+                <tr><td>AspNetUserRoles</td><td><span class="badge badge-identity">Identity</span></td><td>UserId + RoleId</td><td>UserId, RoleId</td><td>Many-to-many: user to role</td></tr>
+                <tr><td>AspNetUserClaims</td><td><span class="badge badge-identity">Identity</span></td><td>Id (int)</td><td>UserId</td><td>User claims</td></tr>
+                <tr><td>AspNetRoleClaims</td><td><span class="badge badge-identity">Identity</span></td><td>Id (int)</td><td>RoleId</td><td>Role claims</td></tr>
+                <tr><td>AspNetUserLogins</td><td><span class="badge badge-identity">Identity</span></td><td>Composite</td><td>UserId</td><td>External login providers</td></tr>
+                <tr><td>AspNetUserTokens</td><td><span class="badge badge-identity">Identity</span></td><td>Composite</td><td>UserId</td><td>Auth tokens</td></tr>
+                <tr class="section-app"><td colspan="5" class="section-label">Application Models (your code)</td></tr>
+                <tr><td><strong>ApplicationUser</strong></td><td><span class="badge badge-app">App</span></td><td>Id (string)</td><td>CompanyId?</td><td>Extends IdentityUser with address, company</td></tr>
+                <tr><td><strong>Company</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>--</td><td>B2B company accounts</td></tr>
+                <tr><td><strong>Category</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>SizeSystemId?</td><td>Product categories</td></tr>
+                <tr><td><strong>Product</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CategoryId</td><td>Product catalog</td></tr>
+                <tr><td><strong>ProductVariant</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ProductId, SizeValueId?</td><td>Color/size/price/stock</td></tr>
+                <tr><td><strong>SizeSystem</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>--</td><td>Adult, Kids, Shoes size types</td></tr>
+                <tr><td><strong>SizeValue</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>SizeSystemId</td><td>S, M, L, 42, 104cm</td></tr>
+                <tr><td><strong>Promotion</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CategoryId</td><td>Buy X Get Y Free per category</td></tr>
+                <tr><td><strong>ShoppingCart</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Cart items before checkout</td></tr>
+                <tr><td><strong>OrderHeader</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId</td><td>Order with shipping/payment</td></tr>
+                <tr><td><strong>OrderDetail</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId, ProductVariantId</td><td>Line items in an order</td></tr>
+                <tr><td><strong>Shipment</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking and delivery</td></tr>
+                <tr><td><strong>Review</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Ratings and comments</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        Cartiva E-Commerce | github.com/hassansamatar/cartiva | .NET 10 | IdentityDbContext&lt;ApplicationUser, IdentityRole, string&gt;
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15,
+                useMaxWidth: false
+            }
+        });
+    </script>
+
+</body>
+</html>

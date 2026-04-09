@@ -36,7 +36,9 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // GET: /Admin/User/Index
         public async Task<IActionResult> Index()
         {
-            var users = await _userManager.Users.ToListAsync();
+            var users = await _db.Users
+                .Include(u => u.Company)
+                .ToListAsync();
 
             var userRoles = new Dictionary<string, string>();
             foreach (var user in users)
@@ -45,7 +47,14 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 userRoles[user.Id] = roles.FirstOrDefault() ?? "None";
             }
 
+            // Build a lookup: CompanyId → list of users in that company
+            var companyUsers = users
+                .Where(u => u.CompanyId != null)
+                .GroupBy(u => u.CompanyId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
             ViewBag.UserRoles = userRoles;
+            ViewBag.CompanyUsers = companyUsers;
             return View(users);
         }
 

@@ -11,5 +11,7 @@ namespace Models.ViewModels
         public string? ContactPerson { get; set; }
 
         public string PaymentStatus { get; set; }
+
+        public List<ApplicationUser> Users { get; set; } = new();
     }
 }

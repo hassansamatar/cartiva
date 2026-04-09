@@ -42,6 +42,10 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 var companyUser = companyUsers
                     .FirstOrDefault(u => u.CompanyId == company.Id);
 
+                var allUsersForCompany = companyUsers
+                    .Where(u => u.CompanyId == company.Id)
+                    .ToList();
+
                 var companyOrders = orders
                     .Where(o => o.ApplicationUser != null && o.ApplicationUser.CompanyId == company.Id)
                     .ToList();
@@ -72,7 +76,8 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 {
                     Company = company,
                     ContactPerson = companyUser?.Name ?? "—",
-                    PaymentStatus = paymentStatus
+                    PaymentStatus = paymentStatus,
+                    Users = allUsersForCompany
                 };
 
             }).ToList();

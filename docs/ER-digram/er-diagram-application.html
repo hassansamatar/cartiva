@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cartiva — Entity Relationship Diagram</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fff;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        .legend {
+            margin-top: 30px;
+            page-break-before: always;
+        }
+        .legend h2 {
+            color: #1a1a2e;
+            border-bottom: 2px solid #198754;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+        th {
+            background: #1a1a2e;
+            color: white;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        td {
+            padding: 6px 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .badge-pk { background: #ffc107; color: #000; }
+        .badge-fk { background: #0d6efd; color: #fff; }
+        .badge-opt { background: #6c757d; color: #fff; }
+        .btn-print {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 30px;
+            background: #198754;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .btn-print:hover { background: #157347; }
+        .footer {
+            text-align: center;
+            color: #999;
+            font-size: 0.8rem;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🛒 Cartiva — Entity Relationship Diagram</h1>
+    <p class="subtitle">Generated from Models project &bull; .NET 10 &bull; 13 Entities &bull; 15 Relationships</p>
+
+    <div class="no-print" style="text-align:center; margin-bottom: 20px;">
+        <a href="er-diagram-identity.html" style="color:#0d6efd; font-size:0.95rem;">
+            View ASP Identity Tables separately &rarr;
+        </a>
+    </div>
+    <div class="no-print" style="text-align:center; margin-bottom: 20px;">
+        <a href="Entity-Relationship-Diagram.html" style="color:#0d6efd; font-size:0.95rem;">
+           Back to Main ER-digram &rarr;
+        </a>
+    </div>
+    <button class="btn-print no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+    <div class="mermaid">
+erDiagram
+
+    Company {
+        int Id PK
+        string Name
+        string StreetAddress
+        string City
+        string PostalCode
+        string State
+        string Country
+        string PhoneNumber
+        bool IsActive
+    }
+
+    ApplicationUser {
+        string Id PK
+        string Name
+        string StreetAddress
+        string City
+        string PostalCode
+        string State
+        string Country
+        int CompanyId FK
+        bool IsInactive
+    }
+
+    SizeSystem {
+        int Id PK
+        string Name
+        string SizeType
+        string Description
+        string IconClass
+        string AlertClass
+    }
+
+    SizeValue {
+        int Id PK
+        int SizeSystemId FK
+        string Value
+        string DisplayText
+        string Description
+        int SortOrder
+    }
+
+    Category {
+        int Id PK
+        string Name
+        int SizeSystemId FK
+    }
+
+    Product {
+        int Id PK
+        string Name
+        string Brand
+        string Description
+        string ImageUrl
+        int CategoryId FK
+    }
+
+    ProductVariant {
+        int Id PK
+        string Color
+        decimal Price
+        int Stock
+        int ProductId FK
+        int SizeValueId FK
+    }
+
+    Promotion {
+        int Id PK
+        string Name
+        string Description
+        int BuyQuantity
+        int GetQuantity
+        int CategoryId FK
+        datetime StartDate
+        datetime EndDate
+        bool IsActive
+    }
+
+    ShoppingCart {
+        int Id PK
+        string ApplicationUserId FK
+        int ProductVariantId FK
+        int Count
+        datetime DateAdded
+        datetime LastUpdated
+    }
+
+    OrderHeader {
+        int Id PK
+        string ApplicationUserId FK
+        datetime OrderDate
+        decimal OrderTotal
+        string OrderStatus
+        string PaymentStatus
+        datetime PaymentDate
+        date PaymentDueDate
+        string PaymentIntentId
+        string Name
+        string PhoneNumber
+        string StreetAddress
+        string City
+        string State
+        string PostalCode
+        string Country
+    }
+
+    OrderDetail {
+        int Id PK
+        int OrderHeaderId FK
+        int ProductVariantId FK
+        int Count
+        decimal Price
+    }
+
+    Shipment {
+        int Id PK
+        int OrderHeaderId FK
+        string TrackingNumber
+        string Carrier
+        string Service
+        string TrackingUrl
+        datetime ShippingDate
+        datetime ShippedDate
+        datetime DeliveredDate
+        string ShipmentStatus
+        string LabelUrl
+        string CarrierData
+        decimal Weight
+        string PackageType
+    }
+
+    Review {
+        int Id PK
+        string ApplicationUserId FK
+        int ProductVariantId FK
+        int Rating
+        string Comment
+        datetime ReviewDate
+        bool IsApproved
+    }
+
+    Company ||--o{ ApplicationUser : "has employees"
+    ApplicationUser ||--o{ ShoppingCart : "has cart items"
+    ApplicationUser ||--o{ OrderHeader : "places orders"
+    ApplicationUser ||--o{ Review : "writes reviews"
+
+    SizeSystem ||--o{ SizeValue : "defines sizes"
+    SizeSystem ||--o{ Category : "default for"
+
+    Category ||--o{ Product : "contains"
+    Category ||--o{ Promotion : "has promotions"
+
+    Product ||--o{ ProductVariant : "has variants"
+    SizeValue ||--o{ ProductVariant : "sizes variant"
+
+    ProductVariant ||--o{ ShoppingCart : "added to cart"
+    ProductVariant ||--o{ OrderDetail : "ordered as"
+    ProductVariant ||--o{ Review : "reviewed on"
+
+    OrderHeader ||--o{ OrderDetail : "contains items"
+    OrderHeader ||--o{ Shipment : "shipped via"
+
+    </div>
+
+    <div class="legend">
+        <h2>📋 Relationships</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Type</th>
+                    <th>Foreign Key</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>ApplicationUser</td><td>Company</td><td>N : 1</td><td><span class="badge badge-fk">CompanyId?</span></td><td><span class="badge badge-opt">Optional</span> — only company users</td></tr>
+                <tr><td>ApplicationUser</td><td>OrderHeader</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User places many orders</td></tr>
+                <tr><td>ApplicationUser</td><td>ShoppingCart</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User has many cart items</td></tr>
+                <tr><td>ApplicationUser</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User writes many reviews</td></tr>
+                <tr><td>Category</td><td>Product</td><td>1 : N</td><td><span class="badge badge-fk">CategoryId</span></td><td></td></tr>
+                <tr><td>Category</td><td>Promotion</td><td>1 : N</td><td><span class="badge badge-fk">CategoryId</span></td><td>Buy X Get Y offers</td></tr>
+                <tr><td>SizeSystem</td><td>Category</td><td>1 : N</td><td><span class="badge badge-fk">SizeSystemId?</span></td><td><span class="badge badge-opt">Optional</span> — accessories have no sizes</td></tr>
+                <tr><td>SizeSystem</td><td>SizeValue</td><td>1 : N</td><td><span class="badge badge-fk">SizeSystemId</span></td><td></td></tr>
+                <tr><td>Product</td><td>ProductVariant</td><td>1 : N</td><td><span class="badge badge-fk">ProductId</span></td><td></td></tr>
+                <tr><td>SizeValue</td><td>ProductVariant</td><td>1 : N</td><td><span class="badge badge-fk">SizeValueId?</span></td><td><span class="badge badge-opt">Optional</span> — accessories</td></tr>
+                <tr><td>ProductVariant</td><td>ShoppingCart</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>ProductVariant</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>ProductVariant</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>OrderHeader</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+                <tr><td>OrderHeader</td><td>Shipment</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+            </tbody>
+        </table>
+
+        <h2>📊 Entity Summary</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Entity</th>
+                    <th>Primary Key</th>
+                    <th>Foreign Keys</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>ApplicationUser</strong></td><td>Id (string)</td><td>CompanyId?</td><td>Extends IdentityUser with address, company link</td></tr>
+                <tr><td><strong>Company</strong></td><td>Id (int)</td><td>—</td><td>B2B company accounts</td></tr>
+                <tr><td><strong>Category</strong></td><td>Id (int)</td><td>SizeSystemId?</td><td>Product categories with optional size system</td></tr>
+                <tr><td><strong>Product</strong></td><td>Id (int)</td><td>CategoryId</td><td>Product catalog</td></tr>
+                <tr><td><strong>ProductVariant</strong></td><td>Id (int)</td><td>ProductId, SizeValueId?</td><td>Color/size/price/stock per product</td></tr>
+                <tr><td><strong>SizeSystem</strong></td><td>Id (int)</td><td>—</td><td>Size type definitions (Adult, Kids, Shoes)</td></tr>
+                <tr><td><strong>SizeValue</strong></td><td>Id (int)</td><td>SizeSystemId</td><td>Individual size values (S, M, L, 42, 104cm)</td></tr>
+                <tr><td><strong>Promotion</strong></td><td>Id (int)</td><td>CategoryId</td><td>Buy X Get Y Free offers per category</td></tr>
+                <tr><td><strong>ShoppingCart</strong></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Cart items before checkout</td></tr>
+                <tr><td><strong>OrderHeader</strong></td><td>Id (int)</td><td>ApplicationUserId</td><td>Order with shipping/payment info</td></tr>
+                <tr><td><strong>OrderDetail</strong></td><td>Id (int)</td><td>OrderHeaderId, ProductVariantId</td><td>Line items in an order</td></tr>
+                <tr><td><strong>Shipment</strong></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking, carrier, delivery status</td></tr>
+                <tr><td><strong>Review</strong></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Product ratings and comments</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        Cartiva E-Commerce &bull; github.com/hassansamatar/cartiva &bull; .NET 10
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15,
+                useMaxWidth: false
+            }
+        });
+    </script>
+
+</body>
+</html>
