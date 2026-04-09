@@ -64,6 +64,11 @@
                                     <i class="bi bi-bag fs-5"></i>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="Customer" asp-controller="Return" asp-action="MyReturns" title="My Returns">
+                                    <i class="bi bi-arrow-return-left fs-5"></i>
+                                </a>
+                            </li>
                         }
 
                         <li class="nav-item">
@@ -112,6 +117,12 @@
                                     <li>
                                         <a class="dropdown-item" asp-area="Admin" asp-controller="Review" asp-action="Index">
                                             <i class="bi bi-star-half me-2"></i> Reviews
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Return" asp-action="Index">
+                                            <i class="bi bi-arrow-return-left me-2"></i> Returns
                                         </a>
                                     </li>
 

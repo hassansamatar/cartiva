@@ -60,6 +60,48 @@ namespace ApplicationUtility
         public const string CartSessionKey = "SessionShoppingCart";
 
         // ======================
+        // RETURN CONSTANTS
+        // ======================
+        public const int ReturnWindowDays = 30;
+
+        public const string ReturnStatusPending = "Pending";
+        public const string ReturnStatusApproved = "Approved";
+        public const string ReturnStatusRejected = "Rejected";
+        public const string ReturnStatusRefunded = "Refunded";
+
+        public const string ReturnReasonDefective = "Defective or damaged";
+        public const string ReturnReasonWrongItem = "Wrong item received";
+        public const string ReturnReasonDoesNotFit = "Does not fit";
+        public const string ReturnReasonNotAsDescribed = "Not as described";
+        public const string ReturnReasonChangedMind = "Changed my mind";
+        public const string ReturnReasonOther = "Other";
+
+        public static string GetReturnStatusBadgeClass(string status)
+        {
+            return status switch
+            {
+                ReturnStatusPending => "bg-warning text-dark",
+                ReturnStatusApproved => "bg-info",
+                ReturnStatusRejected => "bg-danger",
+                ReturnStatusRefunded => "bg-success",
+                _ => "bg-secondary"
+            };
+        }
+
+        public static string[] GetReturnReasons()
+        {
+            return new[]
+            {
+                ReturnReasonDefective,
+                ReturnReasonWrongItem,
+                ReturnReasonDoesNotFit,
+                ReturnReasonNotAsDescribed,
+                ReturnReasonChangedMind,
+                ReturnReasonOther
+            };
+        }
+
+        // ======================
         // DELIVERY CONSTANTS
         // ======================
         public const string DeliveryStandard = "Standard (3-5 days)";

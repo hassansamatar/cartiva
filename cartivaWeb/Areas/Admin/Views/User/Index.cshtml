@@ -33,7 +33,10 @@
                             <th>Role</th>
                             <th>Company</th>
                             <th>Status</th>
-                            <th class="text-center" style="width:260px;">Actions</th>
+                            @if (User.IsInRole(SD.Role_Admin))
+                            {
+                                <th class="text-center" style="width:260px;">Actions</th>
+                            }
                         </tr>
                     </thead>
 
@@ -113,7 +116,8 @@
                                 </td>
 
                                 <td class="text-center">
-
+                                    @if (User.IsInRole(SD.Role_Admin))
+                                    {
                                     <div class="d-flex justify-content-center gap-2">
 
                                         <a asp-action="EditRoles"
@@ -138,7 +142,7 @@
                                         }
 
                                     </div>
-
+                                    }
                                 </td>
 
                             </tr>

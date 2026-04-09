@@ -127,7 +127,12 @@ namespace CartivaWeb.Areas.Admin.Controllers
                 existingCompany.State = companyObj.State;
                 existingCompany.PostalCode = companyObj.PostalCode;
                 existingCompany.PhoneNumber = companyObj.PhoneNumber;
-                existingCompany.IsActive = companyObj.IsActive;
+
+                // Only Admin can change active status
+                if (User.IsInRole(SD.Role_Admin))
+                {
+                    existingCompany.IsActive = companyObj.IsActive;
+                }
 
                 _db.Companies.Update(existingCompany);
                 TempData["success"] = "Company updated successfully";
@@ -138,6 +143,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: Delete
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -151,6 +157,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: Delete
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> DeletePOST(int? id)
         {
             if (id == null) return NotFound();
@@ -189,6 +196,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
         // Optional: Toggle Active/Inactive directly from Index
         [HttpPost]
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> ToggleStatus(int id)
         {
             var company = await _db.Companies.FindAsync(id);

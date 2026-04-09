@@ -33,6 +33,7 @@ namespace DataAccess
         public DbSet<Shipment> Shipments { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
+        public DbSet<ReturnRequest> ReturnRequests { get; set; }
 
         // ======================
         // Configure relationships
@@ -41,7 +42,17 @@ namespace DataAccess
         {
             base.OnModelCreating(modelBuilder);
 
-            // ... rest of your OnModelCreating code (unchanged) ...
+            modelBuilder.Entity<ReturnRequest>()
+                .HasOne(r => r.OrderDetail)
+                .WithMany()
+                .HasForeignKey(r => r.OrderDetailId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ReturnRequest>()
+                .HasOne(r => r.ApplicationUser)
+                .WithMany()
+                .HasForeignKey(r => r.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

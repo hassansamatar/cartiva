@@ -120,8 +120,8 @@
     <p class="subtitle">
         Models + ASP.NET Identity | .NET 10 |
         <span class="badge badge-identity">7 Identity Tables</span>
-        <span class="badge badge-app">13 Application Tables</span>
-        | 20 Tables Total | 22 Relationships
+        <span class="badge badge-app">14 Application Tables</span>
+        | 21 Tables Total | 24 Relationships
     </p>
 
     <button class="btn-print no-print" onclick="window.print()">Print / Save as PDF</button>
@@ -219,7 +219,7 @@ erDiagram
         string State
         string Country
         int CompanyId FK
-        bool IsInactive
+        bool IsActive
     }
 
     SizeSystem {
@@ -339,6 +339,22 @@ erDiagram
         bool IsApproved
     }
 
+    ReturnRequest {
+        int Id PK
+        int OrderDetailId FK
+        string ApplicationUserId FK
+        string Reason
+        string Description
+        int Quantity
+        datetime RequestDate
+        string Status
+        string AdminNote
+        datetime ResolvedDate
+        decimal RefundAmount
+        string RefundId
+        datetime RefundDate
+    }
+
     AspNetUsers_IdentityBase ||--|| ApplicationUser : "extends"
     AspNetUsers_IdentityBase ||--o{ AspNetUserRoles : "assigned"
     AspNetRoles ||--o{ AspNetUserRoles : "has members"
@@ -367,6 +383,9 @@ erDiagram
 
     OrderHeader ||--o{ OrderDetail : "contains items"
     OrderHeader ||--o{ Shipment : "shipped via"
+
+    OrderDetail ||--o{ ReturnRequest : "returned via"
+    ApplicationUser ||--o{ ReturnRequest : "requests returns"
 
     </div>
 
@@ -405,7 +424,7 @@ erDiagram
             </p>
         </div>
 
-        <h2>Application Relationships (15)</h2>
+        <h2>Application Relationships (17)</h2>
         <table>
             <thead>
                 <tr>
@@ -432,10 +451,12 @@ erDiagram
                 <tr><td>ProductVariant</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>Shipment</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+                <tr><td>OrderDetail</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Restrict delete</td></tr>
+                <tr><td>ApplicationUser</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>Restrict delete</td></tr>
             </tbody>
         </table>
 
-        <h2>All Tables Summary (20)</h2>
+        <h2>All Tables Summary (21)</h2>
         <table>
             <thead>
                 <tr>
@@ -469,6 +490,7 @@ erDiagram
                 <tr><td><strong>OrderDetail</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId, ProductVariantId</td><td>Line items in an order</td></tr>
                 <tr><td><strong>Shipment</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking and delivery</td></tr>
                 <tr><td><strong>Review</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Ratings and comments</td></tr>
+                <tr><td><strong>ReturnRequest</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderDetailId, ApplicationUserId</td><td>Product returns and refunds</td></tr>
             </tbody>
         </table>
     </div>

@@ -87,7 +87,7 @@
 <body>
 
     <h1>🛒 Cartiva — Entity Relationship Diagram</h1>
-    <p class="subtitle">Generated from Models project &bull; .NET 10 &bull; 13 Entities &bull; 15 Relationships</p>
+    <p class="subtitle">Generated from Models project &bull; .NET 10 &bull; 14 Entities &bull; 17 Relationships</p>
 
     <div class="no-print" style="text-align:center; margin-bottom: 20px;">
         <a href="er-diagram-identity.html" style="color:#0d6efd; font-size:0.95rem;">
@@ -125,7 +125,7 @@ erDiagram
         string State
         string Country
         int CompanyId FK
-        bool IsInactive
+        bool IsActive
     }
 
     SizeSystem {
@@ -245,6 +245,22 @@ erDiagram
         bool IsApproved
     }
 
+    ReturnRequest {
+        int Id PK
+        int OrderDetailId FK
+        string ApplicationUserId FK
+        string Reason
+        string Description
+        int Quantity
+        datetime RequestDate
+        string Status
+        string AdminNote
+        datetime ResolvedDate
+        decimal RefundAmount
+        string RefundId
+        datetime RefundDate
+    }
+
     Company ||--o{ ApplicationUser : "has employees"
     ApplicationUser ||--o{ ShoppingCart : "has cart items"
     ApplicationUser ||--o{ OrderHeader : "places orders"
@@ -265,6 +281,9 @@ erDiagram
 
     OrderHeader ||--o{ OrderDetail : "contains items"
     OrderHeader ||--o{ Shipment : "shipped via"
+
+    OrderDetail ||--o{ ReturnRequest : "returned via"
+    ApplicationUser ||--o{ ReturnRequest : "requests returns"
 
     </div>
 
@@ -296,6 +315,8 @@ erDiagram
                 <tr><td>ProductVariant</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>Shipment</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+                <tr><td>OrderDetail</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Restrict delete</td></tr>
+                <tr><td>ApplicationUser</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>Restrict delete</td></tr>
             </tbody>
         </table>
 
@@ -323,6 +344,7 @@ erDiagram
                 <tr><td><strong>OrderDetail</strong></td><td>Id (int)</td><td>OrderHeaderId, ProductVariantId</td><td>Line items in an order</td></tr>
                 <tr><td><strong>Shipment</strong></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking, carrier, delivery status</td></tr>
                 <tr><td><strong>Review</strong></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Product ratings and comments</td></tr>
+                <tr><td><strong>ReturnRequest</strong></td><td>Id (int)</td><td>OrderDetailId, ApplicationUserId</td><td>Product returns and refunds</td></tr>
             </tbody>
         </table>
     </div>

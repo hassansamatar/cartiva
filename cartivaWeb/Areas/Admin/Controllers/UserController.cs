@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace CartivaWeb.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    [Authorize(Roles = SD.Role_Admin)]
+    [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class UserController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -61,6 +61,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: /Admin/User/Deactivate/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> Deactivate(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -90,6 +91,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: /Admin/User/Activate/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> Activate(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -111,6 +113,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: /Admin/User/EditRoles/5
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> EditRoles(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -137,6 +140,7 @@ namespace CartivaWeb.Areas.Admin.Controllers
         // POST: /Admin/User/EditRoles
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> EditRoles(EditRolesViewModel model)
         {
             var user = await _userManager.FindByIdAsync(model.UserId);
