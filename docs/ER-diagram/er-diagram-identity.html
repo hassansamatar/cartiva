@@ -11,7 +11,7 @@
         @page { size: landscape; margin: 10mm; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #fff;
+            background: #f8f9fa;
             padding: 20px;
         }
         h1 {
@@ -28,9 +28,17 @@
         .mermaid {
             display: flex;
             justify-content: center;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
         }
         .legend {
             margin-top: 30px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            border: 1px solid #dee2e6;
         }
         .legend h2 {
             color: #1a1a2e;
@@ -53,7 +61,7 @@
             padding: 6px 12px;
             border-bottom: 1px solid #dee2e6;
         }
-        tr:nth-child(even) { background: #f0f4ff; }
+        tr:nth-child(even) { background: #fff; }
         .badge {
             display: inline-block;
             padding: 2px 8px;
@@ -168,7 +176,7 @@ erDiagram
         string State "State - your column"
         string Country "Country - your column"
         int CompanyId "FK to Company - your column"
-        bool IsInactive "Soft delete - your column"
+        bool IsActive "Soft delete - your column"
     }
 
     AspNetRoles {
@@ -246,14 +254,14 @@ erDiagram
                 <tr><td>LockoutEnd</td><td>datetimeoffset</td><td></td><td>Identity</td><td>When lockout expires</td></tr>
                 <tr><td>LockoutEnabled</td><td>bit</td><td></td><td>Identity</td><td>Can account be locked out</td></tr>
                 <tr><td>AccessFailedCount</td><td>int</td><td></td><td>Identity</td><td>Failed login counter</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>Name</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>Full name</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>StreetAddress</strong></td><td>nvarchar(100)</td><td></td><td><strong>Your code</strong></td><td>Street address</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>City</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>City</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>PostalCode</strong></td><td>nvarchar(10)</td><td></td><td><strong>Your code</strong></td><td>Postal code</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>State</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>State / Region</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>Country</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>Default: Norway</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>CompanyId</strong></td><td>int</td><td><span class="badge badge-fk">FK</span> <span class="badge badge-nullable">nullable</span></td><td><strong>Your code</strong></td><td>FK to Companies table</td></tr>
-                <tr style="background:#d1e7dd"><td><strong>IsInactive</strong></td><td>bit</td><td></td><td><strong>Your code</strong></td><td>Soft delete flag</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>Name</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>Full name</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>StreetAddress</strong></td><td>nvarchar(100)</td><td></td><td><strong>Your code</strong></td><td>Street address</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>City</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>City</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>PostalCode</strong></td><td>nvarchar(10)</td><td></td><td><strong>Your code</strong></td><td>Postal code</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>State</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>State / Region</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>Country</strong></td><td>nvarchar(50)</td><td></td><td><strong>Your code</strong></td><td>Default: Norway</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>CompanyId</strong></td><td>int</td><td><span class="badge badge-fk">FK</span> <span class="badge badge-nullable">nullable</span></td><td><strong>Your code</strong></td><td>FK to Companies table</td></tr>
+                <tr style="background:#f8f9fa; border-left: 3px solid #198754;"><td><strong>IsActive</strong></td><td>bit</td><td></td><td><strong>Your code</strong></td><td>Active status flag</td></tr>
             </tbody>
         </table>
 
@@ -350,7 +358,7 @@ erDiagram
                 minEntityWidth: 100,
                 minEntityHeight: 75,
                 entityPadding: 15,
-                useMaxWidth: false
+                useMaxWidth: true
             }
         });
     </script>

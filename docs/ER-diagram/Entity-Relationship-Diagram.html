@@ -12,7 +12,7 @@
         @page { size: landscape; margin: 10mm; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #fff;
+            background: #f8f9fa;
             padding: 20px;
         }
         h1 {
@@ -27,13 +27,24 @@
             font-size: 0.9rem;
         }
         .mermaid {
-            display: flex;
-            justify-content: center;
+            overflow-x: auto;
+            text-align: center;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
         }
         .legend h2 {
             color: #1a1a2e;
             border-bottom: 2px solid #198754;
             padding-bottom: 5px;
+        }
+        .legend {
+            margin-top: 30px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            border: 1px solid #dee2e6;
         }
         .section-label {
             font-size: 0.8rem;
@@ -510,7 +521,7 @@ erDiagram
                 minEntityWidth: 100,
                 minEntityHeight: 75,
                 entityPadding: 15,
-                useMaxWidth: false
+                useMaxWidth: true
             }
         });
     </script>

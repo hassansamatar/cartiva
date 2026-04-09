@@ -8,8 +8,8 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0d1117;
-            color: #e6edf3;
+            background: #f8f9fa;
+            color: #1a1a2e;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -25,7 +25,7 @@
         h1 span { color: #198754; }
         .subtitle {
             text-align: center;
-            color: #8b949e;
+            color: #666;
             margin-bottom: 40px;
             font-size: 1rem;
         }
@@ -40,31 +40,32 @@
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
-            background: #21262d;
-            border: 1px solid #30363d;
-            color: #8b949e;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            color: #495057;
         }
         .cards { display: grid; grid-template-columns: 1fr; gap: 16px; }
         .card {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: #fff;
+            border: 1px solid #dee2e6;
             border-radius: 12px;
             padding: 24px;
             text-decoration: none;
             color: inherit;
-            transition: border-color 0.2s, transform 0.2s;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
         }
         .card:hover {
             border-color: #198754;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.15);
         }
         .card h3 {
             font-size: 1.2rem;
             margin-bottom: 8px;
-            color: #e6edf3;
+            color: #1a1a2e;
         }
         .card p {
-            color: #8b949e;
+            color: #666;
             font-size: 0.9rem;
             line-height: 1.5;
         }
@@ -84,7 +85,7 @@
             margin-top: 40px;
         }
         .links a {
-            color: #58a6ff;
+            color: #0d6efd;
             text-decoration: none;
             margin: 0 16px;
             font-size: 0.95rem;
@@ -92,7 +93,7 @@
         .links a:hover { text-decoration: underline; }
         .footer {
             text-align: center;
-            color: #484f58;
+            color: #999;
             font-size: 0.8rem;
             margin-top: 50px;
         }
