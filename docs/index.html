@@ -91,6 +91,62 @@
             font-size: 0.95rem;
         }
         .links a:hover { text-decoration: underline; }
+        .video-section {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+        .video-section h2 {
+            font-size: 1.3rem;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        .video-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+        .video-link {
+            text-decoration: none;
+            display: block;
+        }
+        .video-thumbnail {
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d3a4a 100%);
+            border-radius: 12px;
+            padding: 50px 20px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .video-thumbnail:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(25, 135, 84, 0.25);
+        }
+        .play-button {
+            width: 70px;
+            height: 70px;
+            background: #198754;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .video-thumbnail p {
+            color: #ccc;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            text-align: center;
+        }
         .footer {
             text-align: center;
             color: #999;
@@ -114,6 +170,25 @@
             <span>Bootstrap 5</span>
             <span>Identity</span>
         </div>
+
+        <!-- Demo Video -->
+        <div class="video-section">
+            <h2>🎬 Demo Walkthrough</h2>
+            <p class="video-description">
+                5-minute walkthrough covering registration, shopping, Stripe checkout,
+                admin order processing, shipment tracking, reviews, returns &amp; refunds.
+            </p>
+            <a href="https://1drv.ms/v/c/ea46c225c4735de5/IQA6wTKv6aIPSogRyCtW1EMZAU7krOhjw7RED2DtuGuykdE?e=BIjc1t"
+               target="_blank" class="video-link">
+                <div class="video-thumbnail">
+                    <div class="play-button">▶</div>
+                    <p>Click to watch demo (5:40)</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- ER Diagrams -->
+        <h2 class="section-title">📊 ER Diagrams</h2>
 
         <div class="cards">
             <a href="ER-diagram/Entity-Relationship-Diagram.html" class="card">

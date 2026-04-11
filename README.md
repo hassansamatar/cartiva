@@ -3,6 +3,8 @@
 A complete e-commerce solution built with **ASP.NET Core (.NET 10)** and **Razor Pages**, featuring role-based access control, Stripe payments, shipment tracking, product reviews, returns & refunds, and a full admin panel.
 
 > 📊 [View ER Diagrams](https://hassansamatar.github.io/cartiva/) — Interactive entity-relationship diagrams hosted on GitHub Pages
+>
+> 🎬 [Watch Demo Video](https://1drv.ms/v/c/ea46c225c4735de5/IQA6wTKv6aIPSogRyCtW1EMZAU7krOhjw7RED2DtuGuykdE?e=BIjc1t) — 5-minute walkthrough of the full application
 
 ---
 
