@@ -1,0 +1,85 @@
+@model List<ReturnRequest>
+@using Cartiva.Shared
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "My Returns";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+}
+
+<div class="container mt-4 mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item active">My Returns</li>
+        </ol>
+    </nav>
+
+    <h2 class="text-primary mb-4"><i class="bi bi-arrow-return-left"></i> My Returns</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-box-seam" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h4 class="text-muted mt-3">No return requests</h4>
+            <p class="text-muted">You haven't requested any returns yet.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var r in Model)
+            {
+                var productName = r.OrderDetail?.ProductVariant?.Product?.Name ?? "Product";
+                var color = r.OrderDetail?.ProductVariant?.Color;
+                var orderId = r.OrderDetail?.OrderHeaderId;
+
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        @productName
+                                        <span class="badge bg-secondary ms-1">@color</span>
+                                        <span class="text-muted small ms-2">× @r.Quantity</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        Order #@orderId · Requested @r.RequestDate.ToString("dd MMM yyyy")
+                                    </small>
+                                    <div class="mt-1">
+                                        <span class="badge bg-light text-dark border">@r.Reason</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(r.Description))
+                                    {
+                                        <p class="text-muted small mt-1 mb-0">@r.Description</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(r.AdminNote))
+                                    {
+                                        <div class="mt-2 small">
+                                            <i class="bi bi-chat-dots text-primary"></i>
+                                            <strong>Admin:</strong> @r.AdminNote
+                                        </div>
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge @SD.GetReturnStatusBadgeClass(r.Status)">@r.Status</span>
+                                    @if (r.RefundAmount.HasValue)
+                                    {
+                                        <div class="mt-1">
+                                            <span class="fw-bold text-success">@r.RefundAmount.Value.ToString("C", culture)</span>
+                                        </div>
+                                    }
+                                    @if (r.RefundDate.HasValue)
+                                    {
+                                        <small class="text-muted d-block">Refunded @r.RefundDate.Value.ToString("dd MMM yyyy")</small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

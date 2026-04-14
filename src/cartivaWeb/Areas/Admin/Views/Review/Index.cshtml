@@ -1,0 +1,93 @@
+@model List<Review>
+@using Cartiva.Shared
+
+@{
+    ViewData["Title"] = "Review Management";
+    var pendingCount = Model.Count(r => !r.IsApproved);
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="bi bi-star-half"></i> Review Management
+            </h4>
+            @if (pendingCount > 0)
+            {
+                <span class="badge bg-warning text-dark">@pendingCount pending</span>
+            }
+        </div>
+
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" id="reviewTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending"
+                            type="button" role="tab">
+                        Pending <span class="badge bg-warning text-dark ms-1">@pendingCount</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved"
+                            type="button" role="tab">
+                        Approved <span class="badge bg-success ms-1">@Model.Count(r => r.IsApproved)</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="all-tab" data-bs-toggle="tab" data-bs-target="#all"
+                            type="button" role="tab">
+                        All <span class="badge bg-secondary ms-1">@Model.Count</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Pending Reviews -->
+                <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                    @{ var pendingReviews = Model.Where(r => !r.IsApproved).ToList(); }
+                    @if (!pendingReviews.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No pending reviews.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_ReviewTable", pendingReviews)
+                    }
+                </div>
+
+                <!-- Approved Reviews -->
+                <div class="tab-pane fade" id="approved" role="tabpanel">
+                    @{ var approvedReviews = Model.Where(r => r.IsApproved).ToList(); }
+                    @if (!approvedReviews.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-star" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No approved reviews yet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_ReviewTable", approvedReviews)
+                    }
+                </div>
+
+                <!-- All Reviews -->
+                <div class="tab-pane fade" id="all" role="tabpanel">
+                    @if (!Model.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-star" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No reviews yet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_ReviewTable", Model)
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

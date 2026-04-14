@@ -1,0 +1,375 @@
+﻿@model OrderHeader
+@using System.Globalization
+@using Cartiva.Shared
+@using Cartiva.Infrastructure.QrCodeServices
+@inject IQrCodeService QrCodeService
+
+@{
+    ViewData["Title"] = "Cancel Order";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var refundAmount = Model.OrderTotal;
+    // Allow cancellation for pending, approved, or awaiting shipment approval
+    var canCancel = Model.OrderStatus == SD.StatusPending
+                    || Model.OrderStatus == SD.StatusApproved
+                    || Model.OrderStatus == SD.StatusAwaitingShipmentApproval;
+
+    var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
+}
+
+@if (!canCancel)
+{
+    <script>
+        window.location.href = '@Url.Action("Details", "Order", new { id = Model.Id })';
+    </script>
+    return;
+}
+
+<!-- Order ID for JavaScript -->
+<input type="hidden" id="orderId" value="@Model.Id" />
+
+<div class="container mt-4 mb-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-action="History">My Orders</a></li>
+            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">Order #@Model.Id</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Cancel Order</li>
+        </ol>
+    </nav>
+
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mx-auto text-center">
+            <div class="cancel-header-icon">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <h1 class="cancel-header-title">Cancel Order #@Model.Id</h1>
+            <p class="cancel-header-subtitle">Please review the details below before proceeding with cancellation.</p>
+        </div>
+    </div>
+
+    <!-- Main Content Card -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card cancel-card">
+                <!-- Card Header -->
+                <div class="cancel-card-header">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-receipt me-2"></i>
+                        <h5 class="mb-0">Order Summary</h5>
+                    </div>
+                </div>
+
+                <!-- Card Body -->
+                <div class="cancel-card-body">
+                    <!-- Order Info Grid -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="cancel-info-box">
+                                <h6 class="cancel-info-title">
+                                    <i class="bi bi-info-circle"></i>Order Information
+                                </h6>
+                                <table class="table cancel-info-table">
+                                    <tr>
+                                        <td class="text-muted">Order Date:</td>
+                                        <td class="fw-bold">@Model.OrderDate.ToString("dd MMM yyyy HH:mm")</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Order Status:</td>
+                                        <td>
+                                            <span class="badge cancel-badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus)">
+                                                <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus)"></i>
+                                                @Model.OrderStatus
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="cancel-info-box">
+                                <h6 class="cancel-info-title">
+                                    <i class="bi bi-credit-card"></i>Payment Information
+                                </h6>
+                                <table class="table cancel-info-table">
+                                    <tr>
+                                        <td class="text-muted">Payment Status:</td>
+                                        <td>
+                                            <span class="badge cancel-badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">
+                                                @Model.PaymentStatus
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Total Amount:</td>
+                                        <td class="fw-bold text-primary h5 mb-0">@Model.OrderTotal.ToString("C", culture)</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Section (NEW) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="cancel-info-box text-center">
+                                <h6 class="cancel-info-title">
+                                    <i class="bi bi-qr-code"></i> Track Your Order
+                                </h6>
+                                @if (!string.IsNullOrEmpty(qrCodeBase64))
+                                {
+                                    <div class="d-flex justify-content-center gap-3 align-items-center">
+                                        <img src="data:image/png;base64,@qrCodeBase64"
+                                             alt="Order Tracking QR Code"
+                                             style="width: 80px; height: 80px; cursor: pointer;"
+                                             onclick="window.open('@trackingUrl', '_blank')"
+                                             class="img-thumbnail"
+                                             title="Click to track order" />
+                                        <div class="text-start">
+                                            <a href="@trackingUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-geo-alt"></i> Track Order
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('@trackingUrl')">
+                                                <i class="bi bi-link"></i> Copy Link
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mt-2 mb-0">
+                                        <i class="bi bi-phone"></i> Scan with your phone to track this order.
+                                    </p>
+                                    @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                                    {
+                                        <div class="alert alert-light small mt-2 mb-0">
+                                            <i class="bi bi-clock-history"></i>
+                                            Tracking details will be available after shipment approval.
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-muted small">
+                                        <i class="bi bi-qr-code"></i> QR code will be available after payment.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Section -->
+                    <div class="mb-4">
+                        <h6 class="cancel-items-title">
+                            <i class="bi bi-box-seam"></i>Items to be Cancelled
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table cancel-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50%">Product</th>
+                                        <th class="text-center" style="width: 15%">Quantity</th>
+                                        <th class="text-end" style="width: 15%">Price</th>
+                                        <th class="text-end" style="width: 20%">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.OrderDetails)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(item.ProductVariant?.Product?.ImageUrl))
+                                                    {
+                                                        <img src="@item.ProductVariant.Product.ImageUrl"
+                                                             alt="@item.ProductVariant.Product.Name"
+                                                             class="cancel-product-image" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="cancel-product-placeholder">
+                                                            <i class="bi bi-image"></i>
+                                                        </div>
+                                                    }
+                                                    <div>
+                                                        <h6 class="cancel-product-name">@item.ProductVariant?.Product?.Name</h6>
+                                                        <div class="d-flex gap-2">
+                                                            <span class="badge cancel-product-badge"
+                                                                  style="background-color: @GetColorCode(item.ProductVariant?.Color);
+                                                                color: @GetTextColor(item.ProductVariant?.Color);">
+                                                                <i class="bi bi-droplet"></i> @item.ProductVariant?.Color
+                                                            </span>
+                                                            @if (item.ProductVariant?.SizeValue != null)
+                                                            {
+                                                                <span class="badge cancel-product-badge bg-secondary">
+                                                                    <i class="bi bi-rulers"></i> @item.ProductVariant.SizeValue.DisplayText
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <span class="fw-bold">@item.Count</span>
+                                            </td>
+                                            <td class="text-end align-middle cancel-price">
+                                                @item.Price.ToString("C", culture)
+                                            </td>
+                                            <td class="text-end align-middle">
+                                                <span class="cancel-total-price">
+                                                    @((item.Price * item.Count).ToString("C", culture))
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end">
+                                            <strong class="fs-5">Refund Amount:</strong>
+                                        </td>
+                                        <td class="text-end">
+                                            <h4 class="cancel-refund-amount">@refundAmount.ToString("C", culture)</h4>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Cancellation Policy -->
+                    <div class="alert alert-warning cancel-alert">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="bi bi-info-circle-fill"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-2">Important Information</h6>
+                                <ul>
+                                    <li>
+                                        <i class="bi bi-check2-circle text-success me-2"></i>
+                                        Stock will be restored for all cancelled items
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check2-circle text-success me-2"></i>
+                                        @if (Model.PaymentStatus == SD.PaymentStatusApproved)
+                                        {
+                                            <span>Refund will be processed within 5-7 business days</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No payment has been processed; order will be cancelled without charge</span>
+                                        }
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check2-circle text-success me-2"></i>
+                                        You will receive a confirmation email
+                                    </li>
+                                    <li class="text-danger">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                        This action cannot be undone
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="cancel-footer">
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn cancel-btn cancel-btn-outline">
+                            <i class="bi bi-arrow-left"></i>
+                            Go Back
+                        </a>
+                        
+                        <button type="button" class="btn cancel-btn cancel-btn-danger" id="confirmCancelBtn">
+                            <i class="bi bi-x-circle"></i>
+                            Cancel Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="cancelConfirmModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="cancel-modal-header">
+                <h5 class="cancel-modal-title" id="cancelModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Confirm Cancellation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="cancel-modal-body">
+                <div class="text-center">
+                    <i class="bi bi-question-circle cancel-modal-icon"></i>
+                </div>
+                <p class="cancel-modal-question text-center">Are you absolutely sure you want to cancel this order?</p>
+                <div class="cancel-modal-summary">
+                    <div class="cancel-modal-summary-item">
+                        <span class="text-muted">Order Total:</span>
+                        <span class="fw-bold">@Model.OrderTotal.ToString("C", culture)</span>
+                    </div>
+                    <div class="cancel-modal-summary-item">
+                        <span class="text-muted">Refund Amount:</span>
+                        <span class="fw-bold cancel-modal-refund">@refundAmount.ToString("C", culture)</span>
+                    </div>
+                </div>
+                <p class="cancel-modal-note">
+                    <i class="bi bi-exclamation-circle"></i>
+                    This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>
+                    No, Keep Order
+                </button>
+                <button type="button" class="btn btn-danger" id="finalConfirmBtn">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Yes, Cancel Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/css/cancel.css" />
+    <script src="~/js/cancel.js"></script>
+    <script src="~/js/order-details.js" asp-append-version="true"></script>
+}
+
+@functions {
+    public string GetColorCode(string? color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+    
+    public string GetTextColor(string? color)
+    {
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
+}

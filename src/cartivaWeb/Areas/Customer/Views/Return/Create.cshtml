@@ -1,0 +1,124 @@
+@using Cartiva.Shared
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Request Return";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var orderDetail = ViewBag.OrderDetail as OrderDetail;
+    var daysRemaining = (int)ViewBag.DaysRemaining;
+    var reasons = ViewBag.ReturnReasons as string[];
+}
+
+<div class="container mt-4 mb-5" style="max-width: 700px;">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Order" asp-action="History">My Orders</a></li>
+            <li class="breadcrumb-item">
+                <a asp-area="Customer" asp-controller="Order" asp-action="Details" asp-route-id="@orderDetail.OrderHeaderId">
+                    Order #@orderDetail.OrderHeaderId
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Request Return</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="bi bi-arrow-return-left"></i> Request a Return
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <!-- Item being returned -->
+            <div class="d-flex align-items-center p-3 bg-light rounded mb-4">
+                @if (!string.IsNullOrEmpty(orderDetail.ProductVariant?.Product?.ImageUrl))
+                {
+                    <img src="@orderDetail.ProductVariant.Product.ImageUrl"
+                         class="rounded me-3" style="width:70px; height:70px; object-fit:cover;"
+                         alt="@orderDetail.ProductVariant.Product.Name" />
+                }
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">@(orderDetail.ProductVariant?.Product?.Name ?? "Product")</h6>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-secondary">@orderDetail.ProductVariant?.Color</span>
+                        @if (orderDetail.ProductVariant?.SizeValue != null)
+                        {
+                            <span class="badge bg-secondary">@orderDetail.ProductVariant.SizeValue.DisplayText</span>
+                        }
+                    </div>
+                    <small class="text-muted">
+                        @orderDetail.Price.ToString("C", culture) × @orderDetail.Count
+                    </small>
+                </div>
+                <div class="text-end">
+                    <span class="fw-bold">@((orderDetail.Price * orderDetail.Count).ToString("C", culture))</span>
+                </div>
+            </div>
+
+            <!-- Return window info -->
+            <div class="alert @(daysRemaining <= 7 ? "alert-warning" : "alert-info") small">
+                <i class="bi bi-clock"></i>
+                <strong>@daysRemaining days</strong> remaining in the @(SD.ReturnWindowDays)-day return window.
+            </div>
+
+            <form asp-area="Customer" asp-controller="Return" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="orderDetailId" value="@orderDetail.Id" />
+
+                <!-- Quantity -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Quantity to return</label>
+                    <input type="number" name="quantity" class="form-control" value="@orderDetail.Count"
+                           min="1" max="@orderDetail.Count" required style="max-width: 120px;" />
+                    <small class="text-muted">Ordered: @orderDetail.Count</small>
+                </div>
+
+                <!-- Reason -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Reason for return</label>
+                    <select name="reason" class="form-select" required>
+                        <option value="">Select a reason...</option>
+                        @foreach (var reason in reasons)
+                        {
+                            <option value="@reason">@reason</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Additional details <small class="text-muted fw-normal">(optional)</small>
+                    </label>
+                    <textarea name="description" class="form-control" rows="3" maxlength="500"
+                              placeholder="Please describe the issue in more detail..."></textarea>
+                </div>
+
+                <!-- Refund estimate -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Estimated refund:</span>
+                            <span class="fw-bold text-success">
+                                @((orderDetail.Price * orderDetail.Count).ToString("C", culture))
+                            </span>
+                        </div>
+                        <small class="text-muted">Refund will be processed after admin approval.</small>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-return-left"></i> Submit Return Request
+                    </button>
+                    <a asp-area="Customer" asp-controller="Order" asp-action="Details"
+                       asp-route-id="@orderDetail.OrderHeaderId" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

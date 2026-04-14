@@ -18,12 +18,15 @@ A complete e-commerce solution built with **ASP.NET Core (.NET 10)** and **Razor
 - **Product reviews** with star ratings (post-delivery)
 - **Returns & refunds** within a 30-day return window
 - **Order history** with detailed receipts
-- **Address autocomplete** via Norwegian address lookup
+- **Address autocomplete** using Norwegian address lookup (Kartverket API)
+- **Flexible address input**: users can either manually enter their address or use Kartverket API for autocomplete
+- **Promotion management** — admins and employees can create flexible promotions targeting specific product categories or product variants for a defined time period, with the ability to enable or disable promotions at any time
+- **Automatic discount visibility** — the cheapest product variant is automatically highlighted as “On Sale” with a visible badge for customers
 
 ### 🏢 Company (B2B)
-- **Deferred payments** — order now, pay within 30 days
+- **Deferred payments** — company users can either pay upfront or use a 30-day invoice option
 - **Company accounts** with multiple users under one organization
-- **Order management** for company representatives
+- **Order management** for company representatives, including sales-created orders and finance-approved billing
 
 ### 🔧 Admin Panel
 - **Dashboard** with order and revenue management
@@ -47,27 +50,35 @@ A complete e-commerce solution built with **ASP.NET Core (.NET 10)** and **Razor
 
 ```
 Cartiva.sln
-├── CartivaWeb/          → ASP.NET Core Razor Pages (UI + Controllers)
-│   ├── Areas/
-│   │   ├── Admin/       → Admin controllers & views
-│   │   ├── Customer/    → Customer controllers & views
-│   │   └── Identity/    → ASP.NET Identity (login, register, 2FA)
-│   ├── Services/        → Application services
-│   └── wwwroot/         → Static files (CSS, JS, images)
-├── Models/              → Domain models, ViewModels, interfaces, services
-├── DataAccess/          → EF Core DbContext, migrations, seeder
-├── MyUtility/           → Constants (SD.cs), helpers
-└── docs/                → ER diagrams (GitHub Pages)
-```
+├── src/
+│   ├── CartivaWeb/              → ASP.NET Core Razor Pages (UI)
+│   │   ├── Areas/
+│   │   │   ├── Admin/           → Admin features (controllers, views)
+│   │   │   ├── Customer/        → Customer features
+│   │   │   └── Identity/        → Authentication (ASP.NET Identity, 2FA)
+│   │   └── wwwroot/             → Static files (CSS, JS, images)
+│   │
+│   ├── Cartiva.Application/     → Use cases (interfaces + services)
+│   ├── Cartiva.Domain/          → Entities, enums, value objects (pure domain)
+│   ├── Cartiva.Persistence/     → EF Core (DbContext, migrations, seeding)
+│   ├── Cartiva.Infrastructure/  → External integrations (Stripe, Email, APIs)
+│   └── Cartiva.Shared/          → Shared utilities, constants, configs
+│
+├── docs/                        → ER diagrams (GitHub Pages)
+├── tests/                       → Unit & integration tests
+└── README.md
+              ```
 
 ### Project Layers
 
-| Project | Purpose |
-|---|---|
-| **CartivaWeb** | Web layer — Razor Pages, controllers, views, routing |
-| **Models** | Domain entities, ViewModels, service interfaces & implementations |
-| **DataAccess** | `ApplicationDbContext`, EF Core migrations, `DbInitializer` |
-| **MyUtility** | Shared constants (`SD.cs`), status helpers, configuration |
+| Project                       | Purpose |
+|-------------------------------|
+| **CartivaWeb**                | Presentation layer — Razor Pages, controllers, views, routing |
+| **Cartiva.Domain**            | Core domain — entities, enums, value objects |
+| **Cartiva.Application**       | Application layer — use cases, service interfaces, DTOs |
+| **Cartiva.Persistence**       | Data access layer — `ApplicationDbContext`, EF Core migrations, seeding |
+| **Cartiva.Infrastructure**    | External services — APIs (Address, Email, QR Code, Shipping, Payments) |
+| **Cartiva.Shared**            | Cross-cutting concerns — constants (`SD.cs`), helpers, shared utilities |
 
 ---
 
@@ -81,60 +92,61 @@ Cartiva.sln
 
 | Model | Purpose |
 |---|---|
-| `ApplicationUser` | Extends IdentityUser with address, company link |
-| `Company` | B2B company accounts |
-| `Category` | Product categories with size system |
-| `Product` | Product catalog |
-| `ProductVariant` | Color / size / price / stock per product |
-| `SizeSystem` | Size type definitions (Adult, Kids, Shoes) |
+| `ApplicationUser` | Extends `IdentityUser` with address and company association |
+| `Company` | B2B company accounts with multiple users |
+| `Category` | Product categories supporting size systems |
+| `Product` | Core product catalog entity |
+| `ProductVariant` | Product variations (color, size, price, stock) |
+| `SizeSystem` | Defines size types (Adult, Kids, Shoes) |
 | `SizeValue` | Individual size values (S, M, L, 42, 104cm) |
-| `Promotion` | Buy X Get Y Free offers per category |
+| `Promotion` | Discount rules (e.g., Buy X Get Y Free per category) |
 | `ShoppingCart` | Cart items before checkout |
-| `OrderHeader` | Order with shipping / payment info |
-| `OrderDetail` | Line items in an order |
-| `Shipment` | Tracking, carrier, delivery status |
-| `Review` | Product ratings and comments |
-| `ReturnRequest` | Product returns and refunds |
+| `OrderHeader` | Order summary (shipping and payment information) |
+| `OrderDetail` | Individual line items within an order |
+| `Shipment` | Shipping tracking (carrier, delivery status) |
+| `Review` | Product ratings and customer comments |
+| `ReturnRequest` | Handles product returns and refund requests |
 
 ---
 
 ## 🔐 Roles & Permissions
 
-| Feature | Customer | Company | Employee | Admin |
-|---|---|---|---|---|
-| Browse & purchase | ✅ | ✅ | — | — |
-| Deferred payments | — | ✅ | — | — |
-| Write reviews | ✅ | ✅ | — | — |
-| Request returns | ✅ | ✅ | — | — |
-| Manage products | — | — | ✅ | ✅ |
-| Manage orders & shipments | — | — | ✅ | ✅ |
-| Moderate reviews | — | — | ✅ | ✅ |
-| Process returns & refunds | — | — | ✅ | ✅ |
-| Manage promotions | — | — | ✅ | ✅ |
-| View users (read-only) | — | — | ✅ | ✅ |
-| Manage users & roles | — | — | ❌ | ✅ |
-| Delete / deactivate companies | — | — | ❌ | ✅ |
-
+| Feature                    | Customer | Company | Employee | Admin |
+|---------------------------|:--------:|:-------:|:--------:|:-----:|
+| Browse & purchase         |    ✅    |    ✅   |    ✅    |  ✅   |
+| Deferred payments         |    —     |    ✅   |    —     |  —    |
+| Write reviews             |    ✅    |    ✅   |    ✅    |  ✅   |
+| Moderate reviews          |    —     |    —     |    ✅    |  ✅   |
+| Request returns           |    ✅    |    ✅   |    —     |  —    |
+| Manage products           |    —     |    —     |    ✅    |  ✅   |
+| Manage orders & shipments |    —     |    —     |    ✅    |  ✅   |
+| Process returns & refunds |    —     |    —     |    ✅    |  ✅   |
+| Manage promotions         |    —     |    —     |    ✅    |  ✅   |
+| View users (read-only)    |    —     |    —     |    ✅    |  ✅   |
+| Manage users & roles      |    —     |    —     |    —     |  ✅   |
+| Manage companies          |    —     |    —     | Limited  |  ✅   |
 ---
 
 ## 🛠️ Tech Stack
 
 | Technology | Usage |
 |---|---|
-| **.NET 10** | Runtime & SDK |
-| **ASP.NET Core** | Web framework |
-| **Razor Pages** | Server-side UI rendering |
-| **Entity Framework Core** | ORM & migrations |
-| **SQL Server** | Database |
-| **ASP.NET Identity** | Authentication & authorization |
-| **Stripe** | Payment processing & refunds |
+| **.NET 10** | Runtime and SDK |
+| **ASP.NET Core** | Web application framework |
+| **Razor Pages** | Server-side UI rendering engine |
+| **Entity Framework Core** | ORM, database access, and migrations |
+| **SQL Server** | Relational database system |
+| **ASP.NET Identity** | Authentication and authorization system |
+| **Stripe** | Payment processing, subscriptions, and refunds |
+| **HTML5 / CSS3 / JavaScript (ES6+)** | Frontend structure, styling, and client-side interactivity |
 | **Bootstrap 5** | Responsive UI framework |
-| **Bootstrap Icons** | Icon library |
-| **SweetAlert2** | Confirmation dialogs & toasts |
-| **DataTables** | Sortable, searchable admin tables |
-| **Mermaid.js** | ER diagram rendering |
+| **Bootstrap Icons** | Icon library for UI components |
+| **SweetAlert2** | Modern alerts, confirmations, and toast notifications |
+| **DataTables** | Advanced tables (sorting, filtering, pagination) |
+| **Mermaid.js** | Diagram and ER model visualization |
+| **Kartverket API** | Norwegian address lookup and autocomplete |
 | **QRCoder** | QR code generation for order tracking |
-| **Bring API** | Shipping rate calculation |
+| **Bring API** | Shipping rates, labels, and delivery integration |
 
 ---
 
@@ -203,13 +215,15 @@ Cartiva.sln
 
 | File | Purpose |
 |---|---|
-| `CartivaWeb/Program.cs` | App configuration, middleware, DI |
-| `DataAccess/ApplicationDbContext.cs` | EF Core DbContext with all DbSets |
-| `DataAccess/DbInitializer.cs` | Database seeder (roles, admin, products) |
-| `MyUtility/SDcs.cs` | All constants (roles, statuses, carriers) |
-| `Models/OrderHeader.cs` | Order model with status helpers |
-| `Models/ReturnRequest.cs` | Return & refund tracking |
-
+| `CartivaWeb/Program.cs` | Application startup, middleware pipeline, dependency injection |
+| `CartivaWeb/Areas/*/Controllers` | UI controllers for Admin, Customer, and Identity areas |
+| `Cartiva.Application/` | Application services, use cases, and interfaces |
+| `Cartiva.Domain/Entities` | Core domain entities (Product, Order, User, etc.) |
+| `Cartiva.Persistence/ApplicationDbContext.cs` | EF Core DbContext with all DbSets |
+| `Cartiva.Persistence/Migrations` | Database schema migrations |
+| `Cartiva.Persistence/DbInitializer.cs` | Database seeding (roles, admin user, sample data) |
+| `Cartiva.Infrastructure/` | External integrations (Stripe, Kartverket, Email, Shipping APIs) |
+| `Cartiva.Shared/SD.cs` | Shared constants (roles, statuses, carriers) |
 ---
 
 ## 📊 Documentation

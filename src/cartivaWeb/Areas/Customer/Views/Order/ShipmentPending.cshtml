@@ -1,0 +1,144 @@
+﻿@model OrderHeader
+@using System.Globalization
+@using Cartiva.Shared
+@using Cartiva.Infrastructure.QrCodeServices
+@inject IQrCodeService QrCodeService
+
+@{
+    ViewData["Title"] = "Order Confirmed";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
+}
+
+<div class="container mt-5 mb-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-action="History">My Orders</a></li>
+            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">Order #@Model.Id</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Confirmation</li>
+        </ol>
+    </nav>
+
+    <!-- Success Message -->
+    <div class="alert alert-success text-center py-4 mb-4 shadow-sm">
+        <i class="bi bi-check-circle-fill display-4 d-block mb-3 text-success"></i>
+        <h2 class="fw-bold">Thank you for your order!</h2>
+        <p class="lead">Your payment has been received.</p>
+        <p>Order #@Model.Id has been placed successfully.</p>
+    </div>
+
+    <!-- Order Summary Card (success color) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-success text-white py-3">
+            <h5 class="mb-0">
+                <i class="bi bi-receipt me-2"></i> Order Summary
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Order Information</h6>
+                    <p class="mb-1"><strong>Order Date:</strong> @Model.OrderDate.ToString("dd MMM yyyy HH:mm")</p>
+                    <p class="mb-1">
+                        <strong>Order Status:</strong>
+                        <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus)">
+                            <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus)"></i> @Model.OrderStatus
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Payment Information</h6>
+                    <p class="mb-1">
+                        <strong>Payment Status:</strong>
+                        <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">
+                            @Model.PaymentStatus
+                        </span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Total Amount:</strong>
+                        <span class="fw-bold text-success">@Model.OrderTotal.ToString("C", culture)</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shipping Address Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white py-3">
+            <h5 class="mb-0"><i class="bi bi-truck"></i> Shipping Information</h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-1 fw-bold">@Model.Name</p>
+            <p class="mb-1">@Model.StreetAddress</p>
+            <p class="mb-1">@Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "") @Model.PostalCode</p>
+            <p class="mb-1">@Model.Country</p>
+            <p class="mb-0"><i class="bi bi-telephone"></i> @Model.PhoneNumber</p>
+        </div>
+    </div>
+
+    <!-- QR Code Card -->
+    @if (!string.IsNullOrEmpty(qrCodeBase64))
+    {
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-qr-code"></i> Track Your Order</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="data:image/png;base64,@qrCodeBase64"
+                     alt="Order Tracking QR Code"
+                     style="width: 150px; height: 150px; cursor: pointer;"
+                     onclick="window.open('@trackingUrl', '_blank')"
+                     class="img-thumbnail mb-3" />
+                <p class="text-muted small">
+                    <a href="@trackingUrl" target="_blank" class="text-decoration-none">
+                        <i class="bi bi-phone"></i> Scan with your phone
+                    </a>
+                </p>
+                <a href="@trackingUrl" class="btn btn-outline-primary btn-sm" target="_blank">
+                    <i class="bi bi-link-45deg"></i> Open Tracking Link
+                </a>
+                @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                {
+                    <div class="alert alert-light small mt-3 mb-0">
+                        <i class="bi bi-clock-history"></i>
+                        Tracking details will be available after shipment approval.
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- What Happens Next Card -->
+    <div class="card shadow-sm border-0 bg-info bg-opacity-10 mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-2">
+                <i class="bi bi-envelope-paper text-info"></i> What Happens Next?
+            </h6>
+            <p class="small mb-2">
+                Your order is now being processed. An administrator will review and approve the shipment shortly.
+                You will receive an email with the tracking number and QR code once the shipment is approved.
+                This typically takes 1 business day.
+            </p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex flex-wrap gap-3 justify-content-between">
+        <a asp-action="History" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history"></i> View Order History
+        </a>
+        <a asp-action="Index" asp-controller="Home" class="btn btn-outline-primary">
+            <i class="bi bi-shop"></i> Continue Shopping
+        </a>
+        @if (Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+        {
+            <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                <i class="bi bi-x-circle"></i> Cancel Order
+            </a>
+        }
+    </div>
+</div>

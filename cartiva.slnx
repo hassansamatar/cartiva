@@ -1,6 +1,8 @@
 <Solution>
-  <Project Path="CartivaWeb/CartivaWeb.csproj" />
-  <Project Path="DataAccess/DataAccess.csproj" Id="1df124f7-d1d5-499c-858e-844138b151ce" />
-  <Project Path="Models/Models.csproj" Id="e7aaa9e8-9871-4e16-814e-5497175244fe" />
-  <Project Path="MyUtility/ApplicationUtility.csproj" Id="2db1561b-bd4f-4305-965c-b0ce12984d65" />
+  <Project Path="src/Cartiva.Application/Cartiva.Application.csproj" Id="1ea15119-33b6-4f41-af6a-3ed2e7aec2ee" />
+  <Project Path="src/Cartiva.Domain/Cartiva.Domain.csproj" />
+  <Project Path="src/Cartiva.Infrastructure/Cartiva.Infrastructure.csproj" />
+  <Project Path="src/Cartiva.Persistence/Cartiva.Persistence.csproj" />
+  <Project Path="src/Cartiva.Shared/Cartiva.Shared.csproj" />
+  <Project Path="src/cartivaWeb/cartivaWeb.csproj" />
 </Solution>

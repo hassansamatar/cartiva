@@ -1,0 +1,42 @@
+﻿@model Shipment
+@using Cartiva.Shared
+
+@{
+    ViewData["Title"] = "Edit Shipment";
+}
+
+<div class="container mt-4">
+    <h2>Edit Shipment #@Model.Id</h2>
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="Id" />
+        <div class="mb-3">
+            <label class="form-label">Tracking Number</label>
+            <input type="text" name="trackingNumber" value="@Model.TrackingNumber" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Carrier</label>
+            <select name="carrier" class="form-select">
+                <option value="">-- Select --</option>
+                <option value="@SD.CarrierPosten" selected="@(Model.Carrier == SD.CarrierPosten)">Posten Norge</option>
+                <option value="@SD.CarrierBring" selected="@(Model.Carrier == SD.CarrierBring)">Bring</option>
+                <option value="@SD.CarrierHelthjem" selected="@(Model.Carrier == SD.CarrierHelthjem)">Helthjem</option>
+                <option value="@SD.CarrierDHL" selected="@(Model.Carrier == SD.CarrierDHL)">DHL Express</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Service</label>
+            <input type="text" name="service" value="@Model.Service" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select name="shipmentStatus" class="form-select">
+                <option value="@SD.ShipmentStatusPendingApproval" selected="@(Model.ShipmentStatus == SD.ShipmentStatusPendingApproval)">Pending Approval</option>
+                <option value="@SD.ShipmentStatusShipped" selected="@(Model.ShipmentStatus == SD.ShipmentStatusShipped)">Shipped</option>
+                <option value="@SD.ShipmentStatusDelivered" selected="@(Model.ShipmentStatus == SD.ShipmentStatusDelivered)">Delivered</option>
+                <option value="@SD.ShipmentStatusCancelled" selected="@(Model.ShipmentStatus == SD.ShipmentStatusCancelled)">Cancelled</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-secondary">Back</a>
+    </form>
+</div>

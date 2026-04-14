@@ -1,0 +1,31 @@
+﻿@model Shipment
+@using Cartiva.Shared
+
+@{
+    ViewData["Title"] = "Cancel Shipment";
+}
+
+<div class="container mt-4">
+    <h2>Cancel Shipment #@Model.Id</h2>
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> Are you sure you want to cancel this shipment?
+    </div>
+    <div class="card mb-3">
+        <div class="card-header">Shipment Details</div>
+        <div class="card-body">
+            <p><strong>Order ID:</strong> @Model.OrderHeader.Id</p>
+            <p><strong>Customer:</strong> @Model.OrderHeader.Name</p>
+            <p><strong>Order Total:</strong> @Model.OrderHeader.OrderTotal.ToString("C")</p>
+            <p><strong>Current Status:</strong> <span class="badge @SD.GetShipmentStatusBadgeClass(Model.ShipmentStatus)">@Model.ShipmentStatus</span></p>
+        </div>
+    </div>
+    <form asp-action="Cancel" method="post">
+        <input type="hidden" asp-for="Id" />
+        <div class="mb-3">
+            <label class="form-label">Reason (optional)</label>
+            <textarea name="reason" class="form-control" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-danger">Confirm Cancel</button>
+        <a asp-action="Index" class="btn btn-secondary">Go Back</a>
+    </form>
+</div>

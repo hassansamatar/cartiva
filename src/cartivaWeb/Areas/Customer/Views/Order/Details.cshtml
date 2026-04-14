@@ -1,0 +1,681 @@
+﻿@model OrderHeader
+@using System.Globalization
+@using Cartiva.Shared
+
+@using Cartiva.Persistence
+@using Cartiva.Infrastructure.QrCodeServices
+@inject IQrCodeService QrCodeService
+@inject ApplicationDbContext _reviewDb
+@inject ApplicationDbContext _returnDb
+
+@{
+    ViewData["Title"] = $"Order Details #{Model.Id}";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var canCancel = Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusApproved;
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+    // Load existing return requests for this order's items
+    var orderDetailIds = Model.OrderDetails.Select(od => od.Id).ToList();
+    var existingReturns = _returnDb.ReturnRequests
+        .Where(r => orderDetailIds.Contains(r.OrderDetailId))
+        .ToDictionary(r => r.OrderDetailId, r => r);
+
+    // Generate QR Code and Tracking URL
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
+    var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
+    var progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
+    var trackingMessage = SD.GetOrderTrackingMessage(Model.OrderStatus);
+    var progressBarColor = SD.GetStatusProgressBarColor(Model.OrderStatus);
+
+    // Get the first shipment (if any)
+    var shipment = Model.Shipments?.OrderBy(s => s.Id).FirstOrDefault();
+    var shippedDate = shipment?.ShippedDate;
+    var deliveredDate = shipment?.DeliveredDate;
+
+    // Determine shipped/delivered status from either shipment dates or order status
+    var isShipped = shippedDate.HasValue
+        || Model.OrderStatus == SD.StatusShipped
+        || Model.OrderStatus == SD.StatusDelivered;
+    var isDelivered = deliveredDate.HasValue
+        || Model.OrderStatus == SD.StatusDelivered;
+}
+
+<div class="container mt-4 mb-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-action="History">My Orders</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Order #@Model.Id</li>
+        </ol>
+    </nav>
+
+    @{
+        var isColleagueOrder = ViewBag.IsColleagueOrder as bool? ?? false;
+        var orderOwnerName = ViewBag.OrderOwnerName as string;
+    }
+    @if (isColleagueOrder)
+    {
+        <div class="alert alert-info d-flex align-items-center mb-3">
+            <i class="bi bi-building me-2 fs-5"></i>
+            <div>
+                <strong>Company Order</strong> — This order was placed by <strong>@orderOwnerName</strong>.
+                You can view details and pay outstanding invoices for your company.
+            </div>
+        </div>
+    }
+
+    <!-- Header with Status and QR Code -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div>
+            <h2 class="text-primary">
+                <i class="bi bi-receipt"></i> Order #@Model.Id
+            </h2>
+            <p class="text-muted">
+                <i class="bi bi-calendar"></i> Placed on @Model.OrderDate.ToString("dd MMMM yyyy 'at' HH:mm")
+            </p>
+        </div>
+        <div class="mt-3 mt-md-0 d-flex align-items-center gap-3">
+            <!-- QR Code -->
+            @if (!string.IsNullOrEmpty(qrCodeBase64))
+            {
+                <div class="text-center">
+                    <img src="data:image/png;base64,@qrCodeBase64"
+                         alt="Order Tracking QR Code"
+                         style="width: 70px; height: 70px; cursor: pointer;"
+                         onclick="window.open('@trackingUrl', '_blank')"
+                         class="img-thumbnail"
+                         title="Scan to track order" />
+                    <small class="text-muted d-block">Track via QR</small>
+                </div>
+            }
+            <div>
+                <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus) px-4 py-3 fs-6">
+                    <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus) me-2"></i>
+                    @Model.OrderStatus
+                </span>
+                <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus) px-4 py-3 fs-6 ms-2">
+                    <i class="bi bi-credit-card me-2"></i>
+                    @Model.PaymentStatus
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Status Card with Progress -->
+    <div class="card shadow-sm mb-4 bg-primary bg-opacity-10">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6 class="fw-bold text-primary mb-2">
+                        <i class="bi bi-info-circle"></i> Order Status
+                    </h6>
+                    <p class="mb-2">@trackingMessage</p>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar @progressBarColor progress-bar-striped"
+                             style="width: @progressPercentage%"></div>
+                    </div>
+                    <small class="text-muted">@progressPercentage% complete</small>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="@trackingUrl" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-geo-alt"></i> Track Order
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Progress Tracker (Updated to use shipment dates) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-2">
+                    <div class="position-relative">
+                        <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                        </div>
+                        <h6 class="fw-bold">Order Placed</h6>
+                        <small class="text-muted">@Model.OrderDate.ToString("dd MMM")</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="position-relative">
+                        <div class="rounded-circle @(Model.PaymentDate.HasValue ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.PaymentDate.HasValue ? "bi-check-circle-fill text-success" : "bi-credit-card text-secondary") fs-2"></i>
+                        </div>
+                        <h6 class="fw-bold">Payment</h6>
+                        <small class="text-muted">
+                            @(Model.PaymentDate?.ToString("dd MMM") ?? "Pending")
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="position-relative">
+                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusProcessing || Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.OrderStatus == SD.StatusProcessing || Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bi-check-circle-fill text-success" : "bi-gear text-secondary") fs-2"></i>
+                        </div>
+                        <h6 class="fw-bold">Processing</h6>
+                        <small class="text-muted">
+                            @(Model.OrderStatus == SD.StatusProcessing ? "In Progress" :
+                              Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "Completed" : "Pending")
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="position-relative">
+                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bi-check-circle-fill text-success" : "bi-truck text-secondary") fs-2"></i>
+                        </div>
+                        <h6 class="fw-bold">Shipped</h6>
+                        <small class="text-muted">
+                            @(shippedDate?.ToString("dd MMM") ?? (isShipped ? "Shipped" : "Pending"))
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="position-relative">
+                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusDelivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(Model.OrderStatus == SD.StatusDelivered ? "bi-check-circle-fill text-success" : "bi-house-check text-primary") fs-2"></i>
+                        </div>
+                        <h6 class="fw-bold">Delivered</h6>
+                        <small class="text-muted">
+                            @(deliveredDate?.ToString("dd MMM") ??
+                              (isDelivered ? "Delivered" :
+                               isShipped ? "Est. " + DateTime.Now.AddDays(3).ToString("dd MMM") : "Pending"))
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- SHIPPING INFORMATION (uses shipment tracking, includes country) -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-truck"></i> Shipping Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Delivery Address</h6>
+                        <p class="mb-1">@Model.Name</p>
+                        <p class="mb-1">@Model.StreetAddress</p>
+                        <p class="mb-1">@Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "") @Model.PostalCode</p>
+                        <p class="mb-1">@Model.Country</p>
+                        <p class="mb-0"><i class="bi bi-telephone"></i> @Model.PhoneNumber</p>
+                    </div>
+
+                    @if (shipment != null && !string.IsNullOrEmpty(shipment.TrackingNumber))
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-box-seam fs-5 me-2"></i>
+                            <div>
+                                <strong>Tracking Number:</strong> @shipment.TrackingNumber
+                                @if (!string.IsNullOrEmpty(shipment.Carrier))
+                                {
+                                    <br /><small>Carrier: @shipment.Carrier</small>
+                                }
+                                <div class="mt-2">
+                                    <a href="@SD.GetTrackingUrl(shipment.Carrier, shipment.TrackingNumber)" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-truck"></i> Track with Carrier
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (shipment != null && shipment.ShipmentStatus == SD.ShipmentStatusPendingApproval)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-clock-history"></i>
+                            Shipment is pending approval. Tracking information will be available soon.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-light">
+                            <i class="bi bi-info-circle"></i>
+                            Tracking information will be available once your order ships.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- PAYMENT INFORMATION (unchanged) -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-credit-card"></i> Payment Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td width="40%"><strong>Payment Method:</strong></td>
+                            <td>
+                                @if (User.IsInRole(SD.Role_Company))
+                                {
+                                    <span><i class="bi bi-building"></i> Company Account</span>
+                                }
+                                else
+                                {
+                                    <span><i class="bi bi-credit-card"></i> Credit Card</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Payment Status:</strong></td>
+                            <td>
+                                <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">
+                                    <i class="bi @SD.GetPaymentStatusIcon(Model.PaymentStatus) me-1"></i>
+                                    @Model.PaymentStatus
+                                </span>
+                            </td>
+                        </tr>
+                        @if (Model.PaymentDate.HasValue)
+                        {
+                            <tr>
+                                <td><strong>Payment Date:</strong></td>
+                                <td>@Model.PaymentDate.Value.ToString("dd MMM yyyy HH:mm")</td>
+                            </tr>
+                        }
+                        @if (Model.PaymentDueDate.HasValue)
+                        {
+                            <tr>
+                                <td><strong>Payment Due:</strong></td>
+                                <td>@Model.PaymentDueDate.Value.ToString("dd MMM yyyy")</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.PaymentIntentId))
+                        {
+                            <tr>
+                                <td><strong>Transaction ID:</strong></td>
+                                <td><small>@Model.PaymentIntentId.Substring(0, 20)...</small></td>
+                            </tr>
+                        }
+                    </table>
+
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-bold">Order Total:</span>
+                            <span class="h4 text-primary mb-0">@Model.OrderTotal.ToString("C", culture)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ORDER ITEMS (unchanged) -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-info text-white py-3">
+            <h5 class="mb-0">
+                <i class="bi bi-boxes"></i> Order Items (@Model.OrderDetails?.Count() ?? 0)
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-light">
+                        32
+                        <th class="py-3" style="width: 40%">Product</th>
+                        <th class="py-3 text-center" style="width: 12%">Price</th>
+                        <th class="py-3 text-center" style="width: 8%">Quantity</th>
+                        <th class="py-3 text-end" style="width: 12%">Total</th>
+                        @if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+                        {
+                            <th class="py-3 text-center" style="width: 13%">Return</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.OrderDetails)
+                    {
+                        var subtotal = item.Price * item.Count;
+                        <tr>
+                            <td class="py-3">
+                                <div class="d-flex">
+                                    @if (!string.IsNullOrEmpty(item.ProductVariant?.Product?.ImageUrl))
+                                    {
+                                        <img src="@item.ProductVariant.Product.ImageUrl"
+                                             alt="@item.ProductVariant.Product.Name"
+                                             class="rounded me-3"
+                                             style="width: 60px; height: 60px; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center"
+                                             style="width: 60px; height: 60px;">
+                                            <i class="bi bi-image text-muted fs-2"></i>
+                                        </div>
+                                    }
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">@item.ProductVariant?.Product?.Name</h6>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <!-- Color Badge -->
+                                            <span class="badge"
+                                                  style="background-color: @GetColorCode(item.ProductVariant?.Color);
+                                                color: @GetTextColor(item.ProductVariant?.Color);">
+                                                <i class="bi bi-droplet me-1"></i> @item.ProductVariant?.Color
+                                            </span>
+
+                                            <!-- Size Badge -->
+                                            @if (item.ProductVariant?.SizeValue != null)
+                                            {
+                                                <span class="badge bg-secondary">
+                                                    <i class="bi bi-rulers me-1"></i> @item.ProductVariant.SizeValue.DisplayText
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">
+                                                    <i class="bi bi-dash me-1"></i> No Size
+                                                </span>
+                                            }
+                                        </div>
+                                        @if (item.ProductVariant?.SizeValue?.Description != null)
+                                        {
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-info-circle"></i> @item.ProductVariant.SizeValue.Description
+                                            </small>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center align-middle py-3">
+                                @item.Price.ToString("C", culture)
+                            </td>
+                            <td class="text-center align-middle py-3">
+                                <span class="badge bg-secondary rounded-pill px-3 py-2">@item.Count</span>
+                            </td>
+                            <td class="text-end align-middle py-3">
+                                <span class="fw-bold text-primary">@subtotal.ToString("C", culture)</span>
+                            </td>
+                            @if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+                            {
+                                <td class="text-center align-middle py-3">
+                                    @if (existingReturns.ContainsKey(item.Id))
+                                    {
+                                        var ret = existingReturns[item.Id];
+                                        <span class="badge @SD.GetReturnStatusBadgeClass(ret.Status)">
+                                            @ret.Status
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <a asp-area="Customer" asp-controller="Return" asp-action="Create"
+                                           asp-route-orderDetailId="@item.Id"
+                                           class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-arrow-return-left"></i> Return
+                                        </a>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-light">
+                    @{
+                        var colSpan = (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder) ? 4 : 3;
+                    }
+                    <tr>
+                        <td colspan="@colSpan" class="text-end py-3"><strong class="fs-5">Subtotal:</strong></td>
+                        <td class="text-end py-3"><strong class="fs-5">@Model.OrderDetails.Sum(d => d.Price * d.Count).ToString("C", culture)</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="@colSpan" class="text-end py-2"><strong>Shipping:</strong></td>
+                        <td class="text-end py-2"><span class="text-success">Free</span></td>
+                    </tr>
+                    <tr>
+                        <td colspan="@colSpan" class="text-end py-3"><strong class="fs-4">Total:</strong></td>
+                        <td class="text-end py-3">
+                            <h4 class="text-primary mb-0 fw-bold">@Model.OrderTotal.ToString("C", culture)</h4>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- ACTION BUTTONS (Updated with Pay Now for Company users) -->
+    <div class="d-flex flex-wrap gap-3 justify-content-between mt-4">
+        <div>
+            <a asp-action="History" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Orders
+            </a>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@trackingUrl" target="_blank" class="btn btn-info text-white">
+                <i class="bi bi-geo-alt"></i> Track Order
+            </a>
+            @if (canCancel)
+            {
+                <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle"></i> Cancel Order
+                </a>
+            }
+            @if (Model.OrderStatus == SD.StatusDelivered)
+            {
+                <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                    <i class="bi bi-star"></i> Leave Review
+                </button>
+            }
+            @if (User.IsInRole(SD.Role_Company) && Model.PaymentStatus == SD.PaymentStatusDeferred)
+            {
+                <a asp-action="Payment" asp-route-orderId="@Model.Id" class="btn btn-success">
+                    <i class="bi bi-credit-card"></i> Pay Now
+                </a>
+            }
+            <button class="btn btn-outline-primary" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <!-- SHARE TRACKING SECTION -->
+    <div class="card border-0 bg-light mt-4">
+        <div class="card-body text-center">
+            <h6 class="fw-bold mb-3">
+                <i class="bi bi-share"></i> Share Order Tracking
+            </h6>
+            <div class="d-flex justify-content-center gap-3">
+                <button class="btn btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')">
+                    <i class="bi bi-link"></i> Copy Tracking Link
+                </button>
+                <a href="mailto:?subject=Track my order #@Model.Id&body=Track your order here: @trackingUrl"
+                       class="btn btn-outline-secondary">
+                    <i class="bi bi-envelope"></i> Email
+                </a>
+                <button class="btn btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(qrCodeBase64))
+            {
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-qr-code"></i> Scan QR code with your phone for quick tracking
+                    </small>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+{
+    var reviewedVariantIds = _reviewDb.Reviews
+        .Where(r => r.ApplicationUserId == currentUserId)
+        .Select(r => r.ProductVariantId)
+        .ToHashSet();
+
+    var reviewableItems = Model.OrderDetails
+        .Where(od => !reviewedVariantIds.Contains(od.ProductVariantId))
+        .ToList();
+
+    if (reviewableItems.Any())
+    {
+        <!-- Review Modal -->
+        <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning bg-opacity-10">
+                        <h5 class="modal-title" id="reviewModalLabel">
+                            <i class="bi bi-star-fill text-warning"></i> Leave a Review
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form asp-area="Customer" asp-controller="Review" asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="orderId" value="@Model.Id" />
+                        <div class="modal-body">
+                            <!-- Select Product -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Which product would you like to review?</label>
+                                <select name="productVariantId" class="form-select" required>
+                                    @foreach (var item in reviewableItems)
+                                    {
+                                        var name = item.ProductVariant?.Product?.Name ?? "Product";
+                                        var color = item.ProductVariant?.Color;
+                                        var size = item.ProductVariant?.SizeValue?.DisplayText;
+                                        var label = $"{name} — {color}";
+                                        if (!string.IsNullOrEmpty(size))
+                                        {
+                                            label += $" / {size}";
+                                        }
+                                        <option value="@item.ProductVariantId">@label</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Star Rating -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Rating</label>
+                                <div class="d-flex gap-1" id="starRating">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi bi-star fs-3 text-muted" data-value="@i"
+                                           style="cursor:pointer;" role="button"></i>
+                                    }
+                                </div>
+                                <input type="hidden" name="rating" id="ratingInput" value="0" required />
+                                <div class="invalid-feedback" id="ratingError" style="display:none;">
+                                    Please select a rating.
+                                </div>
+                            </div>
+
+                            <!-- Comment -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Comment <small class="text-muted">(optional)</small></label>
+                                <textarea name="comment" class="form-control" rows="3" maxlength="500"
+                                          placeholder="Share your experience with this product..."></textarea>
+                                <small class="text-muted"><span id="charCount">0</span>/500</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning" id="submitReviewBtn">
+                                <i class="bi bi-star-fill"></i> Submit Review
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+    <script src="~/js/order-details.js" asp-append-version="true"></script>
+    <script>
+        // Star rating interaction
+        document.querySelectorAll('#starRating i').forEach(star => {
+            star.addEventListener('click', function () {
+                var value = parseInt(this.dataset.value);
+                document.getElementById('ratingInput').value = value;
+                document.getElementById('ratingError').style.display = 'none';
+                document.querySelectorAll('#starRating i').forEach((s, idx) => {
+                    if (idx < value) {
+                        s.classList.remove('bi-star', 'text-muted');
+                        s.classList.add('bi-star-fill', 'text-warning');
+                    } else {
+                        s.classList.remove('bi-star-fill', 'text-warning');
+                        s.classList.add('bi-star', 'text-muted');
+                    }
+                });
+            });
+            star.addEventListener('mouseenter', function () {
+                var value = parseInt(this.dataset.value);
+                document.querySelectorAll('#starRating i').forEach((s, idx) => {
+                    if (idx < value) {
+                        s.classList.add('text-warning');
+                    }
+                });
+            });
+            star.addEventListener('mouseleave', function () {
+                var current = parseInt(document.getElementById('ratingInput').value);
+                document.querySelectorAll('#starRating i').forEach((s, idx) => {
+                    if (idx >= current) {
+                        s.classList.remove('text-warning');
+                    }
+                });
+            });
+        });
+
+        // Character count
+        var textarea = document.querySelector('#reviewModal textarea[name="comment"]');
+        if (textarea) {
+            textarea.addEventListener('input', function () {
+                document.getElementById('charCount').textContent = this.value.length;
+            });
+        }
+
+        // Validate rating before submit
+        var form = document.querySelector('#reviewModal form');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (document.getElementById('ratingInput').value === '0') {
+                    e.preventDefault();
+                    document.getElementById('ratingError').style.display = 'block';
+                }
+            });
+        }
+    </script>
+}
+
+@functions {
+    public string GetColorCode(string? color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+
+    public string GetTextColor(string? color)
+    {
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
+}

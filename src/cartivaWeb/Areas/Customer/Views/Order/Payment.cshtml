@@ -1,0 +1,309 @@
+﻿@model PaymentVM
+@using System.Globalization
+@using Cartiva.Shared
+@using Cartiva.Infrastructure.QrCodeServices
+@inject IQrCodeService QrCodeService
+
+@{
+    ViewData["Title"] = "Payment";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var returnUrl = Url.Action("ConfirmPayment", "Order", new { orderId = Model.Order.Id }, Context.Request.Scheme);
+    var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Order.Id);
+    var trackingUrl = QrCodeService.GetOrderTrackingUrl(Model.Order.Id);
+}
+
+<!-- Add Stripe.js -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<div class="container mt-4 mb-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a asp-action="History">My Orders</a></li>
+            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Order.Id">Order #@Model.Order.Id</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Payment</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Order Summary -->
+        <div class="col-md-5 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i>Order Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold">Order #@Model.Order.Id</h6>
+                        <span class="badge @SD.GetOrderStatusBadgeClass(Model.Order.OrderStatus)">
+                            <i class="bi @SD.GetOrderStatusIcon(Model.Order.OrderStatus) me-1"></i>
+                            @Model.Order.OrderStatus
+                        </span>
+                    </div>
+                    <p class="text-muted small">
+                        <i class="bi bi-calendar"></i> @Model.Order.OrderDate.ToString("dd MMM yyyy HH:mm")
+                    </p>
+
+                    <!-- QR Code Section with note about shipment approval -->
+                    <div class="text-center bg-light p-3 rounded mb-3">
+                        <h6 class="fw-bold mb-2">
+                            <i class="bi bi-qr-code me-2"></i>Track Your Order
+                        </h6>
+                        @if (!string.IsNullOrEmpty(qrCodeBase64))
+                        {
+                            <div class="d-flex justify-content-center gap-3 align-items-center">
+                                <img src="data:image/png;base64,@qrCodeBase64"
+                                     alt="Order Tracking QR Code"
+                                     style="width: 100px; height: 100px; cursor: pointer;"
+                                     onclick="window.open('@trackingUrl', '_blank')"
+                                     class="img-thumbnail"
+                                     title="Click to track order" />
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('@trackingUrl')" title="Copy tracking link">
+                                    <i class="bi bi-link"></i> Copy Link
+                                </button>
+                            </div>
+                            <p class="text-muted small mt-2 mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                Scan with phone or <a href="@trackingUrl" target="_blank">click here</a> to track order
+                            </p>
+                            <!-- Added note: tracking details will appear after shipment approval -->
+                            <div class="alert alert-light small mt-2 mb-0">
+                                <i class="bi bi-clock-history"></i>
+                                Tracking details will be available once your order is approved for shipment.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted small">
+                                <i class="bi bi-qr-code"></i> QR code will be available after payment
+                            </div>
+                        }
+                    </div>
+
+                    <hr />
+
+                    @foreach (var item in Model.Order.OrderDetails)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="fw-bold">@item.ProductVariant?.Product?.Name</span>
+                                <br />
+                                <small class="text-muted">
+                                    <span class="badge" style="background-color: @GetColorCode(item.ProductVariant?.Color); color: @GetTextColor(item.ProductVariant?.Color);">
+                                        @item.ProductVariant?.Color
+                                    </span>
+                                    @if (item.ProductVariant?.SizeValue != null)
+                                    {
+                                        <span class="badge bg-secondary">@item.ProductVariant.SizeValue.DisplayText</span>
+                                    }
+                                    <span> x @item.Count</span>
+                                </small>
+                            </div>
+                            <span class="fw-bold">@((item.Price * item.Count).ToString("C", culture))</span>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold">Subtotal:</span>
+                        <span>@Model.Order.OrderTotal.ToString("C", culture)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold">Shipping:</span>
+                        <span class="text-success">Free</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between">
+                        <span class="h5 fw-bold">Total:</span>
+                        <span class="h4 text-primary fw-bold">@Model.Order.OrderTotal.ToString("C", culture)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipping Address Card (NEW) -->
+            <div class="card mt-3 border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-2">
+                        <i class="bi bi-geo-alt"></i> Shipping Address
+                    </h6>
+                    <p class="mb-0">@Model.Order.Name</p>
+                    <p class="mb-0">@Model.Order.StreetAddress</p>
+                    <p class="mb-0">@Model.Order.City@(!string.IsNullOrEmpty(Model.Order.State) ? $", {Model.Order.State}" : "") @Model.Order.PostalCode</p>
+                    <p class="mb-0">@Model.Order.Country</p>
+                    <p class="mb-0"><i class="bi bi-telephone"></i> @Model.Order.PhoneNumber</p>
+                </div>
+            </div>
+
+            <!-- Payment Security Info -->
+            <div class="card mt-3 border-0 bg-light">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-shield-lock-fill fs-1 text-success me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Secure Payment</h6>
+                            <small class="text-muted">Your payment information is encrypted and secure</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Tracking Info (updated note) -->
+            <div class="card mt-3 border-0 bg-info bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-truck fs-1 text-info me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Track Your Order</h6>
+                            <small class="text-muted">
+                                After payment, your order will be reviewed. You will receive an email with tracking details once shipment is approved.
+                            </small>
+                            <div class="mt-2">
+                                <a href="@trackingUrl" class="btn btn-sm btn-outline-info" target="_blank">
+                                    <i class="bi bi-geo-alt"></i> Track Order
+                                </a>
+                                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('@trackingUrl')">
+                                    <i class="bi bi-link"></i> Copy Link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div class="col-md-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-credit-card me-2"></i>Payment Details
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Payment Method Selection -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Select Payment Method</h6>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="cardPayment" value="card" checked>
+                                <label class="form-check-label" for="cardPayment">
+                                    <i class="bi bi-credit-card me-1"></i> Credit/Debit Card
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="vippsPayment" value="vipps">
+                                <label class="form-check-label" for="vippsPayment">
+                                    <i class="bi bi-phone me-1"></i> Vipps
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stripe Payment Form -->
+                    <div id="payment-form-container">
+                        <form id="payment-form">
+                            <div id="payment-element" class="mb-4">
+                                <!-- Stripe Elements will be inserted here -->
+                            </div>
+
+                            <div id="payment-message" class="alert alert-danger" style="display: none;"></div>
+
+                            <button type="submit" id="submit-button" class="btn btn-success btn-lg w-100 py-3">
+                                <span id="button-text">
+                                    <i class="bi bi-lock-fill me-2"></i>Pay @Model.Order.OrderTotal.ToString("C", culture)
+                                </span>
+                                <span id="spinner" class="spinner-border spinner-border-sm" style="display: none;"></span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Vipps Message (hidden by default) -->
+                    <div id="vipps-message" class="text-center p-4" style="display: none;">
+                        <i class="bi bi-phone fs-1 text-primary mb-3 d-block"></i>
+                        <h5>Pay with Vipps</h5>
+                        <p class="text-muted">You will be redirected to the Vipps app to complete your payment.</p>
+                        <button class="btn btn-primary btn-lg w-100 py-3">
+                            <i class="bi bi-phone me-2"></i>Continue with Vipps
+                        </button>
+                    </div>
+
+                    <!-- Accepted Cards -->
+                    <div class="text-center mt-4">
+                        <small class="text-muted d-block mb-2">We accept:</small>
+                        <div class="d-flex justify-content-center gap-3">
+                            <i class="bi bi-credit-card-2-front fs-2 text-secondary"></i>
+                            <i class="bi bi-credit-card fs-2 text-secondary"></i>
+                            <i class="bi bi-paypal fs-2 text-secondary"></i>
+                            <i class="bi bi-google fs-2 text-secondary"></i>
+                            <i class="bi bi-apple fs-2 text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- After Payment Info (updated) -->
+            <div class="card mt-3 border-0 bg-success bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-envelope-paper fs-1 text-success me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">What Happens Next?</h6>
+                            <small class="text-muted">
+                                After payment, you'll receive:
+                                <ul class="mb-0 mt-1 small">
+                                    <li>Order confirmation email</li>
+                                    <li>QR code and tracking link (once shipment is approved)</li>
+                                    <li>Email notification when your order ships</li>
+                                </ul>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <div id="payment-config"
+         data-publishable-key="@Model.PublishableKey"
+         data-client-secret="@Model.ClientSecret"
+         data-return-url="@returnUrl"></div>
+    <script src="~/js/order-payment.js" asp-append-version="true"></script>
+}
+
+@functions {
+    public string GetColorCode(string? color)
+    {
+        return color?.ToLower() switch
+        {
+            "red" => "#dc3545",
+            "blue" => "#0d6efd",
+            "green" => "#198754",
+            "black" => "#212529",
+            "white" => "#ffffff",
+            "yellow" => "#ffc107",
+            "purple" => "#6f42c1",
+            "orange" => "#fd7e14",
+            "brown" => "#795548",
+            "navy" => "#001f3f",
+            "pink" => "#d63384",
+            "gray" or "grey" => "#6c757d",
+            "tan" => "#d2b48c",
+            _ => "#6c757d"
+        };
+    }
+    
+    public string GetTextColor(string? color)
+    {
+        return color?.ToLower() switch
+        {
+            "white" or "yellow" or "lightgray" or "lightgrey" or "tan" => "#000000",
+            _ => "#ffffff"
+        };
+    }
+}

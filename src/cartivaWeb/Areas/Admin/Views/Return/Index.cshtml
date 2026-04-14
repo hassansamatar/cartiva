@@ -1,0 +1,109 @@
+@model List<ReturnRequest>
+@using Cartiva.Shared
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Return Management";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var pendingCount = Model.Count(r => r.Status == SD.ReturnStatusPending);
+    var approvedCount = Model.Count(r => r.Status == SD.ReturnStatusApproved);
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                <i class="bi bi-arrow-return-left"></i> Return Management
+            </h4>
+            <div>
+                @if (pendingCount > 0)
+                {
+                    <span class="badge bg-warning text-dark">@pendingCount pending</span>
+                }
+                @if (approvedCount > 0)
+                {
+                    <span class="badge bg-info">@approvedCount awaiting refund</span>
+                }
+            </div>
+        </div>
+
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pending" type="button">
+                        Pending <span class="badge bg-warning text-dark ms-1">@pendingCount</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#approved" type="button">
+                        Approved <span class="badge bg-info ms-1">@approvedCount</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolved" type="button">
+                        Resolved <span class="badge bg-secondary ms-1">@Model.Count(r => r.Status == SD.ReturnStatusRefunded || r.Status == SD.ReturnStatusRejected)</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Pending -->
+                <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                    @{ var pendingReturns = Model.Where(r => r.Status == SD.ReturnStatusPending).ToList(); }
+                    @if (!pendingReturns.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No pending return requests.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var r in pendingReturns)
+                        {
+                            @await Html.PartialAsync("_ReturnCard", r)
+                        }
+                    }
+                </div>
+
+                <!-- Approved (awaiting refund) -->
+                <div class="tab-pane fade" id="approved" role="tabpanel">
+                    @{ var approvedReturns = Model.Where(r => r.Status == SD.ReturnStatusApproved).ToList(); }
+                    @if (!approvedReturns.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-credit-card" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No returns awaiting refund.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var r in approvedReturns)
+                        {
+                            @await Html.PartialAsync("_ReturnCard", r)
+                        }
+                    }
+                </div>
+
+                <!-- Resolved -->
+                <div class="tab-pane fade" id="resolved" role="tabpanel">
+                    @{ var resolvedReturns = Model.Where(r => r.Status == SD.ReturnStatusRefunded || r.Status == SD.ReturnStatusRejected).ToList(); }
+                    @if (!resolvedReturns.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-archive" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No resolved returns.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var r in resolvedReturns)
+                        {
+                            @await Html.PartialAsync("_ReturnCard", r)
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
