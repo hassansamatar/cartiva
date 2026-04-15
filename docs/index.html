@@ -3,182 +3,290 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cartiva — Documentation</title>
+<title>Cartiva — Full-Stack E-Commerce Documentation</title>
+<meta name="description" content="Cartiva is a complete e-commerce platform built with ASP.NET Core MVC (.NET 10), Stripe, and SQL Server. Explore ER diagrams, demo video, and source code.">
 
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
     background: #f8f9fa;
     color: #1a1a2e;
     display: flex;
     justify-content: center;
     padding: 40px 20px;
+    line-height: 1.5;
 }
 
 .container {
-    max-width: 900px;
+    max-width: 960px;
     width: 100%;
 }
 
 /* HEADER */
 h1 {
-    font-size: 2.7rem;
+    font-size: 2.8rem;
     text-align: center;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
 }
 
 h1 span { color: #198754; }
 
 .subtitle {
     text-align: center;
-    color: #6c757d;
-    margin-bottom: 30px;
+    color: #495057;
+    margin-bottom: 24px;
+    font-size: 1.1rem;
 }
 
 /* TECH BADGES */
 .tech-badges {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
 }
 
 .tech-badges span {
     display: inline-block;
-    padding: 6px 14px;
-    margin: 4px;
-    border-radius: 20px;
+    padding: 6px 16px;
+    border-radius: 40px;
     font-size: 0.8rem;
     font-weight: 600;
     background: #fff;
     border: 1px solid #dee2e6;
+    transition: all 0.2s;
 }
 
-/* VIDEO */
+.tech-badges span:hover {
+    border-color: #198754;
+    transform: translateY(-1px);
+}
+
+/* QUICK NAV */
+.quick-nav {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.quick-nav a {
+    color: #198754;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.quick-nav a:hover {
+    border-bottom-color: #198754;
+}
+
+/* VIDEO SECTION */
 .video-section {
     background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 14px;
+    border-radius: 20px;
     padding: 28px;
-    margin-bottom: 40px;
+    margin-bottom: 48px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid #e9ecef;
     text-align: center;
 }
 
 .video-section h2 {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    font-size: 1.8rem;
 }
 
 .video-description {
-    color: #6c757d;
-    font-size: 0.95rem;
-    margin-bottom: 18px;
-}
-
-.video-note {
-    font-size: 0.8rem;
-    color: #999;
-    margin-top: 10px;
+    color: #495057;
+    margin-bottom: 24px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .video-link {
     text-decoration: none;
+    display: inline-block;
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
 }
 
 .video-thumbnail {
-    background: linear-gradient(135deg, #1a1a2e, #2d3a4a);
-    border-radius: 14px;
-    padding: 60px 20px;
-    transition: all 0.25s ease;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    border-radius: 16px;
+    padding: 56px 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.video-thumbnail::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.1);
+    transition: background 0.2s;
+}
+
+.video-thumbnail:hover::after {
+    background: rgba(0,0,0,0.2);
 }
 
 .video-thumbnail:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(25, 135, 84, 0.25);
+    transform: scale(1.01);
+    box-shadow: 0 12px 28px rgba(25, 135, 84, 0.25);
 }
 
 .play-button {
-    width: 75px;
-    height: 75px;
+    width: 80px;
+    height: 80px;
     background: #198754;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 2.2rem;
     color: white;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.video-thumbnail:hover .play-button {
+    transform: scale(1.05);
+    background: #0f6e45;
 }
 
 .video-thumbnail p {
-    color: #ddd;
+    color: #f8f9fa;
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+    font-size: 1rem;
+}
+
+.video-note {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 16px;
 }
 
 /* SECTION TITLE */
 .section-title {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 28px;
+    font-size: 1.9rem;
+    font-weight: 600;
 }
 
-/* CARDS */
+/* CARDS (ER DIAGRAMS) */
 .cards {
     display: grid;
-    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    margin-bottom: 48px;
 }
 
 .card {
     background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 14px;
-    padding: 24px;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 24px 20px;
     text-decoration: none;
     color: inherit;
     transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .card:hover {
     border-color: #198754;
-    transform: translateY(-3px);
-    box-shadow: 0 6px 18px rgba(25, 135, 84, 0.15);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
 }
 
 .card h3 {
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    font-size: 1.4rem;
 }
 
 .card p {
     color: #6c757d;
     font-size: 0.9rem;
     line-height: 1.5;
+    flex-grow: 1;
 }
 
 .badge {
     display: inline-block;
-    margin-top: 12px;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    margin-top: 16px;
+    padding: 5px 12px;
+    border-radius: 40px;
+    font-size: 0.7rem;
     font-weight: 600;
+    width: fit-content;
 }
 
 .badge-main { background: #198754; color: white; }
 .badge-app { background: #0d6efd; color: white; }
 .badge-identity { background: #6f42c1; color: white; }
 
-/* LINKS */
+/* LINKS (Source & README) */
 .links {
     text-align: center;
-    margin-top: 40px;
+    margin-top: 20px;
+    margin-bottom: 30px;
 }
 
 .links a {
-    margin: 0 12px;
+    margin: 0 16px;
     color: #0d6efd;
     text-decoration: none;
     font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 30px;
+    transition: background 0.2s;
 }
 
 .links a:hover {
-    text-decoration: underline;
+    background: #e9ecef;
+    text-decoration: none;
+}
+
+/* ADDITIONAL INFO CARD (optional) */
+.extra-info {
+    background: #eef2f3;
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin: 32px 0 20px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+}
+
+.extra-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+.extra-info a {
+    color: #198754;
+    font-weight: 600;
 }
 
 /* FOOTER */
@@ -186,11 +294,21 @@ h1 span { color: #198754; }
     text-align: center;
     margin-top: 50px;
     font-size: 0.8rem;
-    color: #999;
+    color: #868e96;
+    border-top: 1px solid #dee2e6;
+    padding-top: 24px;
+}
+
+/* responsive */
+@media (max-width: 640px) {
+    body { padding: 24px 16px; }
+    h1 { font-size: 2rem; }
+    .video-thumbnail { padding: 40px 16px; }
+    .play-button { width: 60px; height: 60px; font-size: 1.8rem; }
+    .quick-nav { gap: 16px; }
 }
 </style>
 </head>
-
 <body>
 
 <div class="container">
@@ -200,27 +318,35 @@ h1 span { color: #198754; }
 
     <div class="tech-badges">
         <span>.NET 10</span>
-        <span>ASP.NET Core</span>
-        <span>Razor Pages</span>
+        <span>ASP.NET Core MVC</span>   <!-- corrected from Razor Pages to MVC -->
         <span>EF Core</span>
         <span>SQL Server</span>
         <span>Stripe</span>
         <span>Bootstrap 5</span>
         <span>Identity</span>
+        <span>Bring API</span>
     </div>
 
-    <!-- VIDEO -->
-    <div class="video-section">
+    <!-- Quick navigation -->
+    <div class="quick-nav">
+        <a href="#demo">🎬 Demo Walkthrough</a>
+        <a href="#erdiagrams">📊 ER Diagrams</a>
+        <a href="https://github.com/hassansamatar/cartiva" target="_blank">💻 Source Code</a>
+        <a href="README.md">📖 README</a>
+    </div>
+
+    <!-- VIDEO SECTION (anchor) -->
+    <div id="demo" class="video-section">
         <h2>🎬 Demo Walkthrough</h2>
         <p class="video-description">
-            5-minute walkthrough covering registration, shopping flow, Stripe checkout,
+            5‑minute walkthrough covering registration, shopping flow, Stripe checkout,
             admin order processing, shipment tracking, reviews, returns & refunds.
         </p>
 
         <a href="https://1drv.ms/v/c/ea46c225c4735de5/IQA6wTKv6aIPSogRyCtW1EMZAU7krOhjw7RED2DtuGuykdE?e=BIjc1t" 
-           target="_blank" class="video-link">
+           target="_blank" class="video-link" aria-label="Watch demo video">
             <div class="video-thumbnail">
-                <div class="play-button">▶</div>
+                <div class="play-button" aria-hidden="true">▶</div>
                 <p>Click to watch demo (5:40)</p>
             </div>
         </a>
@@ -230,47 +356,41 @@ h1 span { color: #198754; }
         </p>
     </div>
 
-    <!-- ER DIAGRAMS -->
-    <h2 class="section-title">📊 ER Diagrams</h2>
+    <!-- ER DIAGRAMS SECTION -->
+    <h2 id="erdiagrams" class="section-title">📊 ER Diagrams</h2>
 
     <div class="cards">
-
         <a href="ER-diagram/Entity-Relationship-Diagram.html" class="card">
             <h3>📊 Complete ER Diagram</h3>
-            <p>
-                Full entity-relationship model covering all 21 tables,
-                including Identity and application entities.
-            </p>
+            <p>Full entity-relationship model covering all 21 tables, including Identity and application entities.</p>
             <span class="badge badge-main">21 Tables · 24 Relationships</span>
         </a>
 
         <a href="ER-diagram/er-diagram-application.html" class="card">
             <h3>🏗️ Application Tables</h3>
-            <p>
-                Core domain models such as Products, Orders, Shipments, Reviews,
-                Returns, Promotions, and Shopping Cart.
-            </p>
+            <p>Core domain models: Products, Orders, Shipments, Reviews, Returns, Promotions, Shopping Cart.</p>
             <span class="badge badge-app">14 Entities · 17 Relationships</span>
         </a>
 
         <a href="ER-diagram/er-diagram-identity.html" class="card">
             <h3>🔐 Identity Tables</h3>
-            <p>
-                ASP.NET Identity schema including Users, Roles, Claims,
-                Logins, and Tokens.
-            </p>
+            <p>ASP.NET Identity schema: Users, Roles, Claims, Logins, Tokens.</p>
             <span class="badge badge-identity">7 Tables · 7 Relationships</span>
         </a>
+    </div>
 
+    <!-- extra helpful info (getting started / deployment preview) -->
+    <div class="extra-info">
+        <p>🚀 <strong>Ready to run?</strong> Follow the <a href="README.md#getting-started">Getting Started guide</a> – database migrations, Stripe test keys, and seeding included.</p>
     </div>
 
     <div class="links">
-        <a href="https://github.com/hassansamatar/cartiva">💻 Source Code</a>
-         <a href="https://github.com/hassansamatar/cartiva#readme">📖 README</a>
+        <a href="https://github.com/hassansamatar/cartiva" target="_blank">💻 GitHub Repository</a>
+        <a href="https://github.com/hassansamatar/cartiva#readme">📖 Full README</a>
     </div>
 
     <p class="footer">
-        Cartiva E-Commerce · Hassan Samatar · .NET 10 · MIT License
+        Cartiva E-Commerce · Built with ❤️ by Hassan Samatar · .NET 10 · MIT License
     </p>
 
 </div>
