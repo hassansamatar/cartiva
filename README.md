@@ -68,21 +68,30 @@ This project demonstrates a **real-world, production-grade e-commerce system** w
 - Company management – create/edit companies (no delete/deactivate)
 
 ---
-
 ## 🏗️ Architecture
 
-Clean Architecture with clear separation of concerns and dependency inversion.
+> Clean Architecture — ensuring separation of concerns, testability, and scalability through strict layer boundaries and dependency inversion.
 
+```text
 Cartiva.sln
 ├── src/
-│   ├── CartivaWeb/ → ASP.NET Core MVC with ASP.NET Identity (Razor Pages), views, wwwroot
-│   ├── Cartiva.Application/ → Use cases, service interfaces, DTOs
-│   ├── Cartiva.Domain/ → Entities, enums, value objects (pure domain)
-│   ├── Cartiva.Persistence/ → EF Core DbContext, migrations, seeding
-│   ├── Cartiva.Infrastructure/ → Stripe, Bring, Kartverket, Hangfire, Serilog
-│   └── Cartiva.Shared/ → Constants, helpers, shared utilities
-├── docs/ → ER diagrams (GitHub Pages)
-├── tests/ → Unit & integration tests
+│   ├── CartivaWeb/             → ASP.NET Core MVC + Identity (Razor Pages for auth & UI)
+│   │                            Controllers, Views, Static Assets (wwwroot)
+│   │
+│   ├── Cartiva.Application/   → Application layer (use cases, services, DTOs)
+│   │
+│   ├── Cartiva.Domain/        → Core domain (entities, enums, value objects)
+│   │
+│   ├── Cartiva.Persistence/   → Data access (EF Core, DbContext, migrations, seeding)
+│   │
+│   ├── Cartiva.Infrastructure/→ External integrations
+│   │                            Stripe, Bring, Kartverket, Hangfire, Serilog
+│   │
+│   └── Cartiva.Shared/        → Cross-cutting concerns
+│                                Constants, helpers, shared utilities
+│
+├── docs/   → ER diagrams (GitHub Pages)
+├── tests/  → Unit & integration tests
 └── README.md
 
 ### Project Layers
