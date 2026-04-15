@@ -3,7 +3,7 @@
 > 🚀 A production-ready e-commerce platform built with Clean Architecture, ASP.NET Core (.NET 10), and Stripe — supporting B2C, B2B invoicing, returns, and real-time shipment tracking.
 
 📊 [View Interactive ER Diagrams](https://hassansamatar.github.io/cartiva/)  
-🎬 [Watch Demo Video](https://youtu.be/...) — 5-minute walkthrough
+🎬 <a href="https://github.com/hassansamatar/cartiva" target="_blank">💻 Source Code</a>
 
 ---
 
@@ -72,19 +72,18 @@ This project demonstrates a **real-world, production-grade e-commerce system** w
 ## 🏗️ Architecture
 
 Clean Architecture with clear separation of concerns and dependency inversion.
+
 Cartiva.sln
 ├── src/
-│ ├── CartivaWeb/ → MVC controllers, views, wwwroot
-│ ├── Cartiva.Application/ → Use cases, service interfaces, DTOs
-│ ├── Cartiva.Domain/ → Entities, enums, value objects (pure domain)
-│ ├── Cartiva.Persistence/ → EF Core DbContext, migrations, seeding
-│ ├── Cartiva.Infrastructure/ → Stripe, Bring, Kartverket, Hangfire, Serilog
-│ └── Cartiva.Shared/ → Constants, helpers, shared utilities
+│   ├── CartivaWeb/ → ASP.NET Core MVC with ASP.NET Identity (Razor Pages), views, wwwroot
+│   ├── Cartiva.Application/ → Use cases, service interfaces, DTOs
+│   ├── Cartiva.Domain/ → Entities, enums, value objects (pure domain)
+│   ├── Cartiva.Persistence/ → EF Core DbContext, migrations, seeding
+│   ├── Cartiva.Infrastructure/ → Stripe, Bring, Kartverket, Hangfire, Serilog
+│   └── Cartiva.Shared/ → Constants, helpers, shared utilities
 ├── docs/ → ER diagrams (GitHub Pages)
 ├── tests/ → Unit & integration tests
 └── README.md
-
-
 
 ### Project Layers
 
