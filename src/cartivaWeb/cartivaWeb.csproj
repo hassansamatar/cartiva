@@ -16,6 +16,12 @@
 
   <ItemGroup>
     
+    <PackageReference Include="Hangfire" Version="1.8.23" />
+    
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    
+    <PackageReference Include="Hangfire.SqlServer" Version="1.8.23" />
+    
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.2" />
     
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
@@ -32,6 +38,7 @@
 
  
   <ItemGroup>
+    <ProjectReference Include="..\Cartiva.Application\Cartiva.Application.csproj" />
     <ProjectReference Include="..\Cartiva.Domain\Cartiva.Domain.csproj" />
     <ProjectReference Include="..\Cartiva.Infrastructure\Cartiva.Infrastructure.csproj" />
     <ProjectReference Include="..\Cartiva.Persistence\Cartiva.Persistence.csproj" />

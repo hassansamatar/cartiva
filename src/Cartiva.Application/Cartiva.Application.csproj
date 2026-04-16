@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Cartiva.Infrastructure\Cartiva.Infrastructure.csproj" />
+    <ProjectReference Include="..\Cartiva.Persistence\Cartiva.Persistence.csproj" />
+  </ItemGroup>
+
 </Project>

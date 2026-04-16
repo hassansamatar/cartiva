@@ -64,7 +64,7 @@ namespace Cartiva.Infrastructure.EmailServices
 
                 await client.SendMailAsync(mailMessage);
             }
-            finally
+            finally { stream?.Dispose(); }
             {
                 // Ensure the stream is disposed after sending
                 stream?.Dispose();
