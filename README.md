@@ -2,8 +2,14 @@
 
 > 🚀 A production-ready e-commerce platform built with Clean Architecture, ASP.NET Core (.NET 10), and Stripe — supporting B2C, B2B invoicing, returns, and real-time shipment tracking.
 
-📊 [View Interactive ER Diagrams](https://hassansamatar.github.io/cartiva/)  
-🎬 <a href="https://github.com/hassansamatar/cartiva" target="_blank">💻 Source Code</a>
+📊 [View Interactive ER Diagrams]("ER-diagram/Entity-Relationship-Diagram.html"/)  
+<a href="https://1drv.ms/v/c/ea46c225c4735de5/IQA6wTKv6aIPSogRyCtW1EMZAU7krOhjw7RED2DtuGuykdE?e=BIjc1t" 
+           target="_blank" class="video-link" aria-label="Watch demo video">
+            <div class="video-thumbnail">
+                <div class="play-button" aria-hidden="true">▶</div>
+                <p>Click to watch demo (5:40)</p>
+            </div>
+        </a>
 
 ---
 

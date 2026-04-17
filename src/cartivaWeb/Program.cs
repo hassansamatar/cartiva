@@ -1,24 +1,29 @@
+using Cartiva.Application;
+using Cartiva.Application.Abstractions;
+using Cartiva.Domain;
+using Cartiva.Infrastructure;
+using Cartiva.Infrastructure.AddressService;
+using Cartiva.Infrastructure.EmailServices;
+using Cartiva.Infrastructure.ImageServices;
+using Cartiva.Infrastructure.PaymentService;
+using Cartiva.Infrastructure.Promotions;
+using Cartiva.Infrastructure.QrCodeServices;
+using Cartiva.Persistence;
+using Cartiva.Shared;
+using cartivaWeb.HangFire;
 using CartivaWeb.Areas.Admin.Controllers;
 using CartivaWeb.Routing;
-using Cartiva.Persistence;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using Cartiva.Domain;
-using Cartiva.Infrastructure;
-using Cartiva.Shared;
-using Cartiva.Persistence;
-using Cartiva.Infrastructure.AddressService;
-using Cartiva.Infrastructure.ImageServices;
-using Cartiva.Infrastructure.PaymentService;
-using Cartiva.Infrastructure.QrCodeServices;
-using Cartiva.Infrastructure.EmailServices;
-using Cartiva.Infrastructure.Promotions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -50,9 +55,26 @@ builder.Services.AddHttpClient<Cartiva.Infrastructure.ShippingServices.IBringShi
     client.BaseAddress = new Uri(builder.Configuration["Bring:BaseUrl"] ?? "https://api.bring.com/shipping/api/v1");
     client.DefaultRequestHeaders.Add("Accept", "application/xml");
 });
+// Hangfire configuration
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddApplicationServices(); // registers ICompanyShipmentApprovalService etc.
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        QueuePollInterval = TimeSpan.Zero,
+        UseRecommendedIsolationLevel = true,
+        DisableGlobalLocks = true
+    }));
+builder.Services.AddHangfireServer();
 
+// ✅ Register job services as Scoped (not Transient)
+builder.Services.AddScoped<TestJobService>();
 var app = builder.Build();
-
 // Seed database
 using (var scope = app.Services.CreateScope())
 {
@@ -73,6 +95,18 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/test-hangfire", () =>
+{
+    BackgroundJob.Enqueue<TestJobService>(x => x.RunJob());
+
+    return "Job queued!";
+});
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
+HangfireJobsInitializer.RegisterRecurringJobs();
+
 app.MapRazorPages();
 app.MapStaticAssets();
 
