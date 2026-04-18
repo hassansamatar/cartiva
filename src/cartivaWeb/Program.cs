@@ -43,11 +43,12 @@ builder.Services.AddScoped<IEmailSender, Cartiva.Infrastructure.EmailServices.Em
 builder.Services.AddHttpClient<AddressLookupService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
-Stripe.StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe")["SecretKey"];
+Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"] ?? Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<Cartiva.Infrastructure.EmailServices.IEmailTemplateService, EmailTemplateService>();
 builder.Services.AddScoped<IPromotionService, Cartiva.Infrastructure.Promotions.PromotionService>();
+builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
 
 // Bring shipping service typed client
 builder.Services.AddHttpClient<Cartiva.Infrastructure.ShippingServices.IBringShippingService, Cartiva.Infrastructure.ShippingServices.BringShippingService>(client =>
@@ -71,6 +72,8 @@ builder.Services.AddHangfire(configuration => configuration
         DisableGlobalLocks = true
     }));
 builder.Services.AddHangfireServer();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
 // ✅ Register job services as Scoped (not Transient)
 builder.Services.AddScoped<TestJobService>();

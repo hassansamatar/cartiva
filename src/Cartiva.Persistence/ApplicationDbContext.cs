@@ -34,6 +34,7 @@ namespace Cartiva.Persistence
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<ReturnRequest> ReturnRequests { get; set; }
+        public DbSet<Cartiva.Domain.ProcessedStripeEvent> ProcessedStripeEvents { get; set; }
 
         // ======================
         // Configure relationships
