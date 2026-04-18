@@ -15,25 +15,32 @@
   </ItemGroup>
 
   <ItemGroup>
-    
+    <Compile Include="Controllers\StripeWebhookController.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+
     <PackageReference Include="Hangfire" Version="1.8.23" />
-    
+
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
-    
+
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.23" />
-    
+
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.2" />
-    
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
-    
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
+    <PackageReference Include="NuGet.Protocol" Version="7.3.1">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="QRCoder" Version="1.7.0" />
-    <PackageReference Include="Stripe.net" Version="50.4.1" />
+    <PackageReference Include="Stripe.net" Version="51.0.0" />
   </ItemGroup>
 
  
@@ -47,6 +54,7 @@
 
   <ItemGroup>
     <Folder Include="docs\" />
+    <Folder Include="NewFolder\" />
     <Folder Include="wwwroot\images\product\" />
   </ItemGroup>
 
