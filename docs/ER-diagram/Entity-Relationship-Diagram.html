@@ -131,8 +131,8 @@
     <p class="subtitle">
         Models + ASP.NET Identity | .NET 10 |
         <span class="badge badge-identity">7 Identity Tables</span>
-        <span class="badge badge-app">14 Application Tables</span>
-        | 21 Tables Total | 24 Relationships
+        <span class="badge badge-app">15 Application Tables</span>
+        | 22 Tables Total | 24 Relationships
     </p>
 
     <button class="btn-print no-print" onclick="window.print()">Print / Save as PDF</button>
@@ -366,6 +366,11 @@ erDiagram
         datetime RefundDate
     }
 
+    ProcessedStripeEvent {
+        string EventId PK
+        datetime ProcessedAt
+    }
+
     AspNetUsers_IdentityBase ||--|| ApplicationUser : "extends"
     AspNetUsers_IdentityBase ||--o{ AspNetUserRoles : "assigned"
     AspNetRoles ||--o{ AspNetUserRoles : "has members"
@@ -413,13 +418,34 @@ erDiagram
                 </tr>
             </thead>
             <tbody>
-                <tr><td><strong>AspNetUsers</strong></td><td>Base user data (email, password hash, phone, lockout). Your <code>ApplicationUser</code> extends this with Name, Address, CompanyId.</td><td><span class="badge badge-pk">Id</span> UserName, Email, PasswordHash</td></tr>
-                <tr><td><strong>AspNetRoles</strong></td><td>Role definitions</td><td><span class="badge badge-pk">Id</span> Name</td></tr>
-                <tr><td><strong>AspNetUserRoles</strong></td><td>Many-to-many join: which users have which roles</td><td><span class="badge badge-fk">UserId</span> <span class="badge badge-fk">RoleId</span></td></tr>
-                <tr><td><strong>AspNetUserClaims</strong></td><td>Custom claims per user (key-value pairs)</td><td><span class="badge badge-pk">Id</span> <span class="badge badge-fk">UserId</span></td></tr>
-                <tr><td><strong>AspNetRoleClaims</strong></td><td>Custom claims per role</td><td><span class="badge badge-pk">Id</span> <span class="badge badge-fk">RoleId</span></td></tr>
-                <tr><td><strong>AspNetUserLogins</strong></td><td>External login providers (Google, Microsoft, etc.)</td><td><span class="badge badge-fk">UserId</span> LoginProvider, ProviderKey</td></tr>
-                <tr><td><strong>AspNetUserTokens</strong></td><td>Authentication tokens (refresh tokens, 2FA)</td><td><span class="badge badge-fk">UserId</span> LoginProvider, Name</td></tr>
+                <tr><td><strong>AspNetUsers</strong></td>
+                    <td>Base user data (email, password hash, phone, lockout). Your <code>ApplicationUser</code> extends this with Name, Address, CompanyId.</td>
+                    <td><span class="badge badge-pk">Id</span> UserName, Email, PasswordHash</td>
+                </tr>
+                <tr><td><strong>AspNetRoles</strong></td>
+                    <td>Role definitions</td>
+                    <td><span class="badge badge-pk">Id</span> Name</td>
+                </tr>
+                <tr><td><strong>AspNetUserRoles</strong></td>
+                    <td>Many-to-many join: which users have which roles</td>
+                    <td><span class="badge badge-fk">UserId</span> <span class="badge badge-fk">RoleId</span></td>
+                </tr>
+                <tr><td><strong>AspNetUserClaims</strong></td>
+                    <td>Custom claims per user (key-value pairs)</td>
+                    <td><span class="badge badge-pk">Id</span> <span class="badge badge-fk">UserId</span></td>
+                </tr>
+                <tr><td><strong>AspNetRoleClaims</strong></td>
+                    <td>Custom claims per role</td>
+                    <td><span class="badge badge-pk">Id</span> <span class="badge badge-fk">RoleId</span></td>
+                </tr>
+                <tr><td><strong>AspNetUserLogins</strong></td>
+                    <td>External login providers (Google, Microsoft, etc.)</td>
+                    <td><span class="badge badge-fk">UserId</span> LoginProvider, ProviderKey</td>
+                </tr>
+                <tr><td><strong>AspNetUserTokens</strong></td>
+                    <td>Authentication tokens (refresh tokens, 2FA)</td>
+                    <td><span class="badge badge-fk">UserId</span> LoginProvider, Name</td>
+                </tr>
             </tbody>
         </table>
 
@@ -467,7 +493,7 @@ erDiagram
             </tbody>
         </table>
 
-        <h2>All Tables Summary (21)</h2>
+        <h2>All Tables Summary (22)</h2>
         <table>
             <thead>
                 <tr>
@@ -502,6 +528,7 @@ erDiagram
                 <tr><td><strong>Shipment</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking and delivery</td></tr>
                 <tr><td><strong>Review</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Ratings and comments</td></tr>
                 <tr><td><strong>ReturnRequest</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderDetailId, ApplicationUserId</td><td>Product returns and refunds</td></tr>
+                <tr><td><strong>ProcessedStripeEvent</strong></td><td><span class="badge badge-app">App</span></td><td>EventId (string)</td><td>--</td><td>Idempotency for Stripe webhooks</td></tr>
             </tbody>
         </table>
     </div>
