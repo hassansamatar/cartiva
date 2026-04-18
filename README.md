@@ -1,10 +1,8 @@
-markdown
+
 # 🛒 Cartiva — Full-Stack E-Commerce Platform
 
 > 🚀 A production-ready e-commerce platform built with Clean Architecture, ASP.NET Core (.NET 10), and Stripe — supporting B2C, B2B invoicing, returns, and real-time shipment tracking.
 
-📊 [View Interactive ER Diagrams]("ER-diagram/Entity-Relationship-Diagram.html"/)  
----
 
 ## ⚡ TL;DR – What You Get
 
@@ -100,6 +98,8 @@ Cartiva.Application	Application layer – use cases, interfaces, DTOs
 Cartiva.Persistence	Data access – EF Core, migrations, seeding
 Cartiva.Infrastructure	External services + background jobs (Hangfire)
 Cartiva.Shared	Cross-cutting – constants, helpers
+
+
 🗄️ Database Schema
 22 tables – 7 ASP.NET Identity + 15 application models, 24 relationships.
 📊 Interactive ER Diagrams
@@ -141,114 +141,123 @@ ProcessedStripeEvent	Stores Stripe event IDs for idempotent webhook processing
 ¹ Employees can create and edit companies but cannot delete or deactivate them.
 
 ---
+## 🛠️ Tech Stack
 
-🛠️ Tech Stack
-Technology	Usage
-.NET 10	Runtime & SDK
-ASP.NET Core MVC	Web framework (Identity uses Razor Pages)
-Entity Framework Core	ORM, migrations
-SQL Server	Database
-ASP.NET Identity	Auth, 2FA
-Stripe	Payments, refunds
-Bring API	Shipping rates, labels
-Kartverket API	Address autocomplete
-Hangfire	Background jobs (email, expiry, webhook retries)
-Serilog	Structured logging
-MemoryCache / IDistributedCache	Product catalog caching
-HTML5 / CSS3 / JavaScript (ES6+)	Frontend structure, styling, and client-side interactivity
-Bootstrap 5, SweetAlert2, DataTables	Frontend utilities
-QRCoder	QR codes for tracking
-🚀 Getting Started
-Prerequisites
-.NET 10 SDK
+| Technology | Usage |
+|------------|-------|
+| .NET 10 | Runtime & SDK |
+| ASP.NET Core MVC | Web framework (Identity uses Razor Pages) |
+| Entity Framework Core | ORM, migrations |
+| SQL Server | Database |
+| ASP.NET Identity | Auth, 2FA |
+| Stripe | Payments, refunds |
+| Bring API | Shipping rates, labels |
+| Kartverket API | Address autocomplete |
+| Hangfire | Background jobs (email, expiry, webhook retries) |
+| Serilog | Structured logging |
+| MemoryCache / IDistributedCache | Product catalog caching |
+| **HTML5 / CSS3 / JavaScript (ES6+)** | Frontend structure, styling, and client-side interactivity |
+| Bootstrap 5, SweetAlert2, DataTables | Frontend utilities |
+| QRCoder | QR codes for tracking |
 
-SQL Server (LocalDB or full instance)
+---
+## 🚀 Getting Started
 
-Stripe account (test mode)
+### Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (LocalDB or full instance)
+- [Stripe Account](https://stripe.com/) (test mode)
 
-Setup
-Clone the repository
-
-bash
-git clone https://github.com/hassansamatar/cartiva.git
-cd cartiva
-Configure secrets
+### Configure secrets
 Update appsettings.json or use User Secrets:
+{  "ConnectionStrings": {    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=Cartiva;Trusted_Connection=True;MultipleActiveResultSets=true"  },  "Stripe": {    "SecretKey": "sk_test_...",    "PublishableKey": "pk_test_...",    "WebhookSecret": "whsec_..."  },  "Bring": {    "ApiKey": "...",    "CustomerId": "..."  },  "Kartverket": {    "BaseUrl": "https://ws.geonorge.no/adresser/v1/"  }}
 
-json
-{
-  "ConnectionStrings": { "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=Cartiva;..." },
-  "Stripe": { "SecretKey": "sk_test_...", "PublishableKey": "pk_test_...", "WebhookSecret": "whsec_..." },
-  "Bring": { "ApiKey": "...", "CustomerId": "..." },
-  "Kartverket": { "BaseUrl": "https://ws.geonorge.no/adresser/v1/" }
-}
-Apply migrations & seed data
+### 5. Start background job server (Hangfire)
 
-bash
-dotnet ef database update --project Cartiva.Persistence --startup-project CartivaWeb
-Seeding creates:
+In `Program.cs`, ensure:
 
-Roles (Admin, Employee, Company, Customer)
+```
+app.UseHangfireDashboard();
+```
 
-Admin user: admin@cartiva.com / Admin12#
+Recurring jobs:
+- Order confirmation emails
+- Return window expiration checks
+- Failed Stripe webhook retries (idempotency ensures duplicates are safely handled)
 
-Sample products, categories, size systems, variants
+### 6. Run the application
 
-Start background job server (Hangfire)
-In Program.cs, ensure app.UseHangfireDashboard() and recurring jobs for:
-
-Order confirmation emails
-
-Return window expiration checks
-
-Failed Stripe webhook retries (idempotency already handles duplicates)
-
-Run the application
-
-bash
+```
 dotnet run --project CartivaWeb
-🔐 Environment Variables (Production)
-Use these instead of hardcoded secrets in production.
+```
 
-Variable	Purpose
-DB_CONNECTION_STRING	SQL Server connection string
-STRIPE_SECRET_KEY	Stripe API secret key
-STRIPE_WEBHOOK_SECRET	Stripe webhook signing secret
-BRING_API_KEY	Bring shipping API key
-BRING_CUSTOMER_ID	Bring customer ID
-SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS	Email delivery
-ASPNETCORE_ENVIRONMENT	Production or Development
-🧪 Testing
-bash
+---
+
+## 🔐 Environment Variables (Production)
+Use environment variables instead of hardcoded secrets:
+
+| Variable                | Purpose                        |
+|-------------------------|--------------------------------|
+| DB_CONNECTION_STRING    | SQL Server connection string   |
+| STRIPE_SECRET_KEY       | Stripe API secret key          |
+| STRIPE_WEBHOOK_SECRET   | Stripe webhook signing secret  |
+| BRING_API_KEY           | Bring shipping API key         |
+| BRING_CUSTOMER_ID       | Bring customer ID              |
+| SMTP_HOST               | Email server host              |
+| SMTP_PORT               | Email server port              |
+| SMTP_USER               | Email username                 |
+| SMTP_PASS               | Email password                 |
+| ASPNETCORE_ENVIRONMENT  | Production or Development      |
+
+---
+
+## 🧪 Testing
+
+```
 dotnet test
-Unit tests – tests/Cartiva.Tests.Unit (xUnit, Moq)
+```
 
-Integration tests – tests/Cartiva.Tests.Integration (Testcontainers for SQL Server)
+- Unit tests: `tests/Cartiva.Tests.Unit` (xUnit, Moq)
+- Integration tests: `tests/Cartiva.Tests.Integration` (Testcontainers for SQL Server)
 
-📦 Deployment
-Docker
-dockerfile
+---
+
+## 📦 Deployment
+
+### Docker
+
+Create a `Dockerfile`:
+
+```
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY ./publish .
 ENTRYPOINT ["dotnet", "CartivaWeb.dll"]
+```
+
 Build and run:
 
-bash
+```
 dotnet publish -c Release -o ./publish
 docker build -t cartiva .
 docker run -p 80:8080 -e ASPNETCORE_ENVIRONMENT=Production cartiva
-Azure App Service
-Set connection string & secrets in Application Settings
+```
 
-Enable "Always On" for Hangfire background jobs
+### Azure App Service
 
-Configure Stripe webhook endpoint: https://yourapp.com/api/webhooks/stripe
+- Set connection string & secrets in Application Settings
+- Enable Always On (required for Hangfire background jobs)
+- Configure Stripe webhook endpoint:  
+  `https://yourapp.com/api/webhooks/stripe`
 
-IIS
-Install ASP.NET Core Hosting Bundle
+> ⚠️ Ensure webhook handlers are idempotent to safely handle retries from Stripe.
 
-Set application pool to No Managed Code
+### IIS
+
+- Install ASP.NET Core Hosting Bundle
+- Set application pool to No Managed Code
+
+---
 
 🔄 Idempotent Stripe Webhooks
 All webhook handlers store the Stripe event ID (evt_...) in the ProcessedStripeEvent table before processing.
@@ -257,29 +266,69 @@ Duplicate events (e.g., network retries) are detected and ignored, ensuring paym
 📁 See: Cartiva.Infrastructure/PaymentService/StripeWebhookService.cs
 🔁 Background processing via Hangfire – webhook endpoint returns 200 immediately, heavy work runs asynchronously.
 
-📂 Key Files
-File	Purpose
-CartivaWeb/Program.cs	Startup, DI, middleware
-CartivaWeb/Controllers/*	MVC controllers (Admin, Customer, etc.)
-Cartiva.Application/Services/*	Business logic
-Cartiva.Domain/Entities/*	Domain models
-Cartiva.Persistence/ApplicationDbContext.cs	EF Core context
-Cartiva.Infrastructure/PaymentService/StripeWebhookService.cs	Idempotent webhook handler
-Cartiva.Infrastructure/BackgroundJobs/*	Hangfire jobs (email, expiry, webhooks)
-Cartiva.Infrastructure/Logging/SerilogConfig.cs	Structured logging
-Cartiva.Shared/SD.cs	Constants (roles, statuses, carriers)
+
+## 📂 Key Files & Structure
+
+### 🚀 Web Layer (Presentation)
+| File | Purpose |
+|------|--------|
+| `CartivaWeb/Program.cs` | App startup, DI configuration, middleware pipeline |
+| `CartivaWeb/Controllers/*` | MVC controllers (Admin, Customer, etc.) |
+
+---
+
+### 🧠 Application Layer (Business Logic)
+| File | Purpose |
+|------|--------|
+| `Cartiva.Application/Services/*` | Core business logic and use cases |
+
+---
+
+### 🏛️ Domain Layer
+| File | Purpose |
+|------|--------|
+| `Cartiva.Domain/Entities/*` | Domain models (core entities) |
+
+---
+
+### 💾 Persistence Layer (Data Access)
+| File | Purpose |
+|------|--------|
+| `Cartiva.Persistence/ApplicationDbContext.cs` | Entity Framework Core database context |
+
+---
+
+### 🔌 Infrastructure Layer
+| File | Purpose |
+|------|--------|
+| `Cartiva.Infrastructure/PaymentService/StripeWebhookService.cs` | Idempotent Stripe webhook handler |
+| `Cartiva.Infrastructure/BackgroundJobs/*` | Hangfire background jobs (emails, expiry, webhook retries) |
+| `Cartiva.Infrastructure/Logging/SerilogConfig.cs` | Structured logging configuration |
+
+---
+
+### 🧩 Shared
+| File | Purpose |
+|------|--------|
+| `Cartiva.Shared/SD.cs` | Shared constants (roles, statuses, carriers) |
+
+---
+
+### 📝 Notes
+- Webhook handling is idempotent to safely support retries from Stripe.
+- Background jobs are powered by Hangfire.
+- Logging is structured using Serilog.
+
+
 🔮 Future Improvements
 #	Improvement	Priority	Effort
-1	Add background job processor (Hangfire) for async tasks – already planned ✅	🔴 High	Medium
-2	Implement idempotent Stripe webhooks – completed ✅	🔴 High	Low
-3	Add structured logging (Serilog) – integrated ✅	🟡 Medium	Low
-4	Introduce caching for product catalog – in progress	🟡 Medium	Low
-5	Expand deployment guide – done (Docker, Azure, IIS) ✅	🟡 Medium	Medium
-6	Document promotion rule engine – detailed evaluation logic	🟡 Medium	Low
-7	Add Swagger/OpenAPI for any JSON endpoints	🟢 Low	Medium
-8	Increase integration test coverage for checkout & webhooks	🟡 Medium	High
-9	Clarify employee company permissions – already detailed ✅	🟢 Low	Low
-10	Add troubleshooting section – common issues (webhook failures, API rate limits)	🟢 Low	Low
+1	Add structured logging (Serilog) – integrated 	
+2	Introduce caching for product catalog – in progress	
+3	Expand deployment guide – done (Docker, Azure, IIS) 
+4	Document promotion rule engine – detailed evaluation logic	
+5	Add Swagger/OpenAPI for any JSON endpoints	
+6	Increase integration test coverage for checkout & webhooks		
+7	Add troubleshooting section – common issues (webhook failures, API rate limits)	
 📄 License
 MIT © Hassan Samatar
 
