@@ -1,0 +1,49 @@
+@model IEnumerable<Cartiva.Domain.OrderHeader>
+@{
+    ViewData["Title"] = "Overdue Company Invoices";
+}
+<h2>Overdue Company Invoices</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Order #</th>
+            <th>Company</th>
+            <th>Customer</th>
+            <th>Due Date</th>
+            <th>Email</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.Id</td>
+                <td>@order.ApplicationUser?.Company?.Name</td>
+                <td>@order.ApplicationUser?.Name</td>
+                <td>@order.PaymentDueDate</td>
+                <td>@order.ApplicationUser?.Email</td>
+                <td>
+                    @if (!order.InvoiceSent)
+                    {
+                        <!-- Print invoice using the dedicated Admin PrintInvoice action -->
+                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-info btn-sm">
+                            <i class="bi bi-printer"></i> Print Invoice
+                        </a>
+                        <!-- Mark as sent (optional) -->
+                        <form asp-action="Send" asp-route-id="@order.Id" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm">Mark Sent</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="text-success">Sent</span>
+                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-outline-info btn-sm ms-2">
+                            View Invoice
+                        </a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

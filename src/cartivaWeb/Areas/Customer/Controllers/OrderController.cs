@@ -206,6 +206,7 @@ public class OrderController : Controller
                 model.OrderHeader.PaymentStatus = Cartiva.Shared.SD.PaymentStatusPending;
                 model.OrderHeader.OrderStatus = Cartiva.Shared.SD.StatusPending;
                 model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
+                model.OrderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
 
                 // Flag for UI logic (ConfirmOrder page)
                 TempData["Warning"] = "Your company account is inactive. Payment must be completed immediately.";
@@ -217,6 +218,7 @@ public class OrderController : Controller
                 model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
                 model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval;
                 model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
+                model.OrderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
             }
         }
         else
@@ -225,6 +227,7 @@ public class OrderController : Controller
             model.OrderHeader.PaymentStatus = Cartiva.Shared.SD.PaymentStatusPending;
             model.OrderHeader.OrderStatus = Cartiva.Shared.SD.StatusPending;
             model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
+            model.OrderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
         }
 
         using var transaction = await _db.Database.BeginTransactionAsync();

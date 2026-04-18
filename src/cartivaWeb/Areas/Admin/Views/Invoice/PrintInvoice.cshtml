@@ -1,0 +1,155 @@
+﻿@model Cartiva.Domain.OrderHeader
+@using System.Globalization
+@{
+    Layout = null;
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var bankAccount = ViewBag.BankAccount as string;
+    var kid = ViewBag.KID as string;
+    var contact = ViewBag.CartivaContact as dynamic;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Invoice #@Model.Id</title>
+    <style>
+            body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                margin: 40px;
+                color: #333;
+            }
+
+            .invoice-container {
+                max-width: 800px;
+                margin: 0 auto;
+                border: 1px solid #ddd;
+                padding: 30px;
+                border-radius: 8px;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .invoice-title {
+                font-size: 32px;
+                font-weight: bold;
+                color: #2c3e50;
+            }
+
+            .company-info, .customer-info {
+                margin-bottom: 20px;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }
+
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+
+            th {
+                background-color: #f2f2f2;
+            }
+
+            .totals {
+                text-align: right;
+                margin-top: 20px;
+            }
+
+            .payment-details {
+                margin-top: 30px;
+                padding: 15px;
+                background: #f9f9f9;
+                border-left: 4px solid #3498db;
+            }
+
+            .footer {
+                margin-top: 40px;
+                font-size: 12px;
+                text-align: center;
+                color: #7f8c8d;
+            }
+
+            @@media print {
+                body {
+                    margin: 0;
+                }
+
+                .no-print {
+                    display: none;
+                }
+            }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <div class="header">
+            <div class="invoice-title">INVOICE</div>
+            <div>Cartiva – Due for payment</div>
+        </div>
+
+        <!-- Cartiva contact info (seller) -->
+        <div class="company-info">
+            <strong>@contact?.Name</strong><br />
+            @contact?.Address<br />
+            Org.nr: @contact?.OrgNumber<br />
+            Tel: @contact?.Phone &nbsp;|&nbsp; Email: @contact?.Email
+        </div>
+
+        <!-- Customer info -->
+        <div class="customer-info">
+            <strong>Customer:</strong> @Model.ApplicationUser?.Name<br />
+            <strong>Company:</strong> @Model.ApplicationUser?.Company?.Name<br />
+            <strong>Email:</strong> @Model.ApplicationUser?.Email
+        </div>
+
+        <!-- Order details -->
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.OrderDetails)
+                {
+                    <tr>
+                        <td>@item.ProductVariant?.Product?.Name (@item.ProductVariant?.Color)</td>
+                        <td>@item.Count</td>
+                        <td>@item.Price.ToString("C", culture)</td>
+                        <td>@((item.Price * item.Count).ToString("C", culture))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <strong>Total amount:</strong> @Model.OrderTotal.ToString("C", culture)
+        </div>
+
+        <!-- Norwegian payment details -->
+        <div class="payment-details">
+            <h4>Payment information</h4>
+            <p><strong>Due date:</strong> @Model.PaymentDueDate?.ToString("dd.MM.yyyy")</p>
+            <p><strong>Bank account:</strong> @bankAccount</p>
+            <p><strong>KID number:</strong> @kid</p>
+            <p><em>Use the KID number when paying to ensure correct registration.</em></p>
+        </div>
+
+        <div class="footer">
+            This is an electronic invoice – no physical copy will be sent.<br />
+            Late payment may incur interest and collection fees.
+        </div>
+
+        <div class="no-print" style="text-align:center; margin-top:30px;">
+            <button onclick="window.print()" class="btn btn-primary">Print / Save PDF</button>
+            <button onclick="window.close()" class="btn btn-secondary">Close</button>
+        </div>
+    </div>
+</body>
+</html>

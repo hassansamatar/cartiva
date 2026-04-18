@@ -1,0 +1,149 @@
+﻿@model InvoiceDashboardViewModel
+@{
+    ViewData["Title"] = "Invoice Management";
+}
+
+<h2>Invoice Management</h2>
+
+<!-- Overdue Invoices -->
+<h3 class="text-danger">Overdue Invoices</h3>
+@if (!Model.OverdueInvoices.Any())
+{
+    <p>No overdue invoices.</p>
+}
+else
+{
+    <table class="table table-bordered table-danger">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Company</th>
+                <th>Customer</th>
+                <th>Due Date</th>
+                <th>Email</th>
+                <th>Printable</th>      @* New column *@
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model.OverdueInvoices)
+            {
+                <tr>
+                    <td>@order.Id</td>
+                    <td>@order.ApplicationUser?.Company?.Name</td>
+                    <td>@order.ApplicationUser?.Name</td>
+                    <td>@order.PaymentDueDate</td>
+                    <td>@order.ApplicationUser?.Email</td>
+                    <td>
+                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-printer"></i> Print
+                        </a>
+                    </td>
+                    <td>
+                        @if (!order.InvoiceSent)
+                        {
+                            <form asp-action="Send" asp-route-id="@order.Id" method="post">
+                                <button type="submit" class="btn btn-warning btn-sm">Send Invoice</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="text-success">Sent</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Pending (Unpaid) Invoices -->
+<h3 class="text-warning">Pending Invoices (Not yet due)</h3>
+@if (!Model.PendingInvoices.Any())
+{
+    <p>No pending invoices.</p>
+}
+else
+{
+    <table class="table table-bordered table-warning">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Company</th>
+                <th>Customer</th>
+                <th>Due Date</th>
+                <th>Email</th>
+                <th>Printable</th>      @* New column *@
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model.PendingInvoices)
+            {
+                <tr>
+                    <td>@order.Id</td>
+                    <td>@order.ApplicationUser?.Company?.Name</td>
+                    <td>@order.ApplicationUser?.Name</td>
+                    <td>@order.PaymentDueDate</td>
+                    <td>@order.ApplicationUser?.Email</td>
+                    <td>
+                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-printer"></i> Print
+                        </a>
+                    </td>
+                    <td>
+                        @if (!order.InvoiceSent)
+                        {
+                            <form asp-action="Send" asp-route-id="@order.Id" method="post">
+                                <button type="submit" class="btn btn-info btn-sm">Mark as Sent</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="text-success">Sent</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Paid Invoices -->
+<h3 class="text-success">Paid Invoices</h3>
+@if (!Model.PaidInvoices.Any())
+{
+    <p>No paid invoices.</p>
+}
+else
+{
+    <table class="table table-bordered table-success">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Company</th>
+                <th>Customer</th>
+                <th>Payment Date</th>
+                <th>Amount</th>
+                <th>Printable</th>      @* New column *@
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model.PaidInvoices)
+            {
+                <tr>
+                    <td>@order.Id</td>
+                    <td>@order.ApplicationUser?.Company?.Name</td>
+                    <td>@order.ApplicationUser?.Name</td>
+                    <td>@order.PaymentDate?.ToShortDateString()</td>
+                    <td>@order.OrderTotal.ToString("C")</td>
+                    <td>
+                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-printer"></i> Print
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

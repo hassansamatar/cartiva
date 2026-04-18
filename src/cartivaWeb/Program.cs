@@ -10,6 +10,7 @@ using Cartiva.Infrastructure.Promotions;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Persistence;
 using Cartiva.Shared;
+using Cartiva.Shared.Configuration;
 using cartivaWeb.HangFire;
 using CartivaWeb.Areas.Admin.Controllers;
 using CartivaWeb.Routing;
@@ -18,6 +19,7 @@ using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +79,12 @@ builder.Logging.AddDebug();
 
 // ✅ Register job services as Scoped (not Transient)
 builder.Services.AddScoped<TestJobService>();
+//builder.Services.AddScoped<Cartiva.Infrastructure.EmailServices.OverdueInvoiceService>();
+builder.Services.AddScoped<EmailSender>();
+// Bind the section to the class and add it to DI as a singleton
+builder.Services.Configure<CartivaContact>(builder.Configuration.GetSection("CartivaContact"));
+// Optional: also register as a singleton for direct injection (simpler usage)
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CartivaContact>>().Value);
 var app = builder.Build();
 // Seed database
 using (var scope = app.Services.CreateScope())

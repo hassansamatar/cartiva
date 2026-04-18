@@ -44,6 +44,7 @@ namespace Cartiva.Domain
 
         public DateTime? PaymentDate { get; set; }
         public DateOnly? PaymentDueDate { get; set; }
+        public DateTime? ReturnExpirationDate { get; set; }
         public string? PaymentIntentId { get; set; }
 
         [Required(ErrorMessage = "Name is required.")]
@@ -83,12 +84,17 @@ namespace Cartiva.Domain
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
 
+        // Idempotence: Has invoice been sent for overdue payment?
+        public bool InvoiceSent { get; set; } = false;
+
         // Helper properties
         public bool IsPending => OrderStatus == SD.StatusPending;
         public bool IsApproved => OrderStatus == SD.StatusApproved;
         public bool IsShipped => OrderStatus == SD.StatusShipped;
         public bool IsDelivered => OrderStatus == SD.StatusDelivered;
         public bool IsCancelled => OrderStatus == SD.StatusCancelled;
+
+        public bool IsReturnWindowExpired => ReturnExpirationDate.HasValue && DateTime.Now > ReturnExpirationDate.Value;
 
         public void MarkAsCancelled()
         {

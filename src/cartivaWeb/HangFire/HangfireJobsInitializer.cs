@@ -22,6 +22,11 @@ namespace cartivaWeb.HangFire
                 service => service.ProcessApprovedShipmentsAsync(CancellationToken.None),
                 Cron.MinuteInterval(2)); // Or use Cron.MinuteInterval(2) for testing
 
+                    // Overdue company invoice job (daily)
+                    RecurringJob.AddOrUpdate<Cartiva.Infrastructure.EmailServices.OverdueInvoiceService>(
+                        "send-overdue-invoices",
+                        service => service.SendOverdueInvoicesAsync(CancellationToken.None),
+                        Cron.MinuteInterval(2));
+                }
+            }
         }
-    }
-}
