@@ -1,9 +1,6 @@
-using Cartiva.Persistence;
+using Cartiva.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Cartiva.Domain;
-using Cartiva.Shared;
 using System.Security.Claims;
 
 namespace CartivaWeb.Areas.Customer.Controllers
@@ -12,11 +9,11 @@ namespace CartivaWeb.Areas.Customer.Controllers
     [Authorize]
     public class ReviewController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IReviewService _reviewService;
 
-        public ReviewController(ApplicationDbContext db)
+        public ReviewController(IReviewService reviewService)
         {
-            _db = db;
+            _reviewService = reviewService;
         }
 
         // POST: /Customer/Review/Create
@@ -24,47 +21,19 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(int productVariantId, int orderId, int rating, string? comment)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            // Verify the user actually ordered this variant and it's delivered
-            var orderDetail = await _db.OrderDetails
-                .Include(od => od.OrderHeader)
-                .FirstOrDefaultAsync(od => od.OrderHeader.Id == orderId
-                    && od.ProductVariantId == productVariantId
-                    && od.OrderHeader.ApplicationUserId == userId
-                    && od.OrderHeader.OrderStatus == SD.StatusDelivered);
+            var result = await _reviewService.CreateReviewAsync(userId, productVariantId, orderId, rating, comment);
 
-            if (orderDetail == null)
+            if (result.Success)
             {
-                TempData["error"] = "You can only review products from delivered orders.";
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = orderId });
+                TempData["success"] = result.Message;
+            }
+            else
+            {
+                TempData["error"] = result.Message;
             }
 
-            // Check if user already reviewed this variant for this order
-            var existingReview = await _db.Reviews
-                .AnyAsync(r => r.ApplicationUserId == userId
-                    && r.ProductVariantId == productVariantId);
-
-            if (existingReview)
-            {
-                TempData["error"] = "You have already reviewed this product.";
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = orderId });
-            }
-
-            var review = new Review
-            {
-                ApplicationUserId = userId,
-                ProductVariantId = productVariantId,
-                Rating = rating,
-                Comment = comment?.Trim(),
-                ReviewDate = DateTime.UtcNow,
-                IsApproved = false
-            };
-
-            _db.Reviews.Add(review);
-            await _db.SaveChangesAsync();
-
-            TempData["success"] = "Thank you! Your review has been submitted and is pending approval.";
             return RedirectToAction("Details", "Order", new { area = "Customer", id = orderId });
         }
     }

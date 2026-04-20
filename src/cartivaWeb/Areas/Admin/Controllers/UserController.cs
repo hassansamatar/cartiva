@@ -1,15 +1,8 @@
-﻿using Cartiva.Persistence;
+﻿using Cartiva.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Cartiva.Domain;
 using Cartiva.Domain.ViewModels;
 using Cartiva.Shared;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {
@@ -17,41 +10,19 @@ namespace CartivaWeb.Areas.Admin.Controllers
     [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class UserController : Controller
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly ApplicationDbContext _db;
-        private readonly ILogger<UserController> _logger;
+        private readonly IUserService _userService;
 
-        public UserController(UserManager<ApplicationUser> userManager,
-                              RoleManager<IdentityRole> roleManager,
-                              ApplicationDbContext db,
-                              ILogger<UserController> logger)
+        public UserController(IUserService userService)
         {
-            _userManager = userManager;
-            _roleManager = roleManager;
-            _db = db;
-            _logger = logger;
+            _userService = userService;
         }
 
         // GET: /Admin/User/Index
         public async Task<IActionResult> Index()
         {
-            var users = await _db.Users
-                .Include(u => u.Company)
-                .ToListAsync();
-
-            var userRoles = new Dictionary<string, string>();
-            foreach (var user in users)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                userRoles[user.Id] = roles.FirstOrDefault() ?? "None";
-            }
-
-            // Build a lookup: CompanyId → list of users in that company
-            var companyUsers = users
-                .Where(u => u.CompanyId != null)
-                .GroupBy(u => u.CompanyId!.Value)
-                .ToDictionary(g => g.Key, g => g.ToList());
+            var users = await _userService.GetAllUsersAsync();
+            var userRoles = await _userService.GetUserRolesAsync(users);
+            var companyUsers = _userService.GetUsersByCompany(users);
 
             ViewBag.UserRoles = userRoles;
             ViewBag.CompanyUsers = companyUsers;
@@ -64,26 +35,12 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> Deactivate(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null) return NotFound();
+            var result = await _userService.DeactivateUserAsync(id, User.Identity?.Name ?? "");
 
-            if (user.UserName == User.Identity.Name)
-            {
-                TempData["Error"] = "You cannot deactivate your own account.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            user.IsActive = false;
-            var result = await _userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
-                TempData["Success"] = $"User {user.Email} has been deactivated.";
+            if (result.Success)
+                TempData["Success"] = result.Message;
             else
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to deactivate user {Email}: {Errors}", user.Email, errors);
-                TempData["Error"] = $"Failed to deactivate user: {errors}";
-            }
+                TempData["Error"] = result.Message;
 
             return RedirectToAction(nameof(Index));
         }
@@ -94,20 +51,12 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> Activate(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null) return NotFound();
+            var result = await _userService.ActivateUserAsync(id);
 
-            user.IsActive = true;
-            var result = await _userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
-                TempData["Success"] = $"User {user.Email} has been activated.";
+            if (result.Success)
+                TempData["Success"] = result.Message;
             else
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to activate user {Email}: {Errors}", user.Email, errors);
-                TempData["Error"] = $"Failed to activate user: {errors}";
-            }
+                TempData["Error"] = result.Message;
 
             return RedirectToAction(nameof(Index));
         }
@@ -116,23 +65,8 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> EditRoles(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null) return NotFound();
-
-            var currentRoles = await _userManager.GetRolesAsync(user);
-            var allRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
-            var companies = await _db.Companies.ToListAsync();
-
-            var model = new EditRolesViewModel
-            {
-                UserId = user.Id,
-                UserEmail = user.Email,
-                UserName = user.Name ?? user.Email,
-                SelectedRole = currentRoles.FirstOrDefault() ?? "None",
-                AvailableRoles = allRoles,
-                Companies = companies,
-                CompanyId = user.CompanyId
-            };
+            var model = await _userService.GetEditRolesViewModelAsync(id);
+            if (model == null) return NotFound();
 
             return View(model);
         }
@@ -143,32 +77,13 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> EditRoles(EditRolesViewModel model)
         {
-            var user = await _userManager.FindByIdAsync(model.UserId);
-            if (user == null) return NotFound();
+            var result = await _userService.UpdateUserRolesAsync(model.UserId, model.SelectedRole, model.CompanyId);
 
-            // Remove existing roles
-            var currentRoles = await _userManager.GetRolesAsync(user);
-            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            if (result.Success)
+                TempData["Success"] = result.Message;
+            else
+                TempData["Error"] = result.Message;
 
-            // Assign new role
-            if (!string.IsNullOrEmpty(model.SelectedRole) && model.SelectedRole != "None")
-            {
-                await _userManager.AddToRoleAsync(user, model.SelectedRole);
-
-                // If role is Company, assign selected company
-                if (model.SelectedRole == SD.Role_Company)
-                {
-                    user.CompanyId = model.CompanyId;
-                }
-                else
-                {
-                    user.CompanyId = null; // Remove company if role changed to non-company
-                }
-
-                await _userManager.UpdateAsync(user);
-            }
-
-            TempData["Success"] = $"User {user.Email} role updated to {model.SelectedRole ?? "None"}";
             return RedirectToAction(nameof(Index));
         }
     }

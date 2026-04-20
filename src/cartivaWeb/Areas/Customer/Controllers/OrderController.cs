@@ -1,5 +1,4 @@
 ﻿using Cartiva.Persistence;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,14 +19,16 @@ using Cartiva.Application.Abstractions;
 [Authorize]
 public class OrderController : Controller
 {
-    private readonly Cartiva.Persistence.ApplicationDbContext _db;
+    private readonly ApplicationDbContext _db;
     private readonly StripeSettings _stripeSettings;
     private readonly Cartiva.Infrastructure.QrCodeServices.IQrCodeService _qrCodeService;
     private readonly ILogger<OrderController> _logger;
     private readonly IEmailSender _emailSender;
     private readonly Cartiva.Infrastructure.EmailServices.IEmailTemplateService _emailTemplateService;
-    private readonly Cartiva.Infrastructure.Promotions.IPromotionService _promotionService;
     private readonly IInvoiceService _invoiceService;
+    private readonly IOrderService _orderService;
+    private readonly IShipmentService _shipmentService;
+    private readonly ICartService _cartService;
 
     public OrderController(ApplicationDbContext db,
                            IOptions<StripeSettings> stripeSettings,
@@ -35,8 +36,10 @@ public class OrderController : Controller
                            ILogger<OrderController> logger,
                            IEmailSender emailSender,
                            Cartiva.Infrastructure.EmailServices.IEmailTemplateService emailTemplateService,
-                           Cartiva.Infrastructure.Promotions.IPromotionService promotionService,
-                           IInvoiceService invoiceService)
+                           IInvoiceService invoiceService,
+                           IOrderService orderService,
+                           IShipmentService shipmentService,
+                           ICartService cartService)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
@@ -45,8 +48,10 @@ public class OrderController : Controller
         _logger = logger;
         _emailSender = emailSender;
         _emailTemplateService = emailTemplateService;
-        _promotionService = promotionService;
         _invoiceService = invoiceService;
+        _orderService = orderService;
+        _shipmentService = shipmentService;
+        _cartService = cartService;
     }
 
     // =============================
@@ -55,60 +60,30 @@ public class OrderController : Controller
     [HttpGet]
     public async Task<IActionResult> Checkout()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var checkoutResult = await _orderService.PrepareCheckoutAsync(userId);
 
-        var cartList = await _db.ShoppingCarts
-            .Include(c => c.ProductVariant)
-                .ThenInclude(v => v.Product)
-                    .ThenInclude(p => p.Category)
-            .Include(c => c.ProductVariant)
-                .ThenInclude(v => v.SizeValue)
-                    .ThenInclude(sv => sv.SizeSystem)
-            .Where(c => c.ApplicationUserId == userId)
-            .ToListAsync();
-
-        if (!cartList.Any())
+        if (!checkoutResult.Success)
         {
-            TempData["Error"] = "Your cart is empty.";
+            TempData["Error"] = checkoutResult.ErrorMessage;
             return RedirectToAction("Index", "Cart");
         }
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        var discount = await _promotionService.CalculateDiscountAsync(cartList);
-
-        // Calculate VAT-aware totals
-        var subtotalIncVat = cartList.Sum(c => c.ProductVariant.PriceIncVat * c.Count);
-        var subtotalExVat = cartList.Sum(c => c.ProductVariant.PriceExVat * c.Count);
-
-        // Fallback for legacy data where PriceExVat is 0
-        if (subtotalExVat == 0)
-        {
-            subtotalIncVat = cartList.Sum(c => c.ProductVariant.Price * c.Count);
-            subtotalExVat = subtotalIncVat / 1.25m;
-        }
-
-        var totalVat = subtotalIncVat - subtotalExVat;
-
         var vm = new CheckoutVM
         {
-            OrderHeader = new OrderHeader
-            {
-                Name = user?.Name ?? string.Empty,
-                PhoneNumber = user?.PhoneNumber,
-                StreetAddress = user?.StreetAddress,
-                City = user?.City,
-                State = user?.State ?? user?.City,
-                PostalCode = user?.PostalCode,
-                Country = user?.Country ?? "Norway"
-            },
-            ShoppingCartList = cartList,
-            OrderTotal = subtotalIncVat - discount.TotalDiscount
+            OrderHeader = checkoutResult.OrderHeader!,
+            ShoppingCartList = checkoutResult.CartItems,
+            OrderTotal = checkoutResult.OrderTotal
         };
 
-        ViewBag.PromotionDiscount = discount;
-        ViewBag.Subtotal = subtotalIncVat;
-        ViewBag.SubtotalExVat = subtotalExVat;
-        ViewBag.TotalVat = totalVat;
+        ViewBag.PromotionDiscount = new
+        {
+            TotalDiscount = checkoutResult.TotalDiscount,
+            AppliedPromotions = checkoutResult.AppliedPromotions
+        };
+        ViewBag.Subtotal = checkoutResult.Subtotal;
+        ViewBag.SubtotalExVat = checkoutResult.SubtotalExVat;
+        ViewBag.TotalVat = checkoutResult.TotalVat;
 
         return View(vm);
     }
@@ -120,45 +95,30 @@ public class OrderController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmOrder(CheckoutVM model)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var checkoutResult = await _orderService.PrepareCheckoutAsync(userId);
 
-        var cartList = await _db.ShoppingCarts
-            .Include(c => c.ProductVariant)
-                .ThenInclude(v => v.Product)
-                    .ThenInclude(p => p.Category)
-            .Include(c => c.ProductVariant)
-                .ThenInclude(v => v.SizeValue)
-                    .ThenInclude(sv => sv.SizeSystem)
-            .Where(c => c.ApplicationUserId == userId)
-            .ToListAsync();
-
-        if (!cartList.Any())
+        if (!checkoutResult.Success)
         {
             return RedirectToAction("Index", "Cart");
         }
 
-        var discount = await _promotionService.CalculateDiscountAsync(cartList);
-        var subtotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+        model.ShoppingCartList = checkoutResult.CartItems;
+        model.OrderTotal = checkoutResult.OrderTotal;
 
-        model.ShoppingCartList = cartList;
-        model.OrderTotal = subtotal - discount.TotalDiscount;
-
-        ViewBag.PromotionDiscount = discount;
-        ViewBag.Subtotal = subtotal;
-
-        // --- NEW: Show warning for inactive company accounts ---
-        if (User.IsInRole(Cartiva.Shared.SD.Role_Company))
+        ViewBag.PromotionDiscount = new
         {
-            var user = await _db.Users.FindAsync(userId);
-            if (user?.CompanyId != null)
-            {
-                var company = await _db.Companies.FindAsync(user.CompanyId);
-                if (company != null && !company.IsActive)
-                {
-                    TempData["Warning"] = "Your company account is inactive. Payment must be completed immediately (upfront).";
-                    TempData["CompanyInactive"] = true;
-                }
-            }
+            TotalDiscount = checkoutResult.TotalDiscount,
+            AppliedPromotions = checkoutResult.AppliedPromotions
+        };
+        ViewBag.Subtotal = checkoutResult.Subtotal;
+
+        // Check company status for warning
+        var companyStatus = await _orderService.CheckCompanyStatusAsync(userId);
+        if (companyStatus.IsCompanyUser && !companyStatus.IsCompanyActive)
+        {
+            TempData["Warning"] = "Your company account is inactive. Payment must be completed immediately (upfront).";
+            TempData["CompanyInactive"] = true;
         }
 
         return View(model);
@@ -171,190 +131,96 @@ public class OrderController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> PlaceOrder(CheckoutVM model, bool payNow = false)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        // Fetch the cart items
-        var cartList = await _db.ShoppingCarts
-            .Include(c => c.ProductVariant)
-                .ThenInclude(v => v.Product)
-                    .ThenInclude(p => p.Category)
-            .Include(c => c.ProductVariant)
-                .ThenInclude(v => v.SizeValue)
-            .Where(c => c.ApplicationUserId == userId)
-            .ToListAsync();
+        var result = await _orderService.PlaceOrderAsync(userId, model.OrderHeader, payNow);
 
-        if (!cartList.Any())
+        if (!result.Success)
         {
-            TempData["Error"] = "Your cart is empty.";
-            return RedirectToAction("Index", "Cart");
-        }
-
-        // Validate stock
-        foreach (var cart in cartList)
-        {
-            var variant = cart.ProductVariant;
-            if (variant.Stock < cart.Count)
-            {
-                string sizeDisplay = variant.SizeValue != null ? variant.SizeValue.DisplayText : "No Size";
-                TempData["Error"] = $"Not enough stock for {variant.Product?.Name} ({variant.Color}/{sizeDisplay}). Only {variant.Stock} left.";
-                return RedirectToAction("Checkout");
-            }
-        }
-
-        var user = await _db.Users.FindAsync(userId);
-
-        // Calculate promotion discount
-        var discount = await _promotionService.CalculateDiscountAsync(cartList);
-
-        // Calculate VAT-aware totals
-        var subtotalIncVat = cartList.Sum(c => c.ProductVariant.PriceIncVat * c.Count);
-        var subtotalExVat = cartList.Sum(c => c.ProductVariant.PriceExVat * c.Count);
-        var totalVat = subtotalIncVat - subtotalExVat;
-
-        // If PriceExVat is not set (legacy data), calculate from Price
-        if (subtotalExVat == 0)
-        {
-            subtotalIncVat = cartList.Sum(c => c.ProductVariant.Price * c.Count);
-            subtotalExVat = subtotalIncVat / 1.25m; // Assume 25% VAT
-            totalVat = subtotalIncVat - subtotalExVat;
-        }
-
-        // Create OrderHeader with VAT breakdown
-        model.OrderHeader.ApplicationUserId = userId;
-        model.OrderHeader.OrderDate = DateTime.Now;
-        model.OrderHeader.Currency = SD.DefaultCurrency;
-        model.OrderHeader.SubtotalExVat = subtotalExVat - (discount.TotalDiscount / 1.25m);
-        model.OrderHeader.TotalVatAmount = (subtotalExVat - (discount.TotalDiscount / 1.25m)) * 0.25m;
-        model.OrderHeader.TotalDiscountAmount = discount.TotalDiscount;
-        model.OrderHeader.OrderTotal = subtotalIncVat - discount.TotalDiscount;
-        model.OrderHeader.Country = user?.Country ?? "Norway";
-
-        // Determine payment logic
-        if (User.IsInRole(Cartiva.Shared.SD.Role_Company) && user?.CompanyId != null)
-        {
-            var company = await _db.Companies.FindAsync(user.CompanyId);
-
-            if (company != null && !company.IsActive)
-            {
-                // Inactive company – force upfront payment
-                model.OrderHeader.PaymentStatus = Cartiva.Shared.SD.PaymentStatusPending;
-                model.OrderHeader.OrderStatus = Cartiva.Shared.SD.StatusPending;
-                model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
-                model.OrderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
-
-                // Flag for UI logic (ConfirmOrder page)
-                TempData["Warning"] = "Your company account is inactive. Payment must be completed immediately.";
-                TempData["CompanyInactive"] = true;
-            }
-            else
-            {
-                // Active company – allow deferred payment
-                model.OrderHeader.PaymentStatus = SD.PaymentStatusDeferred;
-                model.OrderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval;
-                model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
-                model.OrderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
-            }
-        }
-        else
-        {
-            // Regular customer – payment required
-            model.OrderHeader.PaymentStatus = Cartiva.Shared.SD.PaymentStatusPending;
-            model.OrderHeader.OrderStatus = Cartiva.Shared.SD.StatusPending;
-            model.OrderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
-            model.OrderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
-        }
-
-        using var transaction = await _db.Database.BeginTransactionAsync();
-        try
-        {
-            _db.OrderHeaders.Add(model.OrderHeader);
-            await _db.SaveChangesAsync();
-
-            // Create OrderDetails with full VAT breakdown and update stock
-            var orderDetails = new List<OrderDetail>();
-            foreach (var cart in cartList)
-            {
-                // Use the helper method to create OrderDetail with VAT data
-                var orderDetail = OrderDetail.FromProductVariant(cart.ProductVariant, cart.Count);
-                orderDetail.OrderHeaderId = model.OrderHeader.Id;
-                orderDetails.Add(orderDetail);
-
-                // Update stock
-                cart.ProductVariant.Stock -= cart.Count;
-            }
-
-            _db.OrderDetails.AddRange(orderDetails);
-
-            // Clear cart
-            _db.ShoppingCarts.RemoveRange(cartList);
-            await _db.SaveChangesAsync();
-
-            // Update OrderHeader totals with VAT breakdown
-            model.OrderHeader.OrderDetails = orderDetails;
-            model.OrderHeader.RecalculateTotals();
-            await _db.SaveChangesAsync();
-
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            TempData["Error"] = "An error occurred while placing your order. Please try again.";
+            TempData["Error"] = result.ErrorMessage;
             return RedirectToAction("Checkout");
         }
 
-        // Redirect based on role and payNow flag
-        if (User.IsInRole(SD.Role_Company))
-        {
-            // Create shipment record for company orders
-            var shipment = new Shipment
-            {
-                OrderHeaderId = model.OrderHeader.Id,
-                ShipmentStatus = SD.ShipmentStatusPendingApproval
-            };
-            _db.Shipments.Add(shipment);
-            await _db.SaveChangesAsync();
+        var orderId = result.OrderId!.Value;
 
-            // Generate invoice for active company users with deferred payment
-            if (model.OrderHeader.PaymentStatus == SD.PaymentStatusDeferred)
+        // Create shipment for company orders
+        if (result.IsCompanyOrder)
+        {
+            await _shipmentService.CreateShipmentForOrderAsync(orderId);
+
+            // Generate invoice for deferred payment
+            if (result.IsDeferredPayment)
             {
                 try
                 {
-                    var invoice = await _invoiceService.GenerateInvoiceFromOrderAsync(model.OrderHeader.Id);
-                    _logger.LogInformation("Generated invoice {InvoiceNumber} for company order {OrderId}", 
-                        invoice.InvoiceNumber, model.OrderHeader.Id);
+                    var invoice = await _invoiceService.GenerateInvoiceFromOrderAsync(orderId);
+                    _logger.LogInformation("Generated invoice {InvoiceNumber} for company order {OrderId}",
+                        invoice.InvoiceNumber, orderId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to generate invoice for order {OrderId}", model.OrderHeader.Id);
-                    // Don't fail the order if invoice generation fails - it can be generated later
+                    _logger.LogError(ex, "Failed to generate invoice for order {OrderId}", orderId);
                 }
             }
 
             // Send order confirmation email
-            await SendOrderConfirmationEmailAsync(model.OrderHeader.Id, userId);
+            await SendOrderConfirmationEmailAsync(orderId, userId);
 
-            // Decide redirect based on company status
-            if (payNow || model.OrderHeader.PaymentStatus != SD.PaymentStatusDeferred)
+            if (result.RequiresPayment)
             {
-                return RedirectToAction("Payment", new { orderId = model.OrderHeader.Id });
+                return RedirectToAction("Payment", new { orderId });
             }
             else
             {
-                return RedirectToAction("Receipt", new { id = model.OrderHeader.Id });
+                return RedirectToAction("Receipt", new { id = orderId });
             }
         }
         else
         {
             // Regular customer – always go to payment
-            return RedirectToAction("Payment", new { orderId = model.OrderHeader.Id });
+            return RedirectToAction("Payment", new { orderId });
+        }
+    }
+
+    // Keep the rest of the controller methods that deal with payment processing
+    // as they require direct Stripe integration
+
+    private async Task SendOrderConfirmationEmailAsync(int orderId, string userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        var order = await _orderService.GetOrderByIdAsync(orderId);
+
+        if (user == null || order == null || string.IsNullOrEmpty(user.Email))
+            return;
+
+        try
+        {
+            var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(orderId);
+            var trackingUrl = Url.Action("Track", "Order", new { id = orderId, area = "Customer" }, Request.Scheme);
+
+            var body = await _emailTemplateService.RenderTemplateAsync("order-confirmation", new Dictionary<string, string>
+            {
+                { "OrderId", orderId.ToString() },
+                { "CustomerName", order.Name },
+                { "OrderTotal", order.OrderTotal.ToString("C") },
+                { "TrackingUrl", trackingUrl ?? "" },
+                { "QrCodeSrc", $"data:image/png;base64,{qrCodeBase64}" }
+            });
+
+            await _emailSender.SendEmailAsync(user.Email, $"Order Confirmation #{orderId}", body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", orderId);
         }
     }
 
     // =============================
-    // PAYMENT PAGE (Stripe)
+    // REMAINING METHODS (Payment, Receipt, History, etc.)
+    // These are kept as-is since they involve Stripe integration
     // =============================
-    [HttpGet]
+
+    // GET: /Customer/Order/Payment
     public async Task<IActionResult> Payment(int orderId)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -790,24 +656,5 @@ public class OrderController : Controller
     public IActionResult TrackTest()
     {
         return Content("Track action is working!");
-    }
-
-    private async Task SendOrderConfirmationEmailAsync(int orderId, string? userId)
-    {
-        var user = await _db.Users.FindAsync(userId);
-        if (user == null || string.IsNullOrEmpty(user.Email))
-            return;
-
-        var trackingUrl = Url.Action("Track", "Order", new { id = orderId, area = "Customer" }, Request.Scheme);
-        var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(orderId);
-
-        var body = await _emailTemplateService.RenderTemplateAsync("order-confirmation", new Dictionary<string, string>
-        {
-            { "OrderId", orderId.ToString() },
-            { "TrackingUrl", trackingUrl ?? "" },
-            { "QrCodeBase64", qrCodeBase64 }
-        });
-
-        await _emailSender.SendEmailAsync(user.Email, "Order Confirmation", body);
     }
 }

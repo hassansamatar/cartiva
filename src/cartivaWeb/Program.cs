@@ -1,66 +1,63 @@
 using Cartiva.Application;
-using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
 using Cartiva.Infrastructure;
-using Cartiva.Infrastructure.AddressService;
-using Cartiva.Infrastructure.EmailServices;
-using Cartiva.Infrastructure.ImageServices;
-using Cartiva.Infrastructure.PaymentService;
-using Cartiva.Infrastructure.Promotions;
-using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Persistence;
-using Cartiva.Shared;
 using Cartiva.Shared.Configuration;
 using cartivaWeb.HangFire;
-using CartivaWeb.Areas.Admin.Controllers;
-using CartivaWeb.Routing;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+// ===========================================
+// Configuration Binding
+// ===========================================
+builder.Services.Configure<CartivaContact>(builder.Configuration.GetSection("CartivaContact"));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.Configure<InvoiceSettings>(builder.Configuration.GetSection(InvoiceSettings.SectionName));
 
+// Register CartivaContact as singleton for direct injection
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CartivaContact>>().Value);
+
+// ===========================================
+// Database Context
+// ===========================================
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity using ApplicationUser
+// ===========================================
+// Identity Configuration
+// ===========================================
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.ConfigureApplicationCookie(options => {
-    options.LoginPath = $"/Identity/Account/Login";
-    options.LogoutPath = $"/Identity/Account/Logout";
-    options.AccessDeniedPath = $"/Identity/Account/AccessDenied";
-});
-
-builder.Services.AddRazorPages();
-builder.Services.AddScoped<IEmailSender, Cartiva.Infrastructure.EmailServices.EmailSender>();
-builder.Services.AddHttpClient<AddressLookupService>();
-builder.Services.AddScoped<IImageService, ImageService>();
-builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
-Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"] ?? Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IQrCodeService, QrCodeService>();
-builder.Services.AddScoped<Cartiva.Infrastructure.EmailServices.IEmailTemplateService, EmailTemplateService>();
-builder.Services.AddScoped<IPromotionService, Cartiva.Infrastructure.Promotions.PromotionService>();
-builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
-
-// Bring shipping service typed client
-builder.Services.AddHttpClient<Cartiva.Infrastructure.ShippingServices.IBringShippingService, Cartiva.Infrastructure.ShippingServices.BringShippingService>(client =>
+builder.Services.ConfigureApplicationCookie(options =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Bring:BaseUrl"] ?? "https://api.bring.com/shipping/api/v1");
-    client.DefaultRequestHeaders.Add("Accept", "application/xml");
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
-// Hangfire configuration
+
+// ===========================================
+// MVC & Razor Pages
+// ===========================================
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddApplicationServices(); // registers ICompanyShipmentApprovalService etc.
+
+// ===========================================
+// Application & Infrastructure Services (Clean Architecture)
+// ===========================================
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// ===========================================
+// Hangfire (Background Jobs)
+// ===========================================
 builder.Services.AddHangfire(configuration => configuration
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
     .UseSimpleAssemblyNameTypeSerializer()
@@ -74,19 +71,21 @@ builder.Services.AddHangfire(configuration => configuration
         DisableGlobalLocks = true
     }));
 builder.Services.AddHangfireServer();
+
+// Hangfire job services
+builder.Services.AddScoped<TestJobService>();
+
+// ===========================================
+// Logging
+// ===========================================
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-// ✅ Register job services as Scoped (not Transient)
-builder.Services.AddScoped<TestJobService>();
-//builder.Services.AddScoped<Cartiva.Infrastructure.EmailServices.OverdueInvoiceService>();
-builder.Services.AddScoped<EmailSender>();
-// Bind the section to the class and add it to DI as a singleton
-builder.Services.Configure<CartivaContact>(builder.Configuration.GetSection("CartivaContact"));
-// Optional: also register as a singleton for direct injection (simpler usage)
-builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CartivaContact>>().Value);
 var app = builder.Build();
-// Seed database
+
+// ===========================================
+// Database Seeding
+// ===========================================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -95,7 +94,9 @@ using (var scope = app.Services.CreateScope())
     DbInitializer.Seed(db, userManager, roleManager);
 }
 
-// Configure pipeline
+// ===========================================
+// Middleware Pipeline
+// ===========================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -106,18 +107,27 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapGet("/test-hangfire", () =>
-{
-    BackgroundJob.Enqueue<TestJobService>(x => x.RunJob());
 
-    return "Job queued!";
-});
+// Hangfire Dashboard (Admin only)
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = new[] { new HangfireAuthorizationFilter() }
 });
 HangfireJobsInitializer.RegisterRecurringJobs();
 
+// Test endpoint for Hangfire (Development only)
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/test-hangfire", () =>
+    {
+        BackgroundJob.Enqueue<TestJobService>(x => x.RunJob());
+        return "Job queued!";
+    });
+}
+
+// ===========================================
+// Routing
+// ===========================================
 app.MapRazorPages();
 app.MapStaticAssets();
 

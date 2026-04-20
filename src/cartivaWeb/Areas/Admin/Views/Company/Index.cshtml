@@ -193,8 +193,7 @@
                                         @if (User.IsInRole(SD.Role_Admin))
                                         {
                                             <a asp-area="Admin" asp-controller="Company" asp-action="Delete" asp-route-id="@item.Company.Id"
-                                               class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Delete Company"
-                                               onclick="return confirm('Er du sikker på at du vil slette dette selskapet?')">
+                                               class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Delete Company">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         }

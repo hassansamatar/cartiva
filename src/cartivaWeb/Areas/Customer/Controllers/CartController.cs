@@ -1,8 +1,6 @@
-﻿using Cartiva.Persistence;
+﻿using Cartiva.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Cartiva.Domain;
 using System.Security.Claims;
 
 namespace CartivaWeb.Areas.Customer.Controllers
@@ -11,32 +9,25 @@ namespace CartivaWeb.Areas.Customer.Controllers
     [Authorize]
     public class CartController : Controller
     {
-        private readonly ApplicationDbContext _db;
-        private readonly Cartiva.Infrastructure.Promotions.IPromotionService _promotionService;
+        private readonly ICartService _cartService;
 
-        public CartController(ApplicationDbContext db, Cartiva.Infrastructure.Promotions.IPromotionService promotionService)
+        public CartController(ICartService cartService)
         {
-            _db = db;
-            _promotionService = promotionService;
+            _cartService = cartService;
         }
 
         // Display shopping cart
         public async Task<IActionResult> Index()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var cartItems = await _cartService.GetCartItemsAsync(userId);
+            var totals = await _cartService.CalculateTotalsAsync(userId);
 
-            var cartItems = await _db.ShoppingCarts
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                        .ThenInclude(p => p.Category)
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)
-                        .ThenInclude(sv => sv.SizeSystem)
-                .Where(c => c.ApplicationUserId == userId)
-                .ToListAsync();
-
-            var discount = await _promotionService.CalculateDiscountAsync(cartItems);
-            ViewBag.PromotionDiscount = discount;
+            ViewBag.PromotionDiscount = new
+            {
+                TotalDiscount = totals.TotalDiscount,
+                AppliedPromotions = totals.AppliedPromotions
+            };
 
             return View(cartItems);
         }
@@ -45,24 +36,15 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetPromotionDiscount()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            var cartItems = await _db.ShoppingCarts
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                        .ThenInclude(p => p.Category)
-                .Where(c => c.ApplicationUserId == userId)
-                .ToListAsync();
-
-            var discount = await _promotionService.CalculateDiscountAsync(cartItems);
-            var subtotal = cartItems.Sum(c => c.ProductVariant.Price * c.Count);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var totals = await _cartService.CalculateTotalsAsync(userId);
 
             return Json(new
             {
-                subtotal,
-                totalDiscount = discount.TotalDiscount,
-                finalTotal = subtotal - discount.TotalDiscount,
-                promotions = discount.AppliedPromotions.Select(p => new
+                subtotal = totals.SubtotalIncVat,
+                totalDiscount = totals.TotalDiscount,
+                finalTotal = totals.FinalTotal,
+                promotions = totals.AppliedPromotions.Select(p => new
                 {
                     p.DisplayText,
                     p.CategoryName,
@@ -76,16 +58,13 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCartCount()
         {
-            if (!User.Identity.IsAuthenticated)
+            if (!User.Identity?.IsAuthenticated ?? true)
             {
                 return Json(new { count = 0 });
             }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            var count = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .SumAsync(c => c.Count);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var count = await _cartService.GetCartCountAsync(userId);
 
             return Json(new { count });
         }
@@ -95,73 +74,30 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(int productVariantId, int count = 1)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _cartService.AddToCartAsync(userId, productVariantId, count);
 
-            var variant = await _db.ProductVariants
-                .Include(v => v.Product)
-                .Include(v => v.SizeValue)
-                .FirstOrDefaultAsync(v => v.Id == productVariantId);
-
-            if (variant == null) return NotFound();
-
-            // Current quantity in cart for this variant
-            var cartItem = await _db.ShoppingCarts
-                .FirstOrDefaultAsync(c => c.ApplicationUserId == userId && c.ProductVariantId == productVariantId);
-
-            int totalRequested = count + (cartItem?.Count ?? 0);
-
-            if (totalRequested > variant.Stock)
-            {
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new
-                    {
-                        success = false,
-                        message = $"Cannot add {count} items. Only {variant.Stock - (cartItem?.Count ?? 0)} left in stock."
-                    });
-                }
-
-                TempData["Error"] = $"Cannot add {count} items. Only {variant.Stock - (cartItem?.Count ?? 0)} left in stock.";
-                return RedirectToAction("Details", "Home", new { id = variant.ProductId });
-            }
-
-            if (cartItem != null)
-                cartItem.Count += count;
-            else
-            {
-                cartItem = new ShoppingCart
-                {
-                    ApplicationUserId = userId,
-                    ProductVariantId = productVariantId,
-                    Count = count
-                };
-                _db.ShoppingCarts.Add(cartItem);
-            }
-
-            await _db.SaveChangesAsync();
-
-            // Get updated cart count
-            var cartCount = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .SumAsync(c => c.Count);
-
-            string sizeDisplay = variant.SizeValue != null
-                ? variant.SizeValue.DisplayText
-                : "No Size";
-
-            // If it's an AJAX request, return JSON
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
                 return Json(new
                 {
-                    success = true,
-                    cartCount = cartCount,
-                    message = $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay}) added to your cart!"
+                    success = result.Success,
+                    cartCount = result.CartCount,
+                    message = result.Message
                 });
             }
 
-            TempData["Success"] = $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay}) added to your cart!";
-            return RedirectToAction("Details", "Home", new { id = variant.ProductId });
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+            }
+
+            // Get productId for redirect - need to fetch variant
+            return RedirectToAction("Index", "Home");
         }
 
         // Increment quantity
@@ -169,46 +105,16 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Increment(int id)
         {
-            var cartItem = await _db.ShoppingCarts
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (cartItem == null)
-            {
-                return Json(new { success = false, message = "Cart item not found." });
-            }
-
-            if (cartItem.Count >= cartItem.ProductVariant.Stock)
-            {
-                return Json(new
-                {
-                    success = false,
-                    message = $"Cannot add more than {cartItem.ProductVariant.Stock} in stock."
-                });
-            }
-
-            cartItem.Count++;
-            await _db.SaveChangesAsync();
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var cartCount = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .SumAsync(c => c.Count);
-
-            string sizeDisplay = cartItem.ProductVariant.SizeValue != null
-                ? cartItem.ProductVariant.SizeValue.DisplayText
-                : "No Size";
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _cartService.IncrementAsync(userId, id);
 
             return Json(new
             {
-                success = true,
-                newCount = cartItem.Count,
-                cartCount = cartCount,
-                subtotal = (cartItem.ProductVariant.Price * cartItem.Count).ToString("C"),
-                message = $"Increased quantity of {cartItem.ProductVariant.Product?.Name} ({cartItem.ProductVariant.Color}/{sizeDisplay}) to {cartItem.Count}."
+                success = result.Success,
+                newCount = result.NewItemCount,
+                cartCount = result.CartCount,
+                subtotal = result.ItemSubtotal?.ToString("C"),
+                message = result.Message
             });
         }
 
@@ -217,54 +123,18 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Decrement(int id)
         {
-            var cartItem = await _db.ShoppingCarts
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (cartItem == null)
-            {
-                return Json(new { success = false, message = "Cart item not found." });
-            }
-
-            string productInfo = GetProductInfo(cartItem.ProductVariant);
-            bool removed = false;
-
-            cartItem.Count--;
-            if (cartItem.Count <= 0)
-            {
-                _db.ShoppingCarts.Remove(cartItem);
-                removed = true;
-            }
-
-            await _db.SaveChangesAsync();
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var cartCount = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .SumAsync(c => c.Count);
-
-            if (removed)
-            {
-                return Json(new
-                {
-                    success = true,
-                    removed = true,
-                    itemId = id,
-                    cartCount = cartCount,
-                    message = $"{productInfo} removed from your cart."
-                });
-            }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _cartService.DecrementAsync(userId, id);
 
             return Json(new
             {
-                success = true,
-                newCount = cartItem.Count,
-                cartCount = cartCount,
-                subtotal = (cartItem.ProductVariant.Price * cartItem.Count).ToString("C"),
-                message = $"Decreased quantity of {productInfo} to {cartItem.Count}."
+                success = result.Success,
+                removed = result.ItemRemoved,
+                itemId = result.RemovedItemId,
+                newCount = result.NewItemCount,
+                cartCount = result.CartCount,
+                subtotal = result.ItemSubtotal?.ToString("C"),
+                message = result.Message
             });
         }
 
@@ -273,65 +143,18 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateCount(int id, int count)
         {
-            var cartItem = await _db.ShoppingCarts
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (cartItem == null)
-            {
-                return Json(new { success = false, message = "Cart item not found." });
-            }
-
-            string productInfo = GetProductInfo(cartItem.ProductVariant);
-            bool removed = false;
-
-            if (count <= 0)
-            {
-                _db.ShoppingCarts.Remove(cartItem);
-                removed = true;
-            }
-            else if (count > cartItem.ProductVariant.Stock)
-            {
-                return Json(new
-                {
-                    success = false,
-                    message = $"Cannot set quantity higher than available stock ({cartItem.ProductVariant.Stock})."
-                });
-            }
-            else
-            {
-                cartItem.Count = count;
-            }
-
-            await _db.SaveChangesAsync();
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var cartCount = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .SumAsync(c => c.Count);
-
-            if (removed)
-            {
-                return Json(new
-                {
-                    success = true,
-                    removed = true,
-                    itemId = id,
-                    cartCount = cartCount,
-                    message = $"{productInfo} removed from your cart."
-                });
-            }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _cartService.UpdateCountAsync(userId, id, count);
 
             return Json(new
             {
-                success = true,
-                newCount = cartItem.Count,
-                cartCount = cartCount,
-                subtotal = (cartItem.ProductVariant.Price * cartItem.Count).ToString("C"),
-                message = $"Updated quantity of {productInfo} to {count}."
+                success = result.Success,
+                removed = result.ItemRemoved,
+                itemId = result.RemovedItemId,
+                newCount = result.NewItemCount,
+                cartCount = result.CartCount,
+                subtotal = result.ItemSubtotal?.ToString("C"),
+                message = result.Message
             });
         }
 
@@ -340,35 +163,16 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Remove(int id)
         {
-            var cartItem = await _db.ShoppingCarts
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                .Include(c => c.ProductVariant)
-                    .ThenInclude(v => v.SizeValue)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (cartItem == null)
-            {
-                return Json(new { success = false, message = "Cart item not found." });
-            }
-
-            string productInfo = GetProductInfo(cartItem.ProductVariant);
-
-            _db.ShoppingCarts.Remove(cartItem);
-            await _db.SaveChangesAsync();
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var cartCount = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .SumAsync(c => c.Count);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _cartService.RemoveFromCartAsync(userId, id);
 
             return Json(new
             {
-                success = true,
-                removed = true,
-                itemId = id,
-                cartCount = cartCount,
-                message = $"{productInfo} removed from your cart."
+                success = result.Success,
+                removed = result.ItemRemoved,
+                itemId = result.RemovedItemId,
+                cartCount = result.CartCount,
+                message = result.Message
             });
         }
 
@@ -377,13 +181,8 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveAll()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var cartItems = await _db.ShoppingCarts
-                .Where(c => c.ApplicationUserId == userId)
-                .ToListAsync();
-
-            _db.ShoppingCarts.RemoveRange(cartItems);
-            await _db.SaveChangesAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            await _cartService.ClearCartAsync(userId);
 
             return Json(new
             {
@@ -391,16 +190,6 @@ namespace CartivaWeb.Areas.Customer.Controllers
                 cartCount = 0,
                 message = "All items removed from your cart."
             });
-        }
-
-        // Helper method to get product info with size display
-        private string GetProductInfo(ProductVariant variant)
-        {
-            string sizeDisplay = variant.SizeValue != null
-                ? variant.SizeValue.DisplayText
-                : "No Size";
-
-            return $"{variant.Product?.Name} ({variant.Color}/{sizeDisplay})";
         }
     }
 }

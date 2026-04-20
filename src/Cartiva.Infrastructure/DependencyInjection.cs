@@ -1,0 +1,59 @@
+using Cartiva.Infrastructure.AddressService;
+using Cartiva.Infrastructure.EmailServices;
+using Cartiva.Infrastructure.ImageServices;
+using Cartiva.Infrastructure.PaymentService;
+using Cartiva.Infrastructure.Promotions;
+using Cartiva.Infrastructure.QrCodeServices;
+using Cartiva.Infrastructure.ShippingServices;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Cartiva.Infrastructure;
+
+public static class DependencyInjection
+{
+    /// <summary>
+    /// Registers all infrastructure services including email, payments, shipping, and more.
+    /// </summary>
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Email services
+        services.AddScoped<IEmailSender, EmailSender>();
+        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+        services.AddScoped<EmailSender>(); // For direct injection when needed
+
+        // Image services
+        services.AddScoped<IImageService, ImageService>();
+
+        // QR Code services
+        services.AddScoped<IQrCodeService, QrCodeService>();
+
+        // Promotion services
+        services.AddScoped<IPromotionService, PromotionService>();
+
+        // Payment services (Stripe)
+        services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
+        services.AddScoped<IStripeWebhookService, StripeWebhookService>();
+
+        // Configure Stripe API key
+        var stripeSecretKey = configuration["Stripe:SecretKey"];
+        if (!string.IsNullOrEmpty(stripeSecretKey))
+        {
+            Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+        }
+
+        // Address lookup service (HTTP client)
+        services.AddHttpClient<AddressLookupService>();
+
+        // Bring shipping service (typed HTTP client)
+        services.AddHttpClient<IBringShippingService, BringShippingService>((serviceProvider, client) =>
+        {
+            var baseUrl = configuration["Bring:BaseUrl"] ?? "https://api.bring.com/shipping/api/v1";
+            client.BaseAddress = new Uri(baseUrl);
+            client.DefaultRequestHeaders.Add("Accept", "application/xml");
+        });
+
+        return services;
+    }
+}

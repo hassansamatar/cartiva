@@ -1,41 +1,26 @@
+using Cartiva.Application.Abstractions;
+using Cartiva.Domain;
 using Cartiva.Shared;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Cartiva.Domain;
 using System.Diagnostics;
-using Cartiva.Persistence;
 
 namespace CartivaWeb.Areas.Customer.Controllers
 {
-   [Area("Customer")]
+    [Area("Customer")]
     public class HomeController : Controller
     {
-        private readonly Cartiva.Persistence.ApplicationDbContext _db;
+        private readonly IHomeService _homeService;
 
-        public HomeController(ApplicationDbContext db)
+        public HomeController(IHomeService homeService)
         {
-            _db = db;
+            _homeService = homeService;
         }
 
         // List all products
         public async Task<IActionResult> Index()
         {
-            var products = await _db.Products
-                .Include(p => p.Category)
-                    .ThenInclude(c => c.DefaultSizeSystem)
-                .Include(p => p.Variants)
-                    .ThenInclude(v => v.SizeValue)
-                        .ThenInclude(sv => sv.SizeSystem)
-                .Include(p => p.Variants)
-                    .ThenInclude(v => v.Reviews!.Where(r => r.IsApproved))
-                .AsNoTracking()
-                .ToListAsync();
-
-            var activePromotions = await _db.Promotions
-                .Include(p => p.Category)
-                .Where(p => p.IsActive && p.StartDate <= DateTime.Now && p.EndDate >= DateTime.Now)
-                .AsNoTracking()
-                .ToListAsync();
+            var products = await _homeService.GetAllProductsForBrowsingAsync();
+            var activePromotions = await _homeService.GetActivePromotionsAsync();
 
             ViewBag.ActivePromotions = activePromotions;
 
@@ -45,16 +30,7 @@ namespace CartivaWeb.Areas.Customer.Controllers
         // Product details with variants
         public async Task<IActionResult> Details(int id)
         {
-            var product = await _db.Products
-                .Include(p => p.Category)
-                    .ThenInclude(c => c.DefaultSizeSystem)
-                .Include(p => p.Variants)
-                    .ThenInclude(v => v.SizeValue)
-                        .ThenInclude(sv => sv.SizeSystem)
-                .Include(p => p.Variants)
-                    .ThenInclude(v => v.Reviews!.Where(r => r.IsApproved))
-                        .ThenInclude(r => r.ApplicationUser)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            var product = await _homeService.GetProductDetailsAsync(id);
 
             if (product == null)
                 return NotFound();

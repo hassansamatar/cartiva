@@ -1,7 +1,6 @@
-using Cartiva.Persistence;
+using Cartiva.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Cartiva.Shared;
 
 namespace CartivaWeb.Areas.Admin.Controllers
@@ -10,23 +9,17 @@ namespace CartivaWeb.Areas.Admin.Controllers
     [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class ReviewController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IReviewService _reviewService;
 
-        public ReviewController(ApplicationDbContext db)
+        public ReviewController(IReviewService reviewService)
         {
-            _db = db;
+            _reviewService = reviewService;
         }
 
         // GET: /Admin/Review/Index
         public async Task<IActionResult> Index()
         {
-            var reviews = await _db.Reviews
-                .Include(r => r.ApplicationUser)
-                .Include(r => r.ProductVariant)
-                    .ThenInclude(pv => pv.Product)
-                .OrderByDescending(r => r.ReviewDate)
-                .ToListAsync();
-
+            var reviews = await _reviewService.GetAllReviewsAsync();
             return View(reviews);
         }
 
@@ -35,13 +28,13 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int id)
         {
-            var review = await _db.Reviews.FindAsync(id);
-            if (review == null) return NotFound();
+            var result = await _reviewService.ApproveReviewAsync(id);
 
-            review.IsApproved = true;
-            await _db.SaveChangesAsync();
+            if (result.Success)
+                TempData["success"] = result.Message;
+            else
+                TempData["error"] = result.Message;
 
-            TempData["success"] = "Review approved.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -50,13 +43,13 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int id)
         {
-            var review = await _db.Reviews.FindAsync(id);
-            if (review == null) return NotFound();
+            var result = await _reviewService.RejectReviewAsync(id);
 
-            review.IsApproved = false;
-            await _db.SaveChangesAsync();
+            if (result.Success)
+                TempData["success"] = result.Message;
+            else
+                TempData["error"] = result.Message;
 
-            TempData["success"] = "Review rejected.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -65,13 +58,13 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var review = await _db.Reviews.FindAsync(id);
-            if (review == null) return NotFound();
+            var result = await _reviewService.DeleteReviewAsync(id);
 
-            _db.Reviews.Remove(review);
-            await _db.SaveChangesAsync();
+            if (result.Success)
+                TempData["success"] = result.Message;
+            else
+                TempData["error"] = result.Message;
 
-            TempData["success"] = "Review deleted.";
             return RedirectToAction(nameof(Index));
         }
     }

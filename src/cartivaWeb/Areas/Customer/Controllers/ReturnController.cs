@@ -1,10 +1,8 @@
-using Cartiva.Persistence;
+using Cartiva.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Cartiva.Shared;
 using System.Security.Claims;
-using Cartiva.Domain;
 
 namespace CartivaWeb.Areas.Customer.Controllers
 {
@@ -12,66 +10,37 @@ namespace CartivaWeb.Areas.Customer.Controllers
     [Authorize]
     public class ReturnController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IReturnService _returnService;
 
-        public ReturnController(ApplicationDbContext db)
+        public ReturnController(IReturnService returnService)
         {
-            _db = db;
+            _returnService = returnService;
         }
 
         // GET: /Customer/Return/Create?orderDetailId=5
         [HttpGet]
         public async Task<IActionResult> Create(int orderDetailId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            var orderDetail = await _db.OrderDetails
-                .Include(od => od.OrderHeader)
-                .Include(od => od.ProductVariant)
-                    .ThenInclude(pv => pv.Product)
-                .Include(od => od.ProductVariant)
-                    .ThenInclude(pv => pv.SizeValue)
-                .FirstOrDefaultAsync(od => od.Id == orderDetailId
-                    && od.OrderHeader.ApplicationUserId == userId);
+            var validation = await _returnService.ValidateReturnRequestAsync(userId, orderDetailId);
 
-            if (orderDetail == null)
-                return NotFound();
-
-            // Must be delivered
-            if (orderDetail.OrderHeader.OrderStatus != SD.StatusDelivered)
+            if (!validation.CanReturn)
             {
-                TempData["error"] = "Returns can only be requested for delivered orders.";
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = orderDetail.OrderHeaderId });
+                TempData["error"] = validation.ErrorMessage;
+
+                // Try to get the order header ID for redirect
+                var returnRequest = await _returnService.GetReturnRequestByIdAsync(orderDetailId);
+                if (returnRequest?.OrderDetail?.OrderHeaderId != null)
+                {
+                    return RedirectToAction("Details", "Order", new { area = "Customer", id = returnRequest.OrderDetail.OrderHeaderId });
+                }
+                return RedirectToAction("Index", "Order", new { area = "Customer" });
             }
 
-            // Check return window
-            var deliveredDate = orderDetail.OrderHeader.OrderDate; // use order date as fallback
-            var shipment = await _db.Shipments
-                .FirstOrDefaultAsync(s => s.OrderHeaderId == orderDetail.OrderHeaderId && s.DeliveredDate != null);
-            if (shipment?.DeliveredDate != null)
-                deliveredDate = shipment.DeliveredDate.Value;
-
-            var daysSinceDelivery = (DateTime.UtcNow - deliveredDate).Days;
-            if (daysSinceDelivery > SD.ReturnWindowDays)
-            {
-                TempData["error"] = $"The {SD.ReturnWindowDays}-day return window has expired.";
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = orderDetail.OrderHeaderId });
-            }
-
-            // Check if already has a pending/approved return
-            var existingReturn = await _db.ReturnRequests
-                .AnyAsync(r => r.OrderDetailId == orderDetailId
-                    && (r.Status == SD.ReturnStatusPending || r.Status == SD.ReturnStatusApproved || r.Status == SD.ReturnStatusRefunded));
-
-            if (existingReturn)
-            {
-                TempData["error"] = "A return request already exists for this item.";
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = orderDetail.OrderHeaderId });
-            }
-
-            ViewBag.OrderDetail = orderDetail;
-            ViewBag.DaysRemaining = SD.ReturnWindowDays - daysSinceDelivery;
-            ViewBag.ReturnReasons = SD.GetReturnReasons();
+            ViewBag.OrderDetail = validation.OrderDetail;
+            ViewBag.DaysRemaining = validation.DaysRemaining;
+            ViewBag.ReturnReasons = _returnService.GetReturnReasons();
             return View();
         }
 
@@ -80,63 +49,35 @@ namespace CartivaWeb.Areas.Customer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(int orderDetailId, string reason, string? description, int quantity)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            var orderDetail = await _db.OrderDetails
-                .Include(od => od.OrderHeader)
-                .FirstOrDefaultAsync(od => od.Id == orderDetailId
-                    && od.OrderHeader.ApplicationUserId == userId);
+            var result = await _returnService.CreateReturnRequestAsync(userId, orderDetailId, reason, description, quantity);
 
-            if (orderDetail == null)
-                return NotFound();
-
-            if (orderDetail.OrderHeader.OrderStatus != SD.StatusDelivered)
+            if (result.Success)
             {
-                TempData["error"] = "Returns can only be requested for delivered orders.";
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = orderDetail.OrderHeaderId });
+                TempData["success"] = result.Message;
+            }
+            else
+            {
+                TempData["error"] = result.Message;
             }
 
-            if (quantity < 1 || quantity > orderDetail.Count)
+            // Get the order detail to find the order header ID for redirect
+            var validation = await _returnService.ValidateReturnRequestAsync(userId, orderDetailId);
+            if (validation.OrderDetail?.OrderHeaderId != null)
             {
-                TempData["error"] = $"Quantity must be between 1 and {orderDetail.Count}.";
-                return RedirectToAction("Create", new { orderDetailId });
+                return RedirectToAction("Details", "Order", new { area = "Customer", id = validation.OrderDetail.OrderHeaderId });
             }
 
-            var returnRequest = new ReturnRequest
-            {
-                OrderDetailId = orderDetailId,
-                ApplicationUserId = userId,
-                Reason = reason,
-                Description = description?.Trim(),
-                Quantity = quantity,
-                RequestDate = DateTime.UtcNow,
-                Status = SD.ReturnStatusPending,
-                RefundAmount = orderDetail.Price * quantity
-            };
-
-            _db.ReturnRequests.Add(returnRequest);
-            await _db.SaveChangesAsync();
-
-            TempData["success"] = "Return request submitted. We will review it shortly.";
-            return RedirectToAction("Details", "Order", new { area = "Customer", id = orderDetail.OrderHeaderId });
+            return RedirectToAction("Index", "Order", new { area = "Customer" });
         }
 
         // GET: /Customer/Return/MyReturns
         [HttpGet]
         public async Task<IActionResult> MyReturns()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            var returns = await _db.ReturnRequests
-                .Where(r => r.ApplicationUserId == userId)
-                .Include(r => r.OrderDetail)
-                    .ThenInclude(od => od.ProductVariant)
-                        .ThenInclude(pv => pv.Product)
-                .Include(r => r.OrderDetail)
-                    .ThenInclude(od => od.OrderHeader)
-                .OrderByDescending(r => r.RequestDate)
-                .ToListAsync();
-
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var returns = await _returnService.GetUserReturnRequestsAsync(userId);
             return View(returns);
         }
     }

@@ -3,6 +3,75 @@
     ViewData["Title"] = Model.Id != 0 ? "Update Company" : "Create Company";
 }
 
+<style>
+    #addressSuggestions {
+        position: relative;
+        z-index: 1000;
+        margin-top: -0.5rem;
+        max-height: 250px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 0.375rem;
+    }
+
+        #addressSuggestions .list-group-item {
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            padding: 0.75rem 1rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+
+            #addressSuggestions .list-group-item:first-child {
+                border-top: 1px solid #dee2e6;
+                border-top-left-radius: 0.375rem;
+                border-top-right-radius: 0.375rem;
+            }
+
+            #addressSuggestions .list-group-item:last-child {
+                border-bottom-left-radius: 0.375rem;
+                border-bottom-right-radius: 0.375rem;
+            }
+
+            #addressSuggestions .list-group-item:hover {
+                background-color: #e9ecef;
+            }
+
+            #addressSuggestions .list-group-item:active,
+            #addressSuggestions .list-group-item:focus {
+                background-color: #0d6efd;
+                color: #fff;
+                border-color: #0d6efd;
+            }
+
+                #addressSuggestions .list-group-item:active .text-muted,
+                #addressSuggestions .list-group-item:focus .text-muted,
+                #addressSuggestions .list-group-item:active .text-primary,
+                #addressSuggestions .list-group-item:focus .text-primary {
+                    color: #fff !important;
+                }
+
+    /* Scrollbar styling */
+    #addressSuggestions::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #addressSuggestions::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    #addressSuggestions::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+        #addressSuggestions::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+</style>
+
 <div class="row justify-content-center mt-5">
     <div class="col-lg-7 col-md-9">
 

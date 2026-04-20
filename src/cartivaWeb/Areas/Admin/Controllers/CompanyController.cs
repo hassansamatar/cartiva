@@ -1,13 +1,8 @@
-﻿using Cartiva.Persistence;
+﻿using Cartiva.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Cartiva.Domain;
-using Cartiva.Domain.ViewModels;
 using Cartiva.Shared;
-using System;
-using System.Linq;
 
 namespace CartivaWeb.Areas.Admin.Controllers
 {
@@ -15,73 +10,17 @@ namespace CartivaWeb.Areas.Admin.Controllers
     [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class CompanyController : Controller
     {
-        private readonly ApplicationDbContext _db;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICompanyService _companyService;
 
-        public CompanyController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public CompanyController(ICompanyService companyService)
         {
-            _db = db;
-            _userManager = userManager;
+            _companyService = companyService;
         }
 
         // GET: Company List
         public async Task<IActionResult> Index()
         {
-            var companies = await _db.Companies.ToListAsync();
-
-            var companyUsers = await _db.Users
-                .Where(u => u.CompanyId != null)
-                .ToListAsync();
-
-            var orders = await _db.OrderHeaders
-                .Include(o => o.ApplicationUser)
-                .ToListAsync();
-
-            var companyList = companies.Select(company =>
-            {
-                var companyUser = companyUsers
-                    .FirstOrDefault(u => u.CompanyId == company.Id);
-
-                var allUsersForCompany = companyUsers
-                    .Where(u => u.CompanyId == company.Id)
-                    .ToList();
-
-                var companyOrders = orders
-                    .Where(o => o.ApplicationUser != null && o.ApplicationUser.CompanyId == company.Id)
-                    .ToList();
-
-                string paymentStatus = "No Orders";
-
-                if (companyOrders.Any())
-                {
-                    if (companyOrders.Any(o =>
-                            o.PaymentStatus == SD.PaymentStatusDeferred &&
-                            o.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now)))
-                    {
-                        paymentStatus = "Overdue";
-                    }
-                    else if (companyOrders.Any(o =>
-                            o.PaymentStatus == SD.PaymentStatusDeferred))
-                    {
-                        paymentStatus = "Pending";
-                    }
-                    else if (companyOrders.All(o =>
-                            o.PaymentStatus == SD.PaymentStatusApproved))
-                    {
-                        paymentStatus = "Paid";
-                    }
-                }
-
-                return new CompanyListVM
-                {
-                    Company = company,
-                    ContactPerson = companyUser?.Name ?? "—",
-                    PaymentStatus = paymentStatus,
-                    Users = allUsersForCompany
-                };
-
-            }).ToList();
-
+            var companyList = await _companyService.GetAllCompaniesWithStatsAsync();
             return View(companyList);
         }
 
@@ -90,12 +29,10 @@ namespace CartivaWeb.Areas.Admin.Controllers
         {
             if (id == null || id == 0)
             {
-                // Create new company
                 return View(new Company { IsActive = true });
             }
 
-            // Edit existing company
-            var companyObj = await _db.Companies.FirstOrDefaultAsync(c => c.Id == id);
+            var companyObj = await _companyService.GetCompanyByIdAsync(id.Value);
             if (companyObj == null) return NotFound();
 
             return View(companyObj);
@@ -109,36 +46,23 @@ namespace CartivaWeb.Areas.Admin.Controllers
             if (!ModelState.IsValid)
                 return View(companyObj);
 
+            CompanyOperationResult result;
+
             if (companyObj.Id == 0)
             {
-                // New company
-                _db.Companies.Add(companyObj);
-                TempData["success"] = "Company created successfully";
+                result = await _companyService.CreateCompanyAsync(companyObj);
             }
             else
             {
-                // Update existing company
-                var existingCompany = await _db.Companies.FindAsync(companyObj.Id);
-                if (existingCompany == null) return NotFound();
-
-                existingCompany.Name = companyObj.Name;
-                existingCompany.StreetAddress = companyObj.StreetAddress;
-                existingCompany.City = companyObj.City;
-                existingCompany.State = companyObj.State;
-                existingCompany.PostalCode = companyObj.PostalCode;
-                existingCompany.PhoneNumber = companyObj.PhoneNumber;
-
-                // Only Admin can change active status
-                if (User.IsInRole(SD.Role_Admin))
-                {
-                    existingCompany.IsActive = companyObj.IsActive;
-                }
-
-                _db.Companies.Update(existingCompany);
-                TempData["success"] = "Company updated successfully";
+                bool canChangeActiveStatus = User.IsInRole(SD.Role_Admin);
+                result = await _companyService.UpdateCompanyAsync(companyObj, canChangeActiveStatus);
             }
 
-            await _db.SaveChangesAsync();
+            if (result.Success)
+                TempData["success"] = result.Message;
+            else
+                TempData["error"] = result.Message;
+
             return RedirectToAction("Index");
         }
 
@@ -148,8 +72,20 @@ namespace CartivaWeb.Areas.Admin.Controllers
         {
             if (id == null) return NotFound();
 
-            var companyObj = await _db.Companies.FirstOrDefaultAsync(c => c.Id == id);
+            var companyObj = await _companyService.GetCompanyByIdAsync(id.Value);
             if (companyObj == null) return NotFound();
+
+            // Check if company can be deleted
+            var hasOrders = await _companyService.HasOrdersAsync(id.Value);
+            var hasActiveUsers = await _companyService.HasActiveUsersAsync(id.Value);
+            var companyUsers = await _companyService.GetCompanyUsersAsync(id.Value);
+
+            ViewBag.HasOrderHistory = hasOrders;
+            ViewBag.HasActiveUsers = hasActiveUsers;
+            ViewBag.CanDelete = !hasOrders && !hasActiveUsers;
+            ViewBag.CompanyUsers = companyUsers;
+            ViewBag.UserCount = companyUsers.Count;
+            ViewBag.ActiveUserCount = companyUsers.Count(u => u.IsActive);
 
             return View(companyObj);
         }
@@ -162,35 +98,21 @@ namespace CartivaWeb.Areas.Admin.Controllers
         {
             if (id == null) return NotFound();
 
-            var company = await _db.Companies.FirstOrDefaultAsync(c => c.Id == id);
-            if (company == null) return NotFound();
+            var result = await _companyService.DeleteCompanyAsync(id.Value);
 
-            // Check if any user under this company has orders
-            bool hasOrders = await _db.OrderHeaders
-                .Include(o => o.ApplicationUser)
-                .AnyAsync(o => o.ApplicationUser != null && o.ApplicationUser.CompanyId == company.Id);
-
-            // Check if any active user is assigned to this company
-            bool hasActiveUsers = await _db.Users
-                .AnyAsync(u => u.CompanyId == company.Id && u.IsActive);
-
-            if (hasOrders || hasActiveUsers)
+            if (result.Success)
             {
-                // Cannot delete: mark inactive instead
-                company.IsActive = false;
-
-                _db.Companies.Update(company);
-                await _db.SaveChangesAsync();
-
-                TempData["error"] = "Company has order history or active users and cannot be deleted. It has been marked inactive instead.";
-                return RedirectToAction("Delete", new { id = company.Id });
+                TempData["success"] = result.Message;
+                return RedirectToAction("Index");
             }
 
-            // Safe to delete
-            _db.Companies.Remove(company);
-            await _db.SaveChangesAsync();
+            if (result.WasDeactivatedInstead)
+            {
+                TempData["error"] = result.Message;
+                return RedirectToAction("Delete", new { id = result.EntityId });
+            }
 
-            TempData["success"] = "Company deleted successfully.";
+            TempData["error"] = result.Message;
             return RedirectToAction("Index");
         }
 
@@ -199,14 +121,13 @@ namespace CartivaWeb.Areas.Admin.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public async Task<IActionResult> ToggleStatus(int id)
         {
-            var company = await _db.Companies.FindAsync(id);
-            if (company == null) return NotFound();
+            var result = await _companyService.ToggleStatusAsync(id);
 
-            company.IsActive = !company.IsActive;
-            _db.Companies.Update(company);
-            await _db.SaveChangesAsync();
+            if (result.Success)
+                TempData["success"] = result.Message;
+            else
+                TempData["error"] = result.Message;
 
-            TempData["success"] = $"Company status updated to {(company.IsActive ? "Active" : "Inactive")}.";
             return RedirectToAction("Index");
         }
     }
