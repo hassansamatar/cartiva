@@ -10,6 +10,16 @@
     var companyOrders = ViewBag.CompanyOrders as List<OrderHeader>;
     var companyName = ViewBag.CompanyName as string;
     var hasCompanyOrders = companyOrders != null && companyOrders.Any();
+
+    // Company Orders Statistics
+    var totalCompanyOrders = companyOrders?.Count ?? 0;
+    var uniqueUsers = companyOrders?.Select(o => o.ApplicationUserId).Distinct().Count() ?? 0;
+    var outstandingBills = companyOrders?.Count(o => o.PaymentStatus == SD.PaymentStatusDeferred) ?? 0;
+    var totalOutstandingAmount = companyOrders?
+        .Where(o => o.PaymentStatus == SD.PaymentStatusDeferred)
+        .Sum(o => o.OrderTotal) ?? 0;
+    var overdueBills = companyOrders?.Count(o => o.PaymentStatus == SD.PaymentStatusDeferred 
+        && o.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now)) ?? 0;
 }
 
 <div class="container mt-4 mb-5">
@@ -243,6 +253,47 @@
                         Showing orders from your colleagues at <strong>@companyName</strong>.
                         You can view details and pay outstanding invoices.
                     </div>
+
+                    <!-- Company Orders Statistics Cards -->
+                    <div class="row mb-4 g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card admin-card card-primary">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-cart"></i> Total Orders</h5>
+                                    <h3>@totalCompanyOrders</h3>
+                                    <p>Company orders</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card admin-card card-info">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-people"></i> Team Members</h5>
+                                    <h3>@uniqueUsers</h3>
+                                    <p>Who placed orders</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card admin-card card-warning">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Outstanding</h5>
+                                    <h3>@outstandingBills</h3>
+                                    <p>@totalOutstandingAmount.ToString("C", culture) unpaid</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card admin-card card-danger">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-clock-history"></i> Overdue</h5>
+                                    <h3>@overdueBills</h3>
+                                    <p>Past due date</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row g-4">
                         @foreach (var coOrder in companyOrders!.OrderBy(o => o.PaymentDueDate ?? DateOnly.MaxValue).ThenByDescending(o => o.OrderDate))
                         {
@@ -344,6 +395,7 @@
 @section Scripts {
     <input type="hidden" id="cancelOrderUrl" value="@Url.Action("CancelOrder", "Order")" />
     <link rel="stylesheet" href="~/css/order-history.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
     <script src="~/js/order-history.js" asp-append-version="true"></script>
 }
 

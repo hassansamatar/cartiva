@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cartiva · E‑Commerce Screenshot Gallery | Interactive Preview</title>
+  <meta name="description" content="Cartiva e‑commerce platform screenshots – admin, orders, invoices, returns, Hangfire, Stripe. Filter and lightbox.">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
+      background: #f8f9fa;
+      color: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 960px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    h1 span {
+      color: #198754;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #495057;
+      margin-bottom: 24px;
+      font-size: 1.1rem;
+    }
+
+    .tech-badges {
+      text-align: center;
+      margin-bottom: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .tech-badges span {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #fff;
+      border: 1px solid #dee2e6;
+      transition: all 0.2s;
+    }
+
+    .tech-badges span:hover {
+      border-color: #198754;
+      transform: translateY(-1px);
+    }
+
+    .action-bar {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .action-btn {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 40px;
+      padding: 8px 20px;
+      font-weight: 500;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #1a1a2e;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .action-btn i, .action-btn span {
+      color: #198754;
+    }
+
+    .action-btn:hover {
+      border-color: #198754;
+      background: #f8f9fa;
+      transform: translateY(-2px);
+    }
+
+    .filter-toolbar {
+      background: #fff;
+      border-radius: 60px;
+      padding: 0.5rem 1.2rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border: 1px solid #e9ecef;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+
+    .stats-badge {
+      background: #eef2f3;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .stats-badge i {
+      color: #198754;
+      margin-right: 6px;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filter-input {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 60px;
+      padding: 0.5rem 1rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      width: 240px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .filter-input:focus {
+      border-color: #198754;
+      box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.1);
+    }
+
+    .clear-filter {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 40px;
+      padding: 0.45rem 1rem;
+      font-weight: 500;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #495057;
+    }
+
+    .clear-filter:hover {
+      background: #f1f3f5;
+      border-color: #198754;
+      color: #198754;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.8rem;
+      margin-bottom: 2rem;
+    }
+
+    .screenshot-card {
+      background: #fff;
+      border: 1px solid #e9ecef;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .screenshot-card:hover {
+      border-color: #198754;
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .card-img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+      background: #f1f3f5;
+    }
+
+    .card-content {
+      padding: 1.2rem 1.2rem 1.4rem;
+      flex: 1;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #1a1a2e;
+      word-break: break-word;
+    }
+
+    .card-title i {
+      color: #198754;
+      font-size: 0.9rem;
+    }
+
+    .interactive-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #eef2f3;
+      color: #198754;
+      width: fit-content;
+      margin-top: 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid #e9ecef;
+      color: #6c757d;
+    }
+
+    /* Modal lightbox */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 0.2s, opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .modal-container {
+      background: #fff;
+      max-width: 90vw;
+      max-height: 90vh;
+      width: 860px;
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 40px rgba(0, 0, 0, 0.3);
+      animation: modalPop 0.2s ease;
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-img-wrapper {
+      background: #f1f3f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.2rem;
+    }
+
+    .modal-img {
+      max-width: 100%;
+      max-height: 55vh;
+      object-fit: contain;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .modal-info {
+      padding: 1.2rem 1.8rem;
+      background: white;
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.5rem;
+      word-break: break-word;
+    }
+
+    .modal-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1.8rem 1.4rem;
+      background: white;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .nav-btn {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 0.5rem 1.2rem;
+      border-radius: 40px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: inherit;
+      color: #1a1a2e;
+    }
+
+    .nav-btn:hover {
+      background: #e9ecef;
+      border-color: #198754;
+      color: #198754;
+    }
+
+    .close-modal {
+      background: #198754;
+      border: none;
+      padding: 0.5rem 1.5rem;
+      border-radius: 40px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .close-modal:hover {
+      background: #0f6e45;
+      transform: scale(0.98);
+    }
+
+    .counter {
+      font-size: 0.8rem;
+      background: #eef2f3;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      font-weight: 500;
+    }
+
+    .extra-info {
+      background: #eef2f3;
+      border-radius: 20px;
+      padding: 18px 24px;
+      margin: 32px 0 20px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+
+    .extra-info p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #2c3e50;
+    }
+
+    .extra-info i {
+      color: #198754;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.8rem;
+      color: #868e96;
+      border-top: 1px solid #dee2e6;
+      padding-top: 24px;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 24px 16px; }
+      h1 { font-size: 2rem; }
+      .filter-toolbar { flex-direction: column; align-items: stretch; border-radius: 28px; padding: 1rem; }
+      .filter-input { width: 100%; }
+      .modal-container { width: 95vw; }
+      .modal-title { font-size: 1.2rem; }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>🛒 <span>Cartiva</span> E‑Commerce</h1>
+  <p class="subtitle">Complete screenshot library — admin, orders, invoices, returns, promotions & more</p>
+
+  <div class="tech-badges">
+    <span>.NET 10</span><span>Stripe</span><span>EF Core</span><span>SQL Server</span><span>Identity</span>
+    <span>Hangfire</span><span>Invoice Gen</span><span>Returns</span><span>Shipment</span>
+  </div>
+
+  <!-- Action bar with Reset button, Home, ER diagrams, and Interactive Screenshots link -->
+  <div class="action-bar">
+    <button id="resetGalleryBtn" class="action-btn"><i class="fas fa-undo-alt"></i> Reset to Original</button>
+    <a href="../index.html" class="action-btn"><i class="fas fa-home"></i> Back to Home</a>
+    <a href="../ER-diagram/Entity-Relationship-Diagram.html" class="action-btn"><i class="fas fa-diagram-project"></i> ER-diagrams</a>
+    <a href="gallery.html" target="_blank" class="action-btn"><span>📸</span> Interactive Screenshots</a>
+    <a href="#" id="scrollToGalleryLink" class="action-btn"><i class="fas fa-images"></i> Browse Gallery</a>
+  </div>
+
+  <div class="filter-toolbar">
+    <div class="stats-badge">
+      <i class="fas fa-images"></i> <span id="screenshotCount">0</span> screenshots
+    </div>
+    <div class="filter-group">
+      <input type="text" id="filterInput" class="filter-input" placeholder="🔍 Filter by filename..." autocomplete="off">
+      <button id="clearFilterBtn" class="clear-filter"><i class="fas fa-times-circle"></i> Clear</button>
+    </div>
+  </div>
+
+  <!-- Gallery grid - all images except r.png -->
+  <div id="galleryContainer" class="gallery-grid">
+    <div class="screenshot-card" data-filename="home.png">
+      <img class="card-img" src="home.png" alt="home.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> home.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="admin-management.png">
+      <img class="card-img" src="admin-management.png" alt="admin-management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> admin-management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="product_management.png">
+      <img class="card-img" src="product_management.png" alt="product_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> product_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+   
+    <div class="screenshot-card" data-filename="category_management.png">
+      <img class="card-img" src="category_management.png" alt="category_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> category_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="user_profile.png">
+      <img class="card-img" src="user_profile.png" alt="user_profile.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> user_profile.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="promation_management.png">
+      <img class="card-img" src="promation_management.png" alt="promation_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> promation_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="company_bills_managemnt.png">
+      <img class="card-img" src="company_bills_managemnt.png" alt="company_bills_managemnt.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> company_bills_managemnt.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    
+    <div class="screenshot-card" data-filename="company_management.png">
+      <img class="card-img" src="company_management.png" alt="company_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> company_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="refund_processed.png">
+      <img class="card-img" src="refund_processed.png" alt="refund_processed.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> refund_processed.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="hangfire_jobs.png">
+      <img class="card-img" src="hangfire_jobs.png" alt="hangfire_jobs.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> hangfire_jobs.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="register.png">
+      <img class="card-img" src="register.png" alt="register.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> register.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="history_graph_hangfire.png">
+      <img class="card-img" src="history_graph_hangfire.png" alt="history_graph_hangfire.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> history_graph_hangfire.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="retun_request_pending.png">
+      <img class="card-img" src="retun_request_pending.png" alt="retun_request_pending.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> retun_request_pending.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    
+    <div class="screenshot-card" data-filename="return_management.png">
+      <img class="card-img" src="return_management.png" alt="return_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> return_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="return_refunded.png">
+      <img class="card-img" src="return_refunded.png" alt="return_refunded.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> return_refunded.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="invoice.png">
+      <img class="card-img" src="invoice.png" alt="invoice.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> invoice.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="return_request.png">
+      <img class="card-img" src="return_request.png" alt="return_request.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> return_request.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="invoice_management.png">
+      <img class="card-img" src="invoice_management.png" alt="invoice_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> invoice_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="review_management.png">
+      <img class="card-img" src="review_management.png" alt="review_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> review_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="items_added_shopping_cart.png">
+      <img class="card-img" src="items_added_shopping_cart.png" alt="items_added_shopping_cart.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> items_added_shopping_cart.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="shipment_management.png">
+      <img class="card-img" src="shipment_management.png" alt="shipment_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> shipment_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="login.png">
+      <img class="card-img" src="login.png" alt="login.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> login.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="shipping_info_review.png">
+      <img class="card-img" src="shipping_info_review.png" alt="shipping_info_review.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> shipping_info_review.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="order_confirmed.png">
+      <img class="card-img" src="order_confirmed.png" alt="order_confirmed.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> order_confirmed.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="stripe_dashboard.png">
+      <img class="card-img" src="stripe_dashboard.png" alt="stripe_dashboard.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> stripe_dashboard.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="order_history.png">
+      <img class="card-img" src="order_history.png" alt="order_history.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> order_history.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="order_status.png">
+      <img class="card-img" src="order_status.png" alt="order_status.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> order_status.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+     <div class="screenshot-card" data-filename="product_review.png">
+      <img class="card-img" src="product_review.png" alt="product_review.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> product_reviw.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="user_management.png">
+      <img class="card-img" src="user_management.png" alt="user_management.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> user_management.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    <div class="screenshot-card" data-filename="payment_issued.png">
+      <img class="card-img" src="payment_issued.png" alt="payment_issued.png" onerror="this.src='https://placehold.co/400x260?text=Missing+Image'">
+      <div class="card-content"><div class="card-title"><i class="fas fa-store"></i> payment_issued.png</div><div class="interactive-badge"><i class="fas fa-expand-alt"></i> click to preview</div></div>
+    </div>
+    
+    
+  </div>
+
+  <div class="extra-info">
+    <p><i class="fas fa-lightbulb"></i> <strong>Interactive gallery:</strong> Click any card → fullscreen lightbox. Use filter to search by filename. Reset button restores original set.</p>
+  </div>
+
+  <div class="footer">
+    Cartiva E‑Commerce · Full‑stack platform · Real screenshots from admin, checkout, invoices, returns, Hangfire, and more.
+  </div>
+</div>
+
+<!-- Lightbox Modal -->
+<div id="lightboxModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-img-wrapper">
+      <img id="modalImage" class="modal-img" alt="Screenshot preview" src="">
+    </div>
+    <div class="modal-info">
+      <div id="modalTitle" class="modal-title"></div>
+    </div>
+    <div class="modal-controls">
+      <button id="prevBtn" class="nav-btn"><i class="fas fa-chevron-left"></i> Prev</button>
+      <span id="modalCounter" class="counter">0 / 0</span>
+      <button id="nextBtn" class="nav-btn">Next <i class="fas fa-chevron-right"></i></button>
+      <button id="closeModalBtn" class="close-modal"><i class="fas fa-times"></i> Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const galleryGrid = document.getElementById('galleryContainer');
+  const filterInput = document.getElementById('filterInput');
+  const clearFilterBtn = document.getElementById('clearFilterBtn');
+  const resetBtn = document.getElementById('resetGalleryBtn');
+  const statsSpan = document.getElementById('screenshotCount');
+  const scrollLink = document.getElementById('scrollToGalleryLink');
+
+  // Lightbox elements
+  const modalOverlay = document.getElementById('lightboxModal');
+  const modalImage = document.getElementById('modalImage');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalCounter = document.getElementById('modalCounter');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+
+  // Store original HTML string (r.png already removed)
+  const originalHTML = galleryGrid.innerHTML;
+
+  function updateStats() {
+    const visibleCards = Array.from(galleryGrid.children).filter(card => card.style.display !== 'none');
+    statsSpan.innerText = visibleCards.length;
+  }
+
+  function applyFilter() {
+    const term = filterInput.value.trim().toLowerCase();
+    const cards = Array.from(galleryGrid.children);
+    cards.forEach(card => {
+      const filename = card.getAttribute('data-filename') || card.querySelector('.card-title')?.innerText || '';
+      const matches = filename.toLowerCase().includes(term);
+      card.style.display = matches ? '' : 'none';
+    });
+    updateStats();
+    if (modalOverlay.classList.contains('active')) closeModal();
+  }
+
+  function resetToOriginal() {
+    galleryGrid.innerHTML = originalHTML;
+    attachCardClickHandlers();
+    filterInput.value = '';
+    applyFilter();
+  }
+
+  // Lightbox logic
+  let currentItems = [];
+  let currentIndex = 0;
+
+  function updateLightboxItems() {
+    const visibleCards = Array.from(galleryGrid.children).filter(card => card.style.display !== 'none');
+    currentItems = visibleCards.map(card => {
+      const img = card.querySelector('.card-img');
+      const titleElem = card.querySelector('.card-title');
+      return {
+        src: img ? img.src : '',
+        title: titleElem ? titleElem.innerText.replace(/[^\w\s\.-]/g, '').trim() : 'Screenshot'
+      };
+    }).filter(item => item.src);
+  }
+
+  function openLightbox(index) {
+    if (!currentItems.length || index < 0 || index >= currentItems.length) return;
+    currentIndex = index;
+    const item = currentItems[currentIndex];
+    modalImage.src = item.src;
+    modalTitle.innerText = item.title;
+    modalCounter.innerText = `${currentIndex+1} / ${currentItems.length}`;
+    modalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function nextImage() {
+    if (!currentItems.length) return;
+    currentIndex = (currentIndex + 1) % currentItems.length;
+    const item = currentItems[currentIndex];
+    modalImage.src = item.src;
+    modalTitle.innerText = item.title;
+    modalCounter.innerText = `${currentIndex+1} / ${currentItems.length}`;
+  }
+
+  function prevImage() {
+    if (!currentItems.length) return;
+    currentIndex = (currentIndex - 1 + currentItems.length) % currentItems.length;
+    const item = currentItems[currentIndex];
+    modalImage.src = item.src;
+    modalTitle.innerText = item.title;
+    modalCounter.innerText = `${currentIndex+1} / ${currentItems.length}`;
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function attachCardClickHandlers() {
+    const cards = document.querySelectorAll('.screenshot-card');
+    cards.forEach(card => {
+      card.removeEventListener('click', card._listener);
+      const handler = () => {
+        updateLightboxItems();
+        const visibleCards = Array.from(galleryGrid.children).filter(c => c.style.display !== 'none');
+        const newIndex = visibleCards.findIndex(c => c === card);
+        if (newIndex !== -1) openLightbox(newIndex);
+      };
+      card.addEventListener('click', handler);
+      card._listener = handler;
+    });
+  }
+
+  // Keyboard navigation
+  function onKeyDown(e) {
+    if (!modalOverlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeModal();
+    else if (e.key === 'ArrowRight') nextImage();
+    else if (e.key === 'ArrowLeft') prevImage();
+  }
+
+  // Event bindings
+  filterInput.addEventListener('input', applyFilter);
+  clearFilterBtn.addEventListener('click', () => { filterInput.value = ''; applyFilter(); });
+  if (resetBtn) resetBtn.addEventListener('click', resetToOriginal);
+  scrollLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    galleryGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  prevBtn.addEventListener('click', prevImage);
+  nextBtn.addEventListener('click', nextImage);
+  closeModalBtn.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+  window.addEventListener('keydown', onKeyDown);
+
+  // Initialization
+  attachCardClickHandlers();
+  applyFilter();
+</script>
+</body>
+</html>

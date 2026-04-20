@@ -26,6 +26,17 @@ namespace CartivaWeb.Areas.Admin.Controllers
             try
             {
                 var categories = await _categoryService.GetAllCategoriesAsync();
+
+                // Calculate statistics for each category
+                var categoryStats = new Dictionary<int, (int ProductCount, int VariantCount)>();
+                foreach (var category in categories)
+                {
+                    var productCount = await _categoryService.GetProductCountAsync(category.Id);
+                    var variantCount = await _categoryService.GetVariantCountAsync(category.Id);
+                    categoryStats[category.Id] = (productCount, variantCount);
+                }
+
+                ViewBag.CategoryStats = categoryStats;
                 return View(categories);
             }
             catch (Exception ex)

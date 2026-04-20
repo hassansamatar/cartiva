@@ -1,84 +1,204 @@
 ﻿@model List<Category>
 
-<div class="container">
-    <div class="row pt-4 pb-3">
-        <div class="col-6">
-            <h2 class="text-primary">
-                <i class="bi bi-tags"></i> Category List
-            </h2>
+@{
+    ViewData["Title"] = "Category Management";
+
+    var categoryStats = ViewBag.CategoryStats as Dictionary<int, (int, int)> 
+                        ?? new Dictionary<int, (int, int)>();
+
+    var totalCategories = Model?.Count ?? 0;
+    var categoriesWithProducts = categoryStats.Count(s => s.Value.Item1 > 0);
+    var categoriesWithoutProducts = totalCategories - categoriesWithProducts;
+    var totalProducts = categoryStats.Sum(s => s.Value.Item1);
+    var totalVariants = categoryStats.Sum(s => s.Value.Item2);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
+
+<div class="admin-dashboard">
+    <div class="container-fluid">
+
+        <h2><i class="bi bi-tags"></i> Category Management</h2>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-tags"></i> Total Categories</h5>
+                        <h3>@totalCategories</h3>
+                        <p>Product categories</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-folder-check"></i> With Products</h5>
+                        <h3>@categoriesWithProducts</h3>
+                        <p>Categories in use</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-warning">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-folder"></i> Empty</h5>
+                        <h3>@categoriesWithoutProducts</h3>
+                        <p>No products assigned</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-box-seam"></i> Total Products</h5>
+                        <h3>@totalProducts</h3>
+                        <p>Across all categories</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-6 text-end">
-            <a asp-controller="Category" asp-action="Create" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Create New Category
-            </a>
+
+        <!-- Categories Table Section -->
+        <div class="admin-section">
+            <div class="section-header">
+                <h3><i class="bi bi-table"></i> All Categories</h3>
+                <a asp-controller="Category" asp-action="Create" class="btn btn-create">
+                    <i class="bi bi-plus-circle me-1"></i> Add Category
+                </a>
+            </div>
+
+            @if (Model != null && Model.Any())
+            {
+                <table id="categoriesTable" class="table admin-table">
+                    <thead>
+                        <tr>
+                            <th>Category Name</th>
+                            <th>Default Size System</th>
+                            <th>Products</th>
+                            <th>Status</th>
+                            <th style="width: 120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var obj in Model)
+                        {
+                            var stats = categoryStats.GetValueOrDefault(obj.Id, (0, 0));
+                            var productCount = stats.Item1;
+                            var hasProducts = productCount > 0;
+                            var rowClass = !hasProducts ? "row-warning" : "";
+
+                            <tr class="@rowClass">
+                                <td>
+                                    <span class="fw-600">
+                                        <i class="bi bi-folder me-1 text-primary"></i>@obj.Name
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (obj.DefaultSizeSystem != null)
+                                    {
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi @(obj.DefaultSizeSystem.IconClass ?? "bi-tag") me-1 text-info"></i>
+                                            <span class="badge bg-info me-1" data-bs-toggle="tooltip" title="@obj.DefaultSizeSystem.Description">
+                                                @obj.DefaultSizeSystem.Name
+                                            </span>
+                                            <span class="badge bg-light text-dark">@obj.DefaultSizeSystem.SizeType</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-light">
+                                            <i class="bi bi-dash"></i> No size system
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (hasProducts)
+                                    {
+                                        <span class="badge-status badge-active">
+                                            <i class="bi bi-box-seam me-1"></i>@productCount
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status badge-pending">
+                                            <i class="bi bi-inbox"></i> Empty
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (hasProducts)
+                                    {
+                                        <span class="badge-status badge-paid">
+                                            <i class="bi bi-check-circle"></i> In Use
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status badge-inactive">
+                                            <i class="bi bi-dash-circle"></i> Unused
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a asp-controller="Category" asp-action="Edit" asp-route-id="@obj.Id"
+                                           class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="Edit Category">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        <a asp-controller="Category" asp-action="Delete" asp-route-id="@obj.Id"
+                                           class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Delete Category">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-tags"></i>
+                    <h4>No categories found</h4>
+                    <p>Create your first category to get started.</p>
+                    <a asp-controller="Category" asp-action="Create" class="btn btn-create mt-3">
+                        <i class="bi bi-plus-circle me-1"></i> Add Category
+                    </a>
+                </div>
+            }
         </div>
     </div>
-
-    @if (Model != null && Model.Any())
-    {
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>Category Name</th>
-                    <th>Default Size System</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var obj in Model)
-                {
-                    <tr>
-                        <td>
-                            <i class="bi bi-folder me-2 text-primary"></i>
-                            @obj.Name
-                        </td>
-                        <td>
-                            @if (obj.DefaultSizeSystem != null)
-                            {
-                                <div class="d-flex align-items-center">
-                                    <i class="bi @(obj.DefaultSizeSystem.IconClass ?? "bi-tag") me-2 text-info"></i>
-                                    <span class="badge bg-info me-1">
-                                        @obj.DefaultSizeSystem.Name
-                                    </span>
-                                    <span class="badge bg-light text-dark">@obj.DefaultSizeSystem.SizeType</span>
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">
-                                    <i class="bi bi-dash"></i> No default size system
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <a asp-controller="Category"
-                                       asp-action="Edit"
-                                       asp-route-id="@obj.Id"
-                                       class="btn btn-warning btn-sm">
-                                    <i class="bi bi-pencil-square"></i> Edit
-                                </a>
-                                <a asp-controller="Category"
-                                       asp-action="Delete"
-                                       asp-route-id="@obj.Id"
-                                       class="btn btn-danger btn-sm btn-swal-confirm"
-                                       data-swal-title="Delete this category?"
-                                       data-swal-text="This action cannot be undone.">
-                                    <i class="bi bi-trash-fill"></i> Delete
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="alert alert-info text-center py-4">
-            <i class="bi bi-folder" style="font-size: 3rem;"></i>
-            <h5 class="mt-3">No categories found</h5>
-            <p>Click the "Create New Category" button to add your first category.</p>
-        </div>
-    }
 </div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize Categories DataTable
+            initAdminTable('#categoriesTable', {
+                order: [[0, 'asc']], // Sort by category name ascending
+                columnDefs: [
+                    { targets: [-1], orderable: false } // Disable sorting on actions column
+                ]
+            });
+
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+}
