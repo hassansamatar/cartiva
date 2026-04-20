@@ -37,7 +37,89 @@ namespace Cartiva.Domain
 
         public DateTime OrderDate { get; set; }
 
+        // =========================
+        // ORDER TOTALS WITH VAT BREAKDOWN
+        // =========================
+
+        /// <summary>
+        /// Subtotal excluding VAT (sum of all line totals ex VAT)
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal SubtotalExVat { get; set; }
+
+        /// <summary>
+        /// Total VAT amount for the order
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalVatAmount { get; set; }
+
+        /// <summary>
+        /// Total discount amount (including VAT)
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalDiscountAmount { get; set; }
+
+        /// <summary>
+        /// Shipping cost excluding VAT
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal ShippingCostExVat { get; set; } = 0;
+
+        /// <summary>
+        /// Shipping VAT amount
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal ShippingVatAmount { get; set; } = 0;
+
+        /// <summary>
+        /// Legacy OrderTotal - final amount customer pays (including VAT, after discounts)
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
         public decimal OrderTotal { get; set; }
+
+        /// <summary>
+        /// Currency code (default NOK for Norway)
+        /// </summary>
+        [StringLength(3)]
+        public string Currency { get; set; } = "NOK";
+
+        // =========================
+        // COMPUTED TOTALS
+        // =========================
+
+        /// <summary>
+        /// Subtotal including VAT before discounts
+        /// </summary>
+        [NotMapped]
+        public decimal SubtotalIncVat => SubtotalExVat + TotalVatAmount + TotalDiscountAmount;
+
+        /// <summary>
+        /// Total shipping cost including VAT
+        /// </summary>
+        [NotMapped]
+        public decimal ShippingCostIncVat => ShippingCostExVat + ShippingVatAmount;
+
+        /// <summary>
+        /// Grand total excluding VAT
+        /// </summary>
+        [NotMapped]
+        public decimal GrandTotalExVat => SubtotalExVat + ShippingCostExVat;
+
+        /// <summary>
+        /// Grand total VAT
+        /// </summary>
+        [NotMapped]
+        public decimal GrandTotalVat => TotalVatAmount + ShippingVatAmount;
+
+        /// <summary>
+        /// Whether order has any discounts applied
+        /// </summary>
+        [NotMapped]
+        public bool HasDiscount => TotalDiscountAmount > 0;
+
+        // =========================
+        // ORDER STATUS & PAYMENT
+        // =========================
 
         public string? OrderStatus { get; set; }
         public string? PaymentStatus { get; set; }
@@ -46,6 +128,10 @@ namespace Cartiva.Domain
         public DateOnly? PaymentDueDate { get; set; }
         public DateTime? ReturnExpirationDate { get; set; }
         public string? PaymentIntentId { get; set; }
+
+        // =========================
+        // CUSTOMER INFO
+        // =========================
 
         [Required(ErrorMessage = "Name is required.")]
         [StringLength(50, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 50 characters.")]
@@ -81,13 +167,21 @@ namespace Cartiva.Domain
         [Required]
         [StringLength(50)]
         public string Country { get; set; } = "Norway";
+
+        // =========================
+        // NAVIGATION & COLLECTIONS
+        // =========================
+
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
 
         // Idempotence: Has invoice been sent for overdue payment?
         public bool InvoiceSent { get; set; } = false;
 
-        // Helper properties
+        // =========================
+        // HELPER PROPERTIES
+        // =========================
+
         public bool IsPending => OrderStatus == SD.StatusPending;
         public bool IsApproved => OrderStatus == SD.StatusApproved;
         public bool IsShipped => OrderStatus == SD.StatusShipped;
@@ -96,11 +190,46 @@ namespace Cartiva.Domain
 
         public bool IsReturnWindowExpired => ReturnExpirationDate.HasValue && DateTime.Now > ReturnExpirationDate.Value;
 
+        // =========================
+        // HELPER METHODS
+        // =========================
+
         public void MarkAsCancelled()
         {
             OrderStatus = SD.StatusCancelled;
             if (PaymentStatus == SD.PaymentStatusApproved)
                 PaymentStatus = SD.PaymentStatusRefunded;
+        }
+
+        /// <summary>
+        /// Recalculates order totals from OrderDetails
+        /// </summary>
+        public void RecalculateTotals()
+        {
+            if (OrderDetails == null || !OrderDetails.Any())
+            {
+                SubtotalExVat = 0;
+                TotalVatAmount = 0;
+                TotalDiscountAmount = 0;
+                OrderTotal = ShippingCostIncVat;
+                return;
+            }
+
+            SubtotalExVat = OrderDetails.Sum(d => d.LineTotalExVat);
+            TotalVatAmount = OrderDetails.Sum(d => d.LineVatAmount);
+            TotalDiscountAmount = OrderDetails.Sum(d => d.TotalDiscountIncVat);
+            OrderTotal = SubtotalExVat + TotalVatAmount + ShippingCostIncVat;
+        }
+
+        /// <summary>
+        /// Sets totals from a simple total amount (backward compatibility)
+        /// Assumes standard Norwegian VAT rate of 25%
+        /// </summary>
+        public void SetTotalFromIncVat(decimal totalIncVat, decimal vatRate = 25.00m)
+        {
+            OrderTotal = totalIncVat;
+            SubtotalExVat = totalIncVat / (1 + vatRate / 100m);
+            TotalVatAmount = totalIncVat - SubtotalExVat;
         }
     }
 }

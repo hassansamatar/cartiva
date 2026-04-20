@@ -12,8 +12,12 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<ICompanyShipmentApprovalService, Services.CompanyShipmentApprovalService>();
-        // other application services...
         services.AddScoped<ICompanyShipmentProcessingService, CompanyShipmentProcessingService>();
+
+        // Invoice services
+        services.AddScoped<IInvoiceService, InvoiceService>();
+        services.AddScoped<ICreditNoteService, CreditNoteService>();
+
         return services;
     }
 }

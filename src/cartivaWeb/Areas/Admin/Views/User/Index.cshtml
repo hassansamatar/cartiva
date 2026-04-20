@@ -5,28 +5,85 @@
     ViewData["Title"] = "User Management";
     var userRoles = ViewBag.UserRoles as Dictionary<string, string>;
     var companyUsers = ViewBag.CompanyUsers as Dictionary<int, List<ApplicationUser>>;
+
+    var totalUsers = Model.Count;
+    var activeUsers = Model.Count(u => u.IsActive);
+    var inactiveUsers = Model.Count(u => !u.IsActive);
+    var companyMembers = Model.Count(u => u.CompanyId != null);
+    var admins = userRoles?.Count(r => r.Value == SD.Role_Admin) ?? 0;
 }
 
-<div class="container mt-4">
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
 
-    ```
-    @Html.AntiForgeryToken()
+<div class="admin-dashboard">
+    <div class="container-fluid">
 
-    <div class="card shadow-sm border-0">
+        @Html.AntiForgeryToken()
 
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">
-                <i class="bi bi-people"></i> User Management
-            </h4>
+        <h2><i class="bi bi-people-fill"></i> User Management</h2>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-people"></i> Total Users</h5>
+                        <h3>@totalUsers</h3>
+                        <p>Registered accounts</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-person-check"></i> Active</h5>
+                        <h3>@activeUsers</h3>
+                        <p>Can access the system</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-danger">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-person-x"></i> Inactive</h5>
+                        <h3>@inactiveUsers</h3>
+                        <p>Deactivated accounts</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-building"></i> Company Members</h5>
+                        <h3>@companyMembers</h3>
+                        <p>Linked to companies</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="card-body">
+        <!-- Users Table Section -->
+        <div class="admin-section">
+            <div class="section-header">
+                <h3><i class="bi bi-table"></i> All Users</h3>
+            </div>
 
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle">
-
-                    <thead class="table-light">
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-people"></i>
+                    <h4>No users found</h4>
+                    <p>There are no registered users in the system.</p>
+                </div>
+            }
+            else
+            {
+                <table id="usersTable" class="table admin-table">
+                    <thead>
                         <tr>
                             <th>Email</th>
                             <th>Name</th>
@@ -35,57 +92,64 @@
                             <th>Status</th>
                             @if (User.IsInRole(SD.Role_Admin))
                             {
-                                <th class="text-center" style="width:260px;">Actions</th>
+                                <th style="width: 180px;">Actions</th>
                             }
                         </tr>
                     </thead>
-
                     <tbody>
-
                         @foreach (var user in Model)
                         {
-                            var role = userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : "None";
-                            var rowClass = !user.IsActive ? "table-danger" : "";
+                            var role = userRoles != null && userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : "None";
+                            var rowClass = !user.IsActive ? "row-inactive" : "";
+                            var badgeClass = role switch
+                            {
+                                SD.Role_Admin => "badge-admin",
+                                SD.Role_Company => "badge-company",
+                                SD.Role_Customer => "badge-customer",
+                                _ => "badge-role"
+                            };
 
                             <tr class="@rowClass">
-
-                                <td>@user.Email</td>
-
-                                <td>@user.Name</td>
-
                                 <td>
-                                    <span class="badge bg-secondary">
+                                    <a href="mailto:@user.Email" class="text-decoration-none">
+                                        @user.Email
+                                    </a>
+                                </td>
+                                <td class="fw-600">@(user.Name ?? "-")</td>
+                                <td>
+                                    <span class="badge-status @badgeClass">
                                         @role
                                     </span>
                                 </td>
-
                                 <td>
                                     @if (user.Company != null)
                                     {
-                                        var colleagues = companyUsers != null && companyUsers.ContainsKey(user.CompanyId!.Value)
+                                        var colleagues = companyUsers != null && user.CompanyId.HasValue && companyUsers.ContainsKey(user.CompanyId.Value)
                                             ? companyUsers[user.CompanyId.Value].Where(u => u.Id != user.Id).ToList()
                                             : new List<ApplicationUser>();
 
                                         <div>
-                                            <span class="fw-bold">
-                                                <i class="bi bi-building me-1"></i>@user.Company.Name
+                                            <span class="fw-600">
+                                                <i class="bi bi-building me-1 text-primary"></i>@user.Company.Name
                                             </span>
                                         </div>
-                                        if (colleagues.Any())
+                                        @if (colleagues.Any())
                                         {
                                             <details class="mt-1">
-                                                <summary class="text-muted small" style="cursor:pointer;">
-                                                    <i class="bi bi-people"></i> @colleagues.Count other member@(colleagues.Count > 1 ? "s" : "")
+                                                <summary class="text-muted small">
+                                                    <i class="bi bi-people"></i> @colleagues.Count colleague@(colleagues.Count > 1 ? "s" : "")
                                                 </summary>
-                                                <ul class="list-unstyled mb-0 mt-1 ms-2">
-                                                    @foreach (var c in colleagues)
+                                                <ul class="list-unstyled mb-0 mt-1 ms-3">
+                                                    @foreach (var c in colleagues.Take(5))
                                                     {
                                                         <li class="small text-muted">
                                                             <i class="bi bi-person me-1"></i>@(c.Name ?? c.Email)
-                                                            @if (!string.IsNullOrEmpty(c.Name))
-                                                            {
-                                                                <span class="text-muted opacity-75">(@c.Email)</span>
-                                                            }
+                                                        </li>
+                                                    }
+                                                    @if (colleagues.Count > 5)
+                                                    {
+                                                        <li class="small text-muted">
+                                                            <i class="bi bi-three-dots"></i> +@(colleagues.Count - 5) more
                                                         </li>
                                                     }
                                                 </ul>
@@ -94,76 +158,123 @@
                                     }
                                     else
                                     {
-                                        <span class="text-muted small">
+                                        <span class="text-muted-light">
                                             <i class="bi bi-dash"></i> None
                                         </span>
                                     }
                                 </td>
-
                                 <td>
                                     @if (user.IsActive)
                                     {
-                                        <span class="badge bg-success">
+                                        <span class="badge-status badge-active">
                                             <i class="bi bi-check-circle"></i> Active
                                         </span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger">
+                                        <span class="badge-status badge-inactive">
                                             <i class="bi bi-x-circle"></i> Inactive
                                         </span>
                                     }
                                 </td>
+                                @if (User.IsInRole(SD.Role_Admin))
+                                {
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <a asp-action="EditRoles" asp-route-id="@user.Id" 
+                                               class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="Edit Roles">
+                                                <i class="bi bi-shield-lock"></i>
+                                            </a>
 
-                                <td class="text-center">
-                                    @if (User.IsInRole(SD.Role_Admin))
-                                    {
-                                    <div class="d-flex justify-content-center gap-2">
-
-                                        <a asp-action="EditRoles"
-                                               asp-route-id="@user.Id"
-                                               class="btn btn-sm btn-outline-warning">
-                                            <i class="bi bi-shield-lock"></i> Roles
-                                        </a>
-
-                                        @if (user.IsActive)
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    onclick="deactivateUser('@user.Id')">
-                                                <i class="bi bi-person-x"></i> Deactivate
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <button class="btn btn-sm btn-outline-success"
-                                                    onclick="activateUser('@user.Id')">
-                                                <i class="bi bi-person-check"></i> Activate
-                                            </button>
-                                        }
-
-                                    </div>
-                                    }
-                                </td>
-
+                                            @if (user.IsActive)
+                                            {
+                                                <button class="btn btn-action btn-deactivate" 
+                                                        onclick="deactivateUser('@user.Id')"
+                                                        data-bs-toggle="tooltip" title="Deactivate User">
+                                                    <i class="bi bi-person-x"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-action btn-activate" 
+                                                        onclick="activateUser('@user.Id')"
+                                                        data-bs-toggle="tooltip" title="Activate User">
+                                                    <i class="bi bi-person-check"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                }
                             </tr>
                         }
-
                     </tbody>
-
                 </table>
-
-            </div>
-
+            }
         </div>
-
     </div>
-    ```
-
 </div>
 
-@section Scripts
-{
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+
     <input type="hidden" id="deactivateUrl" value="@Url.Action("Deactivate", "User", new { area = "Admin" })" />
     <input type="hidden" id="activateUrl" value="@Url.Action("Activate", "User", new { area = "Admin" })" />
-    <script src="~/js/admin-user-index.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize Users DataTable
+            initAdminTable('#usersTable', {
+                order: [[0, 'asc']], // Sort by email ascending
+                columnDefs: [
+                    { targets: [-1], orderable: false } // Disable sorting on actions column
+                ]
+            });
+        });
+
+        // Deactivate user function
+        function deactivateUser(userId) {
+            if (confirm('Er du sikker på at du vil deaktivere denne brukeren?')) {
+                var url = $('#deactivateUrl').val();
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: { id: userId },
+                    headers: { 'RequestVerificationToken': token },
+                    success: function() {
+                        location.reload();
+                    },
+                    error: function() {
+                        alert('En feil oppstod. Prøv igjen.');
+                    }
+                });
+            }
+        }
+
+        // Activate user function
+        function activateUser(userId) {
+            if (confirm('Er du sikker på at du vil aktivere denne brukeren?')) {
+                var url = $('#activateUrl').val();
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: { id: userId },
+                    headers: { 'RequestVerificationToken': token },
+                    success: function() {
+                        location.reload();
+                    },
+                    error: function() {
+                        alert('En feil oppstod. Prøv igjen.');
+                    }
+                });
+            }
+        }
+    </script>
 }

@@ -1,0 +1,700 @@
+/* ==============================================
+   ADMIN DASHBOARD SHARED STYLES
+   Works with Bootswatch Lux theme
+   ============================================== */
+
+/* ==============================================
+   PAGE LAYOUT - LUX COMPATIBLE
+   ============================================== */
+.admin-dashboard {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    padding: 25px 0;
+}
+
+.admin-dashboard h2 {
+    color: #1a1a2e;
+    font-weight: 700;
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid #1a1a2e;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.admin-dashboard h2 i {
+    margin-right: 12px;
+}
+
+/* Container styling */
+.admin-dashboard .container-fluid {
+    max-width: 1600px;
+}
+
+/* ==============================================
+   SUMMARY CARDS - LUX STYLE
+   ============================================== */
+.admin-card {
+    border: none;
+    border-radius: 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.admin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.admin-card .card-body {
+    padding: 1.5rem;
+}
+
+.admin-card .card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 0.75rem;
+    opacity: 0.9;
+}
+
+.admin-card .card-title i {
+    margin-right: 8px;
+}
+
+.admin-card h3 {
+    font-size: 2.5rem;
+    font-weight: 300;
+    margin-bottom: 0.25rem;
+}
+
+.admin-card p {
+    font-size: 0.85rem;
+    font-weight: 400;
+    margin-bottom: 0;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.admin-card small {
+    opacity: 0.75;
+    font-size: 0.8rem;
+}
+
+/* Card Color Themes - Lux style (solid colors) */
+.card-primary {
+    background-color: #1a1a2e;
+    color: white;
+}
+
+.card-success {
+    background-color: #4bbf73;
+    color: white;
+}
+
+.card-warning {
+    background-color: #f0ad4e;
+    color: #1a1a2e;
+}
+
+.card-danger {
+    background-color: #d9534f;
+    color: white;
+}
+
+.card-info {
+    background-color: #1f9bcf;
+    color: white;
+}
+
+.card-purple {
+    background-color: #6f42c1;
+    color: white;
+}
+
+.card-dark {
+    background-color: #343a40;
+    color: white;
+}
+
+/* ==============================================
+   TABLE SECTIONS - LUX STYLE
+   ============================================== */
+.admin-section {
+    background: #fff;
+    border-radius: 0;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.admin-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #1a1a2e;
+}
+
+.admin-section .section-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #1a1a2e;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.admin-section .section-header h3 i {
+    font-size: 1rem;
+    color: #1a1a2e;
+}
+
+/* ==============================================
+   DATA TABLES STYLING - LUX STYLE
+   ============================================== */
+.admin-table {
+    width: 100% !important;
+    border-collapse: collapse;
+    color: #212529;
+}
+
+.admin-table thead th {
+    background: #1a1a2e;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 16px;
+    border: none;
+    white-space: nowrap;
+}
+
+.admin-table thead th:first-child {
+    border-radius: 0;
+}
+
+.admin-table thead th:last-child {
+    border-radius: 0;
+}
+
+.admin-table tbody tr {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.admin-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.admin-table tbody tr:hover {
+    background: #e9ecef;
+}
+
+.admin-table tbody td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+    color: #212529;
+}
+
+.admin-table tbody td a {
+    color: #1a1a2e;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.admin-table tbody td a:hover {
+    color: #4bbf73;
+    text-decoration: underline;
+}
+
+.admin-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Row status colors - Lux style */
+.admin-table tbody tr.row-inactive {
+    background: #f8d7da;
+    border-left: 4px solid #d9534f;
+}
+
+.admin-table tbody tr.row-inactive:hover {
+    background: #f5c6cb;
+}
+
+.admin-table tbody tr.row-warning {
+    background: #fff3cd;
+    border-left: 4px solid #f0ad4e;
+}
+
+.admin-table tbody tr.row-success {
+    background: #d4edda;
+    border-left: 4px solid #4bbf73;
+}
+
+/* Table footer - Lux style */
+.admin-table tfoot {
+    background: #f8f9fa;
+}
+
+.admin-table tfoot td {
+    padding: 14px 16px;
+    font-weight: 700;
+    border-top: 2px solid #1a1a2e;
+    color: #1a1a2e;
+}
+
+/* ==============================================
+   BADGES - LUX STYLE (Clean, minimal)
+   ============================================== */
+.badge-status {
+    padding: 6px 14px;
+    border-radius: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-active {
+    background: #4bbf73;
+    color: white;
+}
+
+.badge-inactive {
+    background: #adb5bd;
+    color: white;
+}
+
+.badge-role {
+    background: #1a1a2e;
+    color: white;
+}
+
+.badge-admin {
+    background: #6f42c1;
+    color: white;
+}
+
+.badge-company {
+    background: #1f9bcf;
+    color: white;
+}
+
+.badge-customer {
+    background: #1a1a2e;
+    color: white;
+}
+
+.badge-paid {
+    background: #4bbf73;
+    color: white;
+}
+
+.badge-pending {
+    background: #f0ad4e;
+    color: #1a1a2e;
+}
+
+.badge-overdue {
+    background: #d9534f;
+    color: white;
+}
+
+/* ==============================================
+   ACTION BUTTONS - LUX STYLE
+   ============================================== */
+.btn-action {
+    padding: 8px 16px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 0;
+    margin-right: 6px;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-action:last-child {
+    margin-right: 0;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-action:active {
+    transform: translateY(0);
+}
+
+.btn-edit {
+    background: #1a1a2e;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2d2d44;
+    color: white;
+}
+
+.btn-delete {
+    background: #d9534f;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c9302c;
+    color: white;
+}
+
+.btn-activate {
+    background: #4bbf73;
+    color: white;
+}
+
+.btn-activate:hover {
+    background: #3a9d5c;
+    color: white;
+}
+
+.btn-deactivate {
+    background: #d9534f;
+    color: white;
+}
+
+.btn-deactivate:hover {
+    background: #c9302c;
+    color: white;
+}
+
+.btn-roles {
+    background: #f0ad4e;
+    color: #1a1a1a;
+}
+
+.btn-roles:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: #1a1a1a;
+}
+
+.btn-create {
+    background: #4bbf73;
+    color: white;
+    padding: 12px 24px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.2s ease;
+}
+
+.btn-create:hover {
+    background: #3a9d5c;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(75, 191, 115, 0.3);
+}
+
+/* ==============================================
+   DATATABLE OVERRIDES - LUX STYLE
+   ============================================== */
+.dataTables_wrapper {
+    padding: 0;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 1.25rem;
+}
+
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_filter label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: #212529;
+    transition: all 0.2s ease;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    padding-right: 30px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    width: 250px;
+    margin-left: 10px;
+}
+
+.dataTables_wrapper .dataTables_filter input::placeholder {
+    color: #adb5bd;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus,
+.dataTables_wrapper .dataTables_length select:focus {
+    outline: none;
+    border-color: #1a1a2e;
+    box-shadow: 0 0 0 2px rgba(26, 26, 46, 0.1);
+}
+
+.dataTables_wrapper .dataTables_info {
+    color: #6c757d;
+    font-size: 0.8rem;
+    padding-top: 1.25rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+    padding-top: 1.25rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 10px 16px;
+    margin: 0 3px;
+    border-radius: 0;
+    border: 1px solid #dee2e6 !important;
+    background: #fff !important;
+    color: #1a1a2e !important;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #f8f9fa !important;
+    border-color: #1a1a2e !important;
+    color: #1a1a2e !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #1a1a2e !important;
+    border-color: #1a1a2e !important;
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Sorting icons */
+.admin-table thead th.sorting::after,
+.admin-table thead th.sorting_asc::after,
+.admin-table thead th.sorting_desc::after {
+    opacity: 0.8;
+}
+
+/* ==============================================
+   EMPTY STATE - LUX STYLE
+   ============================================== */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.2;
+    color: #1a1a2e;
+}
+
+.empty-state h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.empty-state p {
+    font-size: 0.9rem;
+    margin: 0;
+    color: #6c757d;
+}
+
+/* ==============================================
+   DETAILS/COLLAPSIBLE - LUX STYLE
+   ============================================== */
+details summary {
+    cursor: pointer;
+    user-select: none;
+    color: #6c757d;
+    transition: color 0.2s ease;
+    font-size: 0.85rem;
+}
+
+details summary:hover {
+    color: #1a1a2e;
+}
+
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+details summary::before {
+    content: "▶ ";
+    font-size: 0.6rem;
+    margin-right: 6px;
+    transition: transform 0.2s ease;
+    display: inline-block;
+    color: #1a1a2e;
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+details ul {
+    color: #6c757d;
+}
+
+/* ==============================================
+   RESPONSIVE
+   ============================================== */
+@media (max-width: 992px) {
+    .admin-card h3 {
+        font-size: 2rem;
+    }
+
+    .admin-section {
+        padding: 1.25rem;
+    }
+
+    .admin-section .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-dashboard {
+        padding: 15px 0;
+    }
+
+    .admin-dashboard h2 {
+        font-size: 1.25rem;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        width: 180px;
+    }
+
+    .btn-action {
+        padding: 6px 10px;
+        font-size: 0.65rem;
+    }
+
+    .admin-card .card-body {
+        padding: 1rem;
+    }
+}
+
+/* ==============================================
+   TEXT UTILITIES
+   ============================================== */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.fw-600 {
+    font-weight: 600;
+}
+
+.text-muted-light {
+    color: #adb5bd;
+}
+
+/* ==============================================
+   LUX THEME UTILITIES
+   ============================================== */
+
+/* Links */
+.admin-dashboard a:not(.btn):not(.btn-action):not(.admin-card):not(.sketchy-tab) {
+    color: #1a1a2e;
+    transition: color 0.2s ease;
+    font-weight: 600;
+}
+
+.admin-dashboard a:not(.btn):not(.btn-action):not(.admin-card):not(.sketchy-tab):hover {
+    color: #4bbf73;
+}
+
+/* Form controls */
+.admin-dashboard .form-control,
+.admin-dashboard .form-select {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0;
+    color: #212529;
+}
+
+.admin-dashboard .form-control:focus,
+.admin-dashboard .form-select:focus {
+    background: #fff;
+    border-color: #1a1a2e;
+    color: #212529;
+    box-shadow: 0 0 0 2px rgba(26, 26, 46, 0.1);
+}
+
+/* Scrollbar styling */
+.admin-dashboard ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.admin-dashboard ::-webkit-scrollbar-track {
+    background: #f8f9fa;
+}
+
+.admin-dashboard ::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+}
+
+.admin-dashboard ::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+

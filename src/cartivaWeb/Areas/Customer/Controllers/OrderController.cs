@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Cartiva.Infrastructure.PaymentService;
 using Cartiva.Shared;
+using Cartiva.Application.Abstractions;
 
 [Area("Customer")]
 [Authorize]
@@ -26,6 +27,7 @@ public class OrderController : Controller
     private readonly IEmailSender _emailSender;
     private readonly Cartiva.Infrastructure.EmailServices.IEmailTemplateService _emailTemplateService;
     private readonly Cartiva.Infrastructure.Promotions.IPromotionService _promotionService;
+    private readonly IInvoiceService _invoiceService;
 
     public OrderController(ApplicationDbContext db,
                            IOptions<StripeSettings> stripeSettings,
@@ -33,7 +35,8 @@ public class OrderController : Controller
                            ILogger<OrderController> logger,
                            IEmailSender emailSender,
                            Cartiva.Infrastructure.EmailServices.IEmailTemplateService emailTemplateService,
-                           Cartiva.Infrastructure.Promotions.IPromotionService promotionService)
+                           Cartiva.Infrastructure.Promotions.IPromotionService promotionService,
+                           IInvoiceService invoiceService)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
@@ -43,6 +46,7 @@ public class OrderController : Controller
         _emailSender = emailSender;
         _emailTemplateService = emailTemplateService;
         _promotionService = promotionService;
+        _invoiceService = invoiceService;
     }
 
     // =============================
@@ -71,7 +75,19 @@ public class OrderController : Controller
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         var discount = await _promotionService.CalculateDiscountAsync(cartList);
-        var subtotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+
+        // Calculate VAT-aware totals
+        var subtotalIncVat = cartList.Sum(c => c.ProductVariant.PriceIncVat * c.Count);
+        var subtotalExVat = cartList.Sum(c => c.ProductVariant.PriceExVat * c.Count);
+
+        // Fallback for legacy data where PriceExVat is 0
+        if (subtotalExVat == 0)
+        {
+            subtotalIncVat = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+            subtotalExVat = subtotalIncVat / 1.25m;
+        }
+
+        var totalVat = subtotalIncVat - subtotalExVat;
 
         var vm = new CheckoutVM
         {
@@ -86,11 +102,13 @@ public class OrderController : Controller
                 Country = user?.Country ?? "Norway"
             },
             ShoppingCartList = cartList,
-            OrderTotal = subtotal - discount.TotalDiscount
+            OrderTotal = subtotalIncVat - discount.TotalDiscount
         };
 
         ViewBag.PromotionDiscount = discount;
-        ViewBag.Subtotal = subtotal;
+        ViewBag.Subtotal = subtotalIncVat;
+        ViewBag.SubtotalExVat = subtotalExVat;
+        ViewBag.TotalVat = totalVat;
 
         return View(vm);
     }
@@ -187,12 +205,28 @@ public class OrderController : Controller
 
         // Calculate promotion discount
         var discount = await _promotionService.CalculateDiscountAsync(cartList);
-        var subtotal = cartList.Sum(c => c.ProductVariant.Price * c.Count);
 
-        // Create OrderHeader
+        // Calculate VAT-aware totals
+        var subtotalIncVat = cartList.Sum(c => c.ProductVariant.PriceIncVat * c.Count);
+        var subtotalExVat = cartList.Sum(c => c.ProductVariant.PriceExVat * c.Count);
+        var totalVat = subtotalIncVat - subtotalExVat;
+
+        // If PriceExVat is not set (legacy data), calculate from Price
+        if (subtotalExVat == 0)
+        {
+            subtotalIncVat = cartList.Sum(c => c.ProductVariant.Price * c.Count);
+            subtotalExVat = subtotalIncVat / 1.25m; // Assume 25% VAT
+            totalVat = subtotalIncVat - subtotalExVat;
+        }
+
+        // Create OrderHeader with VAT breakdown
         model.OrderHeader.ApplicationUserId = userId;
         model.OrderHeader.OrderDate = DateTime.Now;
-        model.OrderHeader.OrderTotal = subtotal - discount.TotalDiscount;
+        model.OrderHeader.Currency = SD.DefaultCurrency;
+        model.OrderHeader.SubtotalExVat = subtotalExVat - (discount.TotalDiscount / 1.25m);
+        model.OrderHeader.TotalVatAmount = (subtotalExVat - (discount.TotalDiscount / 1.25m)) * 0.25m;
+        model.OrderHeader.TotalDiscountAmount = discount.TotalDiscount;
+        model.OrderHeader.OrderTotal = subtotalIncVat - discount.TotalDiscount;
         model.OrderHeader.Country = user?.Country ?? "Norway";
 
         // Determine payment logic
@@ -236,17 +270,13 @@ public class OrderController : Controller
             _db.OrderHeaders.Add(model.OrderHeader);
             await _db.SaveChangesAsync();
 
-            // Create OrderDetails and update stock
+            // Create OrderDetails with full VAT breakdown and update stock
             var orderDetails = new List<OrderDetail>();
             foreach (var cart in cartList)
             {
-                var orderDetail = new OrderDetail
-                {
-                    OrderHeaderId = model.OrderHeader.Id,
-                    ProductVariantId = cart.ProductVariantId,
-                    Count = cart.Count,
-                    Price = cart.ProductVariant.Price
-                };
+                // Use the helper method to create OrderDetail with VAT data
+                var orderDetail = OrderDetail.FromProductVariant(cart.ProductVariant, cart.Count);
+                orderDetail.OrderHeaderId = model.OrderHeader.Id;
                 orderDetails.Add(orderDetail);
 
                 // Update stock
@@ -257,6 +287,11 @@ public class OrderController : Controller
 
             // Clear cart
             _db.ShoppingCarts.RemoveRange(cartList);
+            await _db.SaveChangesAsync();
+
+            // Update OrderHeader totals with VAT breakdown
+            model.OrderHeader.OrderDetails = orderDetails;
+            model.OrderHeader.RecalculateTotals();
             await _db.SaveChangesAsync();
 
             await transaction.CommitAsync();
@@ -279,6 +314,22 @@ public class OrderController : Controller
             };
             _db.Shipments.Add(shipment);
             await _db.SaveChangesAsync();
+
+            // Generate invoice for active company users with deferred payment
+            if (model.OrderHeader.PaymentStatus == SD.PaymentStatusDeferred)
+            {
+                try
+                {
+                    var invoice = await _invoiceService.GenerateInvoiceFromOrderAsync(model.OrderHeader.Id);
+                    _logger.LogInformation("Generated invoice {InvoiceNumber} for company order {OrderId}", 
+                        invoice.InvoiceNumber, model.OrderHeader.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to generate invoice for order {OrderId}", model.OrderHeader.Id);
+                    // Don't fail the order if invoice generation fails - it can be generated later
+                }
+            }
 
             // Send order confirmation email
             await SendOrderConfirmationEmailAsync(model.OrderHeader.Id, userId);

@@ -36,6 +36,136 @@ namespace Cartiva.Shared
         public const string PaymentStatusDeferred = "Deferred";
         public const string PaymentStatusRejected = "Rejected";
         public const string PaymentStatusRefunded = "Refunded";
+        public const string PaymentStatusPaid = "Paid";
+
+        // ======================
+        // INVOICE CONSTANTS
+        // ======================
+        public const int DeferredPaymentDays = 30;
+        public const int InvoiceReminderDaysBeforeDue = 7;
+        public const int InvoiceOverdueGraceDays = 3;
+
+        // Norwegian VAT rates (MVA)
+        public const decimal VatRateStandard = 25.00m;    // Standard rate
+        public const decimal VatRateReduced = 15.00m;     // Food, transport
+        public const decimal VatRateLow = 12.00m;         // Cinema, sports events
+        public const decimal VatRateZero = 0.00m;         // Exempt
+
+        // Default currency
+        public const string DefaultCurrency = "NOK";
+
+        // Invoice number prefix
+        public const string InvoiceNumberPrefix = "INV";
+        public const string CreditNoteNumberPrefix = "CN";
+
+        // ======================
+        // VAT CALCULATION HELPERS
+        // ======================
+
+        /// <summary>
+        /// Calculates price excluding VAT from a price including VAT
+        /// </summary>
+        public static decimal CalculatePriceExVat(decimal priceIncVat, decimal vatRate = VatRateStandard)
+        {
+            return priceIncVat / (1 + vatRate / 100m);
+        }
+
+        /// <summary>
+        /// Calculates price including VAT from a price excluding VAT
+        /// </summary>
+        public static decimal CalculatePriceIncVat(decimal priceExVat, decimal vatRate = VatRateStandard)
+        {
+            return priceExVat * (1 + vatRate / 100m);
+        }
+
+        /// <summary>
+        /// Calculates VAT amount from a price excluding VAT
+        /// </summary>
+        public static decimal CalculateVatAmount(decimal priceExVat, decimal vatRate = VatRateStandard)
+        {
+            return priceExVat * (vatRate / 100m);
+        }
+
+        /// <summary>
+        /// Calculates VAT amount from a price including VAT
+        /// </summary>
+        public static decimal CalculateVatFromInclusivePrice(decimal priceIncVat, decimal vatRate = VatRateStandard)
+        {
+            return priceIncVat - CalculatePriceExVat(priceIncVat, vatRate);
+        }
+
+        /// <summary>
+        /// Calculates discount amount from a percentage
+        /// </summary>
+        public static decimal CalculateDiscountAmount(decimal originalPrice, decimal discountPercent)
+        {
+            return originalPrice * (discountPercent / 100m);
+        }
+
+        /// <summary>
+        /// Applies discount and returns the discounted price
+        /// </summary>
+        public static decimal ApplyDiscount(decimal originalPrice, decimal discountPercent)
+        {
+            return originalPrice - CalculateDiscountAmount(originalPrice, discountPercent);
+        }
+
+        /// <summary>
+        /// Gets VAT breakdown for a given price (returns tuple: exVat, vatAmount, incVat)
+        /// </summary>
+        public static (decimal ExVat, decimal VatAmount, decimal IncVat) GetVatBreakdown(
+            decimal priceExVat, decimal vatRate = VatRateStandard)
+        {
+            var vatAmount = CalculateVatAmount(priceExVat, vatRate);
+            return (priceExVat, vatAmount, priceExVat + vatAmount);
+        }
+
+        /// <summary>
+        /// Gets VAT breakdown from an inclusive price (returns tuple: exVat, vatAmount, incVat)
+        /// </summary>
+        public static (decimal ExVat, decimal VatAmount, decimal IncVat) GetVatBreakdownFromInclusivePrice(
+            decimal priceIncVat, decimal vatRate = VatRateStandard)
+        {
+            var exVat = CalculatePriceExVat(priceIncVat, vatRate);
+            var vatAmount = priceIncVat - exVat;
+            return (exVat, vatAmount, priceIncVat);
+        }
+
+        /// <summary>
+        /// Formats a price with currency for display (Norwegian format)
+        /// </summary>
+        public static string FormatPrice(decimal amount, string currency = DefaultCurrency)
+        {
+            return $"{amount:N2} {currency}";
+        }
+
+        /// <summary>
+        /// Formats a price with VAT info for display
+        /// </summary>
+        public static string FormatPriceWithVat(decimal priceIncVat, decimal vatRate = VatRateStandard, string currency = DefaultCurrency)
+        {
+            var exVat = CalculatePriceExVat(priceIncVat, vatRate);
+            return $"{priceIncVat:N2} {currency} (inkl. {vatRate:N0}% MVA)";
+        }
+
+        // ======================
+        // INVOICE STATUS CONSTANTS (string versions)
+        // ======================
+        public const string InvoiceStatusDraft = "Draft";
+        public const string InvoiceStatusIssued = "Issued";
+        public const string InvoiceStatusSent = "Sent";
+        public const string InvoiceStatusPaid = "Paid";
+        public const string InvoiceStatusPartiallyPaid = "PartiallyPaid";
+        public const string InvoiceStatusOverdue = "Overdue";
+        public const string InvoiceStatusCancelled = "Cancelled";
+
+        // ======================
+        // CREDIT NOTE STATUS CONSTANTS (string versions)
+        // ======================
+        public const string CreditNoteStatusDraft = "Draft";
+        public const string CreditNoteStatusIssued = "Issued";
+        public const string CreditNoteStatusBooked = "Booked";
+        public const string CreditNoteStatusCancelled = "Cancelled";
 
         // ======================
         // SHIPMENT STATUS CONSTANTS (NEW)
@@ -361,6 +491,120 @@ namespace Cartiva.Shared
                 CarrierDHL => $"https://www.dhl.com/no-en/home/tracking/tracking-parcel.html?submit=1&tracking-id={trackingNumber}",
                 _ => "#"
             };
+        }
+
+        // ======================
+        // INVOICE HELPERS
+        // ======================
+        public static string GetInvoiceStatusBadgeClass(string status)
+        {
+            return status switch
+            {
+                InvoiceStatusDraft => "bg-secondary",
+                InvoiceStatusIssued => "bg-info",
+                InvoiceStatusSent => "bg-primary",
+                InvoiceStatusPaid => "bg-success",
+                InvoiceStatusPartiallyPaid => "bg-warning text-dark",
+                InvoiceStatusOverdue => "bg-danger",
+                InvoiceStatusCancelled => "bg-dark",
+                _ => "bg-secondary"
+            };
+        }
+
+        public static string GetInvoiceStatusIcon(string status)
+        {
+            return status switch
+            {
+                InvoiceStatusDraft => "bi-file-earmark",
+                InvoiceStatusIssued => "bi-file-earmark-check",
+                InvoiceStatusSent => "bi-send",
+                InvoiceStatusPaid => "bi-check-circle-fill",
+                InvoiceStatusPartiallyPaid => "bi-pie-chart",
+                InvoiceStatusOverdue => "bi-exclamation-triangle",
+                InvoiceStatusCancelled => "bi-x-circle",
+                _ => "bi-file-earmark"
+            };
+        }
+
+        public static string GetCreditNoteStatusBadgeClass(string status)
+        {
+            return status switch
+            {
+                CreditNoteStatusDraft => "bg-secondary",
+                CreditNoteStatusIssued => "bg-info",
+                CreditNoteStatusBooked => "bg-success",
+                CreditNoteStatusCancelled => "bg-danger",
+                _ => "bg-secondary"
+            };
+        }
+
+        public static string GetCreditNoteStatusIcon(string status)
+        {
+            return status switch
+            {
+                CreditNoteStatusDraft => "bi-file-earmark",
+                CreditNoteStatusIssued => "bi-file-earmark-minus",
+                CreditNoteStatusBooked => "bi-journal-check",
+                CreditNoteStatusCancelled => "bi-x-circle",
+                _ => "bi-file-earmark"
+            };
+        }
+
+        /// <summary>
+        /// Checks if a user is eligible for deferred payment (active company user)
+        /// </summary>
+        public static bool IsEligibleForDeferredPayment(string? companyId, bool? isCompanyActive)
+        {
+            return !string.IsNullOrEmpty(companyId) && isCompanyActive == true;
+        }
+
+        /// <summary>
+        /// Generates an invoice number with prefix and date
+        /// Format: INV-2025-00001
+        /// </summary>
+        public static string GenerateInvoiceNumber(int sequence)
+        {
+            return $"{InvoiceNumberPrefix}-{DateTime.UtcNow.Year}-{sequence:D5}";
+        }
+
+        /// <summary>
+        /// Generates a credit note number with prefix and date
+        /// Format: CN-2025-00001
+        /// </summary>
+        public static string GenerateCreditNoteNumber(int sequence)
+        {
+            return $"{CreditNoteNumberPrefix}-{DateTime.UtcNow.Year}-{sequence:D5}";
+        }
+
+        /// <summary>
+        /// Generates a KID number for Norwegian bank payments (Mod10 checksum)
+        /// </summary>
+        public static string GenerateKIDNumber(int invoiceId)
+        {
+            string baseNumber = invoiceId.ToString().PadLeft(15, '0');
+            int sum = 0;
+            bool alternate = true;
+            for (int i = baseNumber.Length - 1; i >= 0; i--)
+            {
+                int digit = int.Parse(baseNumber[i].ToString());
+                if (alternate)
+                {
+                    digit *= 2;
+                    if (digit > 9) digit -= 9;
+                }
+                sum += digit;
+                alternate = !alternate;
+            }
+            int checksum = (sum * 9) % 10;
+            return baseNumber + checksum.ToString();
+        }
+
+        /// <summary>
+        /// Returns the due date for a deferred payment invoice
+        /// </summary>
+        public static DateOnly GetDeferredPaymentDueDate(DateTime orderDate)
+        {
+            return DateOnly.FromDateTime(orderDate.AddDays(DeferredPaymentDays));
         }
     }
 }

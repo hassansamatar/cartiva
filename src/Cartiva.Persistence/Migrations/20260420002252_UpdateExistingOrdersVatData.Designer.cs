@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cartiva.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260418143345_AddReturnExpirationAndInvoiceSentToOrderHeader")]
-    partial class AddReturnExpirationAndInvoiceSentToOrderHeader
+    [Migration("20260420002252_UpdateExistingOrdersVatData")]
+    partial class UpdateExistingOrdersVatData
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -170,6 +170,404 @@ namespace Cartiva.Persistence.Migrations
                     b.ToTable("Companies");
                 });
 
+            modelBuilder.Entity("Cartiva.Domain.CreditNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BookedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreditNoteNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("CustomerAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerOrgNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExternalAccountingId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExternalRefundReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsBooked")
+                        .HasColumnType("bit");
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("OriginalInvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int?>("ReturnRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("VatAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditNoteNumber")
+                        .IsUnique();
+
+                    b.HasIndex("OriginalInvoiceId");
+
+                    b.HasIndex("ReturnRequestId");
+
+                    b.ToTable("CreditNotes");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.CreditNoteLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CreditNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("LineNetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LineTotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LineVatAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("OriginalInvoiceLineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductSku")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("VatPercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditNoteId");
+
+                    b.HasIndex("OriginalInvoiceLineId");
+
+                    b.ToTable("CreditNoteLines");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BIC")
+                        .HasMaxLength(11)
+                        .HasColumnType("nvarchar(11)");
+
+                    b.Property<string>("BankAccountNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("BookedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancelledBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("CustomerAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerOrgNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("EhfSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalAccountingId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IBAN")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsBooked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEhfSent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("KID")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("OrderHeaderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PaidDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PdfUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PeppolId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SellerAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SellerEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SellerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SellerOrgNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SellerPhone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("SentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("VatAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("OrderHeaderId");
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.InvoiceLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LineNetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LineTotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LineVatAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductDescription")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ProductSku")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("VatPercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.ToTable("InvoiceLines");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.InvoicePayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RegisteredBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("InvoiceId");
+
+                    b.ToTable("InvoicePayments");
+                });
+
             modelBuilder.Entity("Cartiva.Domain.OrderDetail", b =>
                 {
                     b.Property<int>("Id")
@@ -181,14 +579,37 @@ namespace Cartiva.Persistence.Migrations
                     b.Property<int>("Count")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("DiscountPercent")
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<int>("OrderHeaderId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("PriceExVat")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PriceIncVat")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int>("ProductVariantId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("UnitDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VariantDescription")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("VatRate")
+                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 
@@ -220,6 +641,11 @@ namespace Cartiva.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<bool>("InvoiceSent")
                         .HasColumnType("bit");
@@ -263,6 +689,12 @@ namespace Cartiva.Persistence.Migrations
                     b.Property<DateTime?>("ReturnExpirationDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("ShippingCostExVat")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ShippingVatAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("State")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -271,6 +703,15 @@ namespace Cartiva.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("SubtotalExVat")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalVatAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -517,7 +958,7 @@ namespace Cartiva.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Weight")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(10,2)");
 
                     b.HasKey("Id");
 
@@ -765,7 +1206,13 @@ namespace Cartiva.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<decimal>("DiscountPercent")
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PriceExVat")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductId")
@@ -776,6 +1223,9 @@ namespace Cartiva.Persistence.Migrations
 
                     b.Property<int>("Stock")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("VatRate")
+                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 
@@ -826,6 +1276,81 @@ namespace Cartiva.Persistence.Migrations
                         .HasForeignKey("CompanyId");
 
                     b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.CreditNote", b =>
+                {
+                    b.HasOne("Cartiva.Domain.Invoice", "OriginalInvoice")
+                        .WithMany("CreditNotes")
+                        .HasForeignKey("OriginalInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cartiva.Domain.ReturnRequest", "ReturnRequest")
+                        .WithMany()
+                        .HasForeignKey("ReturnRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OriginalInvoice");
+
+                    b.Navigation("ReturnRequest");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.CreditNoteLine", b =>
+                {
+                    b.HasOne("Cartiva.Domain.CreditNote", "CreditNote")
+                        .WithMany("Lines")
+                        .HasForeignKey("CreditNoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Cartiva.Domain.InvoiceLine", "OriginalInvoiceLine")
+                        .WithMany()
+                        .HasForeignKey("OriginalInvoiceLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreditNote");
+
+                    b.Navigation("OriginalInvoiceLine");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.Invoice", b =>
+                {
+                    b.HasOne("Cartiva.Domain.OrderHeader", "OrderHeader")
+                        .WithMany()
+                        .HasForeignKey("OrderHeaderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OrderHeader");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.InvoiceLine", b =>
+                {
+                    b.HasOne("Cartiva.Domain.Invoice", "Invoice")
+                        .WithMany("Lines")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProductVariant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("ProductVariant");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.InvoicePayment", b =>
+                {
+                    b.HasOne("Cartiva.Domain.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("Cartiva.Domain.OrderDetail", b =>
@@ -1034,6 +1559,20 @@ namespace Cartiva.Persistence.Migrations
                     b.Navigation("ApplicationUser");
 
                     b.Navigation("ProductVariant");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.CreditNote", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Cartiva.Domain.Invoice", b =>
+                {
+                    b.Navigation("CreditNotes");
+
+                    b.Navigation("Lines");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("Cartiva.Domain.OrderHeader", b =>

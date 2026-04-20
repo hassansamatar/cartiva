@@ -1,145 +1,230 @@
 ﻿@using Cartiva.Domain.ViewModels
+@using Cartiva.Shared
 @model IEnumerable<CompanyListVM>
 
 @{
-    ViewData["Title"] = "Company List";
+    ViewData["Title"] = "Company Management";
+
+    var totalCompanies = Model.Count();
+    var activeCompanies = Model.Count(c => c.Company.IsActive);
+    var inactiveCompanies = Model.Count(c => !c.Company.IsActive);
+    var overdueCompanies = Model.Count(c => c.PaymentStatus == "Overdue");
+    var totalUsers = Model.Sum(c => c.Users.Count);
 }
 
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
 
-<div class="card shadow border-0 mt-4">
+<div class="admin-dashboard">
+    <div class="container-fluid">
 
-    <!-- Card Header -->
-    <div class="card-header bg-dark text-white py-3">
-        <div class="row">
-            <div class="col-6">
-                <h4 class="mb-0">
-                    <i class="bi bi-building me-2"></i> Company List
-                </h4>
+        <h2><i class="bi bi-building"></i> Company Management</h2>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-buildings"></i> Total Companies</h5>
+                        <h3>@totalCompanies</h3>
+                        <p>Registered companies</p>
+                    </div>
+                </div>
             </div>
-
-            <div class="col-6 text-end">
-                <a asp-area="Admin"
-                       asp-controller="Company"
-                       asp-action="Upsert"
-                       class="btn btn-light">
-                    <i class="bi bi-plus-circle me-1"></i> Create Company
-                </a>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-check-circle"></i> Active</h5>
+                        <h3>@activeCompanies</h3>
+                        <p>Can place orders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-danger">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Overdue</h5>
+                        <h3>@overdueCompanies</h3>
+                        <p>Payment overdue</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-people"></i> Total Users</h5>
+                        <h3>@totalUsers</h3>
+                        <p>Company members</p>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Card Body -->
-    <div class="card-body">
+        <!-- Companies Table Section -->
+        <div class="admin-section">
+            <div class="section-header">
+                <h3><i class="bi bi-table"></i> All Companies</h3>
+                <a asp-area="Admin" asp-controller="Company" asp-action="Upsert" class="btn btn-create">
+                    <i class="bi bi-plus-circle me-1"></i> Add Company
+                </a>
+            </div>
 
-        <table id="tblCompany" class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>Name</th>
-                    <th>Address, Postal Code</th>
-                    <th>City</th>
-                    <th>Phone</th>
-                    <th>Contact Person</th>
-                    <th>Payment Status</th>
-                    <th>Status</th> <!-- New column -->
-                    <th style="width:150px">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td>@item.Company.Name</td>
-                        <td>@item.Company.StreetAddress, @item.Company.PostalCode</td>
-                        <td>@item.Company.City</td>
-                        <td>@item.Company.PhoneNumber</td>
-                        <td>
-                            <span>@item.ContactPerson</span>
-                            @if (item.Users.Count > 1)
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-building"></i>
+                    <h4>No companies found</h4>
+                    <p>Create your first company to get started.</p>
+                </div>
+            }
+            else
+            {
+                <table id="companiesTable" class="table admin-table">
+                    <thead>
+                        <tr>
+                            <th>Company Name</th>
+                            <th>Address</th>
+                            <th>City</th>
+                            <th>Phone</th>
+                            <th>Contact Person</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th style="width: 120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var rowClass = !item.Company.IsActive ? "row-inactive" : 
+                                          item.PaymentStatus == "Overdue" ? "row-warning" : "";
+                            var paymentBadge = item.PaymentStatus switch
                             {
-                                <details class="mt-1">
-                                    <summary class="text-muted small" style="cursor:pointer;">
-                                        <i class="bi bi-people"></i> @item.Users.Count users total
-                                    </summary>
-                                    <ul class="list-unstyled mb-0 mt-1 ms-2">
-                                        @foreach (var u in item.Users)
+                                "Paid" => "badge-paid",
+                                "Pending" => "badge-pending",
+                                "Overdue" => "badge-overdue",
+                                _ => "badge-role"
+                            };
+
+                            <tr class="@rowClass">
+                                <td>
+                                    <span class="fw-600">
+                                        <i class="bi bi-building me-1 text-primary"></i>@item.Company.Name
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-truncate-2">
+                                        @item.Company.StreetAddress, @item.Company.PostalCode
+                                    </span>
+                                </td>
+                                <td>@item.Company.City</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Company.PhoneNumber))
+                                    {
+                                        <a href="tel:@item.Company.PhoneNumber" class="text-decoration-none">
+                                            @item.Company.PhoneNumber
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-light">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.ContactPerson))
+                                    {
+                                        <span>@item.ContactPerson</span>
+                                        @if (item.Users.Count > 1)
                                         {
-                                            <li class="small text-muted">
-                                                <i class="bi bi-person me-1"></i>@(u.Name ?? u.Email)
-                                                @if (!string.IsNullOrEmpty(u.Name))
-                                                {
-                                                    <span class="opacity-75">(@u.Email)</span>
-                                                }
-                                            </li>
+                                            <details class="mt-1">
+                                                <summary class="text-muted small">
+                                                    <i class="bi bi-people"></i> @item.Users.Count users
+                                                </summary>
+                                                <ul class="list-unstyled mb-0 mt-1 ms-3">
+                                                    @foreach (var u in item.Users.Take(5))
+                                                    {
+                                                        <li class="small text-muted">
+                                                            <i class="bi bi-person me-1"></i>@(u.Name ?? u.Email)
+                                                        </li>
+                                                    }
+                                                    @if (item.Users.Count > 5)
+                                                    {
+                                                        <li class="small text-muted">
+                                                            <i class="bi bi-three-dots"></i> +@(item.Users.Count - 5) more
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </details>
                                         }
-                                    </ul>
-                                </details>
-                            }
-                        </td>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-light">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge-status @paymentBadge">
+                                        @item.PaymentStatus
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (item.Company.IsActive)
+                                    {
+                                        <span class="badge-status badge-active">
+                                            <i class="bi bi-check-circle"></i> Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status badge-inactive">
+                                            <i class="bi bi-x-circle"></i> Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a asp-area="Admin" asp-controller="Company" asp-action="Upsert" asp-route-id="@item.Company.Id"
+                                           class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="Edit Company">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
 
-                        <td>
-                            @if (item.PaymentStatus == "Paid")
-                            {
-                                <span class="badge bg-success">Paid</span>
-                            }
-                            else if (item.PaymentStatus == "Pending")
-                            {
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            }
-                            else if (item.PaymentStatus == "Overdue")
-                            {
-                                <span class="badge bg-danger">Overdue</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">No Orders</span>
-                            }
-                        </td>
-
-                        <td>
-                            @if (item.Company.IsActive)
-                            {
-                                <span class="badge bg-success">Active</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">Inactive</span>
-                            }
-                        </td>
-
-                        <td>
-                            <div class="text-center">
-                                <a asp-area="Admin"
-                                       asp-controller="Company"
-                                       asp-action="Upsert"
-                                       asp-route-id="@item.Company.Id"
-                                       class="btn btn-sm btn-dark me-2">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-
-                                @if (User.IsInRole(SD.Role_Admin))
-                                {
-                                    <a asp-area="Admin"
-                                           asp-controller="Company"
-                                           asp-action="Delete"
-                                           asp-route-id="@item.Company.Id"
-                                           class="btn btn-sm btn-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
+                                        @if (User.IsInRole(SD.Role_Admin))
+                                        {
+                                            <a asp-area="Admin" asp-controller="Company" asp-action="Delete" asp-route-id="@item.Company.Id"
+                                               class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Delete Company"
+                                               onclick="return confirm('Er du sikker på at du vil slette dette selskapet?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="~/js/company-index.js" asp-append-version="true"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize Companies DataTable
+            initAdminTable('#companiesTable', {
+                order: [[0, 'asc']], // Sort by company name ascending
+                columnDefs: [
+                    { targets: [-1], orderable: false } // Disable sorting on actions column
+                ]
+            });
+        });
+    </script>
 }

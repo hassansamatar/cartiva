@@ -95,7 +95,7 @@
 <body>
 
     <h1>🛒 Cartiva — Entity Relationship Diagram</h1>
-    <p class="subtitle">Application Models only (excluding ASP.NET Identity) &bull; .NET 10 &bull; 15 Entities &bull; 17 Relationships</p>
+    <p class="subtitle">Application Models only (excluding ASP.NET Identity) &bull; .NET 10 &bull; 19 Entities &bull; 24 Relationships</p>
 
     <div class="no-print" style="text-align:center; margin-bottom: 20px;">
         <a href="er-diagram-identity.html" style="color:#0d6efd; font-size:0.95rem;">
@@ -269,6 +269,70 @@ erDiagram
         datetime RefundDate
     }
 
+    Invoice {
+        int Id PK
+        int OrderHeaderId FK
+        string InvoiceNumber
+        string KID
+        date IssueDate
+        date DueDate
+        decimal NetAmount
+        decimal VatAmount
+        decimal TotalAmount
+        string Currency
+        string Status
+        string SellerName
+        string SellerOrgNumber
+        string CustomerName
+        datetime PaidDate
+        bool IsBooked
+    }
+
+    InvoiceLine {
+        int Id PK
+        int InvoiceId FK
+        int ProductVariantId FK
+        string ProductName
+        string ProductSku
+        int Quantity
+        decimal UnitPrice
+        decimal DiscountAmount
+        decimal VatPercent
+        decimal LineNetAmount
+        decimal LineVatAmount
+        decimal LineTotalAmount
+    }
+
+    CreditNote {
+        int Id PK
+        int OriginalInvoiceId FK
+        int ReturnRequestId FK
+        string CreditNoteNumber
+        date IssueDate
+        string Status
+        decimal NetAmount
+        decimal VatAmount
+        decimal TotalAmount
+        string Currency
+        string Reason
+        datetime CreatedAt
+        string CreatedByUserId
+    }
+
+    CreditNoteLine {
+        int Id PK
+        int CreditNoteId FK
+        int OriginalInvoiceLineId FK
+        string Description
+        string ProductSku
+        int Quantity
+        decimal UnitPrice
+        decimal VatPercent
+        decimal LineNetAmount
+        decimal LineVatAmount
+        decimal LineTotalAmount
+    }
+
     ProcessedStripeEvent {
         string EventId PK
         datetime ProcessedAt
@@ -294,14 +358,23 @@ erDiagram
 
     OrderHeader ||--o{ OrderDetail : "contains items"
     OrderHeader ||--o{ Shipment : "shipped via"
+    OrderHeader ||--o{ Invoice : "invoiced via"
 
     OrderDetail ||--o{ ReturnRequest : "returned via"
     ApplicationUser ||--o{ ReturnRequest : "requests returns"
 
+    Invoice ||--o{ InvoiceLine : "contains lines"
+    Invoice ||--o{ CreditNote : "credited by"
+    ProductVariant ||--o{ InvoiceLine : "invoiced as"
+
+    CreditNote ||--o{ CreditNoteLine : "contains lines"
+    ReturnRequest ||--o{ CreditNote : "generates credit"
+    InvoiceLine ||--o{ CreditNoteLine : "credited via"
+
     </div>
 
     <div class="legend">
-        <h2>📋 Relationships</h2>
+        <h2>📋 Relationships (24)</h2>
         <table>
             <thead>
                 <tr>
@@ -328,12 +401,19 @@ erDiagram
                 <tr><td>ProductVariant</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>Shipment</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
+                <tr><td>OrderHeader</td><td>Invoice</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId?</span></td><td><span class="badge badge-opt">Optional</span> — invoice can exist standalone</td></tr>
                 <tr><td>OrderDetail</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Restrict delete</td></tr>
                 <tr><td>ApplicationUser</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>Restrict delete</td></tr>
+                <tr><td>Invoice</td><td>InvoiceLine</td><td>1 : N</td><td><span class="badge badge-fk">InvoiceId</span></td><td>Invoice line items</td></tr>
+                <tr><td>Invoice</td><td>CreditNote</td><td>1 : N</td><td><span class="badge badge-fk">OriginalInvoiceId</span></td><td>Credit notes reference invoice</td></tr>
+                <tr><td>ProductVariant</td><td>InvoiceLine</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId?</span></td><td><span class="badge badge-opt">Optional</span> — snapshot</td></tr>
+                <tr><td>ReturnRequest</td><td>CreditNote</td><td>1 : N</td><td><span class="badge badge-fk">ReturnRequestId?</span></td><td><span class="badge badge-opt">Optional</span> — credit from return</td></tr>
+                <tr><td>CreditNote</td><td>CreditNoteLine</td><td>1 : N</td><td><span class="badge badge-fk">CreditNoteId</span></td><td>Credit note line items</td></tr>
+                <tr><td>InvoiceLine</td><td>CreditNoteLine</td><td>1 : N</td><td><span class="badge badge-fk">OriginalInvoiceLineId?</span></td><td><span class="badge badge-opt">Optional</span> — links credited line</td></tr>
             </tbody>
         </table>
 
-        <h2>📊 Entity Summary (15 Application Tables)</h2>
+        <h2>📊 Entity Summary (19 Application Tables)</h2>
         <table>
             <thead>
                 <tr>
@@ -358,6 +438,10 @@ erDiagram
                 <tr><td><strong>Shipment</strong></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking, carrier, delivery status</td></tr>
                 <tr><td><strong>Review</strong></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Product ratings and comments</td></tr>
                 <tr><td><strong>ReturnRequest</strong></td><td>Id (int)</td><td>OrderDetailId, ApplicationUserId</td><td>Product returns and refunds</td></tr>
+                <tr><td><strong>Invoice</strong></td><td>Id (int)</td><td>OrderHeaderId?</td><td>Billing document with KID, VAT, EHF support</td></tr>
+                <tr><td><strong>InvoiceLine</strong></td><td>Id (int)</td><td>InvoiceId, ProductVariantId?</td><td>Invoice line items with pricing snapshot</td></tr>
+                <tr><td><strong>CreditNote</strong></td><td>Id (int)</td><td>OriginalInvoiceId, ReturnRequestId?</td><td>Credit/refund document linked to invoice</td></tr>
+                <tr><td><strong>CreditNoteLine</strong></td><td>Id (int)</td><td>CreditNoteId, OriginalInvoiceLineId?</td><td>Credit note line items</td></tr>
                 <tr><td><strong>ProcessedStripeEvent</strong></td><td>EventId (string)</td><td>—</td><td>Idempotency for Stripe webhooks</td></tr>
             </tbody>
         </table>

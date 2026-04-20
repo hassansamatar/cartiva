@@ -1,149 +1,288 @@
 ﻿@model InvoiceDashboardViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = "Invoice Management";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
 }
 
-<h2>Invoice Management</h2>
-
-<!-- Overdue Invoices -->
-<h3 class="text-danger">Overdue Invoices</h3>
-@if (!Model.OverdueInvoices.Any())
-{
-    <p>No overdue invoices.</p>
+@section Styles {
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <!-- Shared Admin Dashboard CSS -->
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+    <!-- Invoice-specific CSS (extends admin-dashboard) -->
+    <link rel="stylesheet" href="~/css/invoice.css" asp-append-version="true" />
 }
-else
-{
-    <table class="table table-bordered table-danger">
-        <thead>
-            <tr>
-                <th>Order #</th>
-                <th>Company</th>
-                <th>Customer</th>
-                <th>Due Date</th>
-                <th>Email</th>
-                <th>Printable</th>      @* New column *@
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var order in Model.OverdueInvoices)
+
+<div class="admin-dashboard invoice-dashboard">
+    <div class="container-fluid">
+        <h2><i class="bi bi-receipt"></i> Invoice Management</h2>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card invoice-card card-overdue">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-exclamation-triangle-fill"></i> Overdue</h5>
+                        <h3>@Model.OverdueCount</h3>
+                        <p class="mb-1">@Model.TotalOverdue.ToString("C", culture)</p>
+                        <small>Ex VAT: @Model.TotalOverdueExVat.ToString("C", culture)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card invoice-card card-pending">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-clock-fill"></i> Pending</h5>
+                        <h3>@Model.PendingCount</h3>
+                        <p class="mb-1">@Model.TotalPending.ToString("C", culture)</p>
+                        <small>Ex VAT: @Model.TotalPendingExVat.ToString("C", culture)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card invoice-card card-paid">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-check-circle-fill"></i> Paid</h5>
+                        <h3>@Model.PaidCount</h3>
+                        <p class="mb-1">@Model.TotalPaid.ToString("C", culture)</p>
+                        <small>Ex VAT: @Model.TotalPaidExVat.ToString("C", culture)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card invoice-card card-outstanding">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-cash-stack"></i> Total Outstanding</h5>
+                        <h3>@Model.TotalOutstanding.ToString("C", culture)</h3>
+                        <small>Ex VAT: @Model.TotalOutstandingExVat.ToString("C", culture)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue Invoices Section -->
+        <div class="invoice-section section-overdue">
+            <h3><i class="bi bi-exclamation-triangle"></i> Overdue Invoices</h3>
+            @if (!Model.OverdueInvoices.Any() && !Model.OverdueInvoiceEntities.Any())
             {
-                <tr>
-                    <td>@order.Id</td>
-                    <td>@order.ApplicationUser?.Company?.Name</td>
-                    <td>@order.ApplicationUser?.Name</td>
-                    <td>@order.PaymentDueDate</td>
-                    <td>@order.ApplicationUser?.Email</td>
-                    <td>
-                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-printer"></i> Print
-                        </a>
-                    </td>
-                    <td>
-                        @if (!order.InvoiceSent)
-                        {
-                            <form asp-action="Send" asp-route-id="@order.Id" method="post">
-                                <button type="submit" class="btn btn-warning btn-sm">Send Invoice</button>
-                            </form>
-                        }
-                        else
-                        {
-                            <span class="text-success">Sent</span>
-                        }
-                    </td>
-                </tr>
+                <div class="empty-state">
+                    <i class="bi bi-check-circle"></i>
+                    <p>No overdue invoices - Great job!</p>
+                </div>
             }
-        </tbody>
-    </table>
-}
-
-<!-- Pending (Unpaid) Invoices -->
-<h3 class="text-warning">Pending Invoices (Not yet due)</h3>
-@if (!Model.PendingInvoices.Any())
-{
-    <p>No pending invoices.</p>
-}
-else
-{
-    <table class="table table-bordered table-warning">
-        <thead>
-            <tr>
-                <th>Order #</th>
-                <th>Company</th>
-                <th>Customer</th>
-                <th>Due Date</th>
-                <th>Email</th>
-                <th>Printable</th>      @* New column *@
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var order in Model.PendingInvoices)
+            else
             {
-                <tr>
-                    <td>@order.Id</td>
-                    <td>@order.ApplicationUser?.Company?.Name</td>
-                    <td>@order.ApplicationUser?.Name</td>
-                    <td>@order.PaymentDueDate</td>
-                    <td>@order.ApplicationUser?.Email</td>
-                    <td>
-                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-printer"></i> Print
-                        </a>
-                    </td>
-                    <td>
-                        @if (!order.InvoiceSent)
+                <table id="overdueTable" class="table invoice-table table-overdue">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Company</th>
+                            <th>Customer</th>
+                            <th>Due Date</th>
+                            <th>Ex VAT</th>
+                            <th>VAT</th>
+                            <th>Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.OverdueInvoices)
                         {
-                            <form asp-action="Send" asp-route-id="@order.Id" method="post">
-                                <button type="submit" class="btn btn-info btn-sm">Mark as Sent</button>
-                            </form>
+                            var exVat = order.SubtotalExVat > 0 ? order.SubtotalExVat : order.OrderTotal / 1.25m;
+                            var vat = order.TotalVatAmount > 0 ? order.TotalVatAmount : order.OrderTotal - exVat;
+                            <tr>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="fw-bold text-decoration-none">
+                                        #@order.Id
+                                    </a>
+                                </td>
+                                <td>@(order.ApplicationUser?.Company?.Name ?? "-")</td>
+                                <td>@(order.ApplicationUser?.Name ?? order.Name)</td>
+                                <td class="text-overdue">@order.PaymentDueDate?.ToString("dd.MM.yyyy")</td>
+                                <td class="text-end">@exVat.ToString("N2", culture)</td>
+                                <td class="text-end text-muted-light">@vat.ToString("N2", culture)</td>
+                                <td class="text-end amount-large">@order.OrderTotal.ToString("C", culture)</td>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    @if (!order.InvoiceSent)
+                                    {
+                                        <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline" data-confirm="Send reminder to customer?">
+                                            <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Send Reminder">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-sent"><i class="bi bi-check"></i> Sent</span>
+                                    }
+                                </td>
+                            </tr>
                         }
-                        else
-                        {
-                            <span class="text-success">Sent</span>
-                        }
-                    </td>
-                </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total Overdue:</td>
+                            <td class="text-end fw-bold">@Model.TotalOverdueExVat.ToString("N2", culture)</td>
+                            <td class="text-end text-muted-light">@Model.TotalOverdueVat.ToString("N2", culture)</td>
+                            <td class="text-end fw-bold">@Model.TotalOverdue.ToString("C", culture)</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
             }
-        </tbody>
-    </table>
-}
+        </div>
 
-<!-- Paid Invoices -->
-<h3 class="text-success">Paid Invoices</h3>
-@if (!Model.PaidInvoices.Any())
-{
-    <p>No paid invoices.</p>
-}
-else
-{
-    <table class="table table-bordered table-success">
-        <thead>
-            <tr>
-                <th>Order #</th>
-                <th>Company</th>
-                <th>Customer</th>
-                <th>Payment Date</th>
-                <th>Amount</th>
-                <th>Printable</th>      @* New column *@
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var order in Model.PaidInvoices)
+        <!-- Pending Invoices Section -->
+        <div class="invoice-section section-pending">
+            <h3><i class="bi bi-clock"></i> Pending Invoices (Not yet due)</h3>
+            @if (!Model.PendingInvoices.Any() && !Model.PendingInvoiceEntities.Any())
             {
-                <tr>
-                    <td>@order.Id</td>
-                    <td>@order.ApplicationUser?.Company?.Name</td>
-                    <td>@order.ApplicationUser?.Name</td>
-                    <td>@order.PaymentDate?.ToShortDateString()</td>
-                    <td>@order.OrderTotal.ToString("C")</td>
-                    <td>
-                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-printer"></i> Print
-                        </a>
-                    </td>
-                </tr>
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>No pending invoices</p>
+                </div>
             }
-        </tbody>
-    </table>
+            else
+            {
+                <table id="pendingTable" class="table invoice-table table-pending">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Company</th>
+                            <th>Customer</th>
+                            <th>Due Date</th>
+                            <th>Ex VAT</th>
+                            <th>VAT</th>
+                            <th>Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.PendingInvoices)
+                        {
+                            var exVat = order.SubtotalExVat > 0 ? order.SubtotalExVat : order.OrderTotal / 1.25m;
+                            var vat = order.TotalVatAmount > 0 ? order.TotalVatAmount : order.OrderTotal - exVat;
+                            <tr>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="fw-bold text-decoration-none">
+                                        #@order.Id
+                                    </a>
+                                </td>
+                                <td>@(order.ApplicationUser?.Company?.Name ?? "-")</td>
+                                <td>@(order.ApplicationUser?.Name ?? order.Name)</td>
+                                <td>@order.PaymentDueDate?.ToString("dd.MM.yyyy")</td>
+                                <td class="text-end">@exVat.ToString("N2", culture)</td>
+                                <td class="text-end text-muted-light">@vat.ToString("N2", culture)</td>
+                                <td class="text-end amount-large">@order.OrderTotal.ToString("C", culture)</td>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    @if (!order.InvoiceSent)
+                                    {
+                                        <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Mark as Sent">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-sent"><i class="bi bi-check"></i> Sent</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total Pending:</td>
+                            <td class="text-end fw-bold">@Model.TotalPendingExVat.ToString("N2", culture)</td>
+                            <td class="text-end text-muted-light">@Model.TotalPendingVat.ToString("N2", culture)</td>
+                            <td class="text-end fw-bold">@Model.TotalPending.ToString("C", culture)</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            }
+        </div>
+
+        <!-- Paid Invoices Section -->
+        <div class="invoice-section section-paid">
+            <h3><i class="bi bi-check-circle"></i> Paid Invoices</h3>
+            @if (!Model.PaidInvoices.Any() && !Model.PaidInvoiceEntities.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>No paid invoices yet</p>
+                </div>
+            }
+            else
+            {
+                <table id="paidTable" class="table invoice-table table-paid">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Company</th>
+                            <th>Customer</th>
+                            <th>Payment Date</th>
+                            <th>Ex VAT</th>
+                            <th>VAT</th>
+                            <th>Total</th>
+                            <th>Print</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.PaidInvoices)
+                        {
+                            var exVat = order.SubtotalExVat > 0 ? order.SubtotalExVat : order.OrderTotal / 1.25m;
+                            var vat = order.TotalVatAmount > 0 ? order.TotalVatAmount : order.OrderTotal - exVat;
+                            <tr>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="fw-bold text-decoration-none">
+                                        #@order.Id
+                                    </a>
+                                </td>
+                                <td>@(order.ApplicationUser?.Company?.Name ?? "-")</td>
+                                <td>@(order.ApplicationUser?.Name ?? order.Name)</td>
+                                <td class="amount-positive">@order.PaymentDate?.ToString("dd.MM.yyyy")</td>
+                                <td class="text-end">@exVat.ToString("N2", culture)</td>
+                                <td class="text-end text-muted-light">@vat.ToString("N2", culture)</td>
+                                <td class="text-end amount-large amount-positive">@order.OrderTotal.ToString("C", culture)</td>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total Paid:</td>
+                            <td class="text-end fw-bold">@Model.TotalPaidExVat.ToString("N2", culture)</td>
+                            <td class="text-end text-muted-light">@Model.TotalPaidVat.ToString("N2", culture)</td>
+                            <td class="text-end fw-bold amount-positive">@Model.TotalPaid.ToString("C", culture)</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <!-- Invoice Dashboard JS -->
+    <script src="~/js/invoice.js" asp-append-version="true"></script>
 }

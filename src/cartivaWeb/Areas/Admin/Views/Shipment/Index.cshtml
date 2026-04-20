@@ -6,70 +6,214 @@
     ViewData["Title"] = "Shipment Management";
     var currentStatus = ViewBag.CurrentStatus as string;
     var culture = CultureInfo.GetCultureInfo("nb-NO");
+
+    // Calculate stats
+    var allShipments = Model.ToList();
+    var pendingCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusPendingApproval);
+    var shippedCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusShipped);
+    var deliveredCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusDelivered);
+    var cancelledCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusCancelled);
+    var totalCount = allShipments.Count;
 }
 
-<div class="container mt-4">
-    <h2><i class="bi bi-box-seam"></i> Shipment Management</h2>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
 
-    <!-- Status filter tabs -->
-    <div class="mb-3">
-        <a asp-action="Index" asp-route-status="" class="btn btn-outline-secondary @(string.IsNullOrEmpty(currentStatus) ? "active" : "")">All</a>
-        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusPendingApproval" class="btn btn-outline-warning @(currentStatus == SD.ShipmentStatusPendingApproval ? "active" : "")">Pending Approval</a>
-        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusShipped" class="btn btn-outline-info @(currentStatus == SD.ShipmentStatusShipped ? "active" : "")">Shipped</a>
-        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusDelivered" class="btn btn-outline-success @(currentStatus == SD.ShipmentStatusDelivered ? "active" : "")">Delivered</a>
-        <a asp-action="Index" asp-route-status="@SD.ShipmentStatusCancelled" class="btn btn-outline-danger @(currentStatus == SD.ShipmentStatusCancelled ? "active" : "")">Cancelled</a>
-    </div>
+<div class="admin-dashboard">
+    <div class="container-fluid">
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover">
-            <thead class="table-light">
-                32
-                <th>Shipment ID</th>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Order Total</th>
-                <th>Status</th>
-                <th>Tracking</th>
-                <th>Actions</th>
-            </thead>
-            <tbody>
-                @foreach (var s in Model)
-                {
-                    <tr>
-                        <td>@s.Id</td>
-                        <td>@s.OrderHeader.Id</td>
-                        <td>@s.OrderHeader.Name</td>
-                        <td>@s.OrderHeader.OrderTotal.ToString("C", culture)</td>
-                        <td><span class="badge @SD.GetShipmentStatusBadgeClass(s.ShipmentStatus)">@s.ShipmentStatus</span></td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(s.TrackingNumber))
+        <h2><i class="bi bi-box-seam"></i> Shipment Management</h2>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-warning">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-hourglass-split"></i> Pending</h5>
+                        <h3>@pendingCount</h3>
+                        <p>Awaiting approval</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-truck"></i> Shipped</h5>
+                        <h3>@shippedCount</h3>
+                        <p>In transit</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-check2-circle"></i> Delivered</h5>
+                        <h3>@deliveredCount</h3>
+                        <p>Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-danger">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-x-circle"></i> Cancelled</h5>
+                        <h3>@cancelledCount</h3>
+                        <p>Cancelled orders</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shipments Table Section -->
+        <div class="admin-section">
+            <div class="section-header">
+                <h3><i class="bi bi-table"></i> All Shipments</h3>
+                <div class="btn-group" role="group">
+                    <a asp-action="Index" asp-route-status="" 
+                       class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-dark" : "btn-outline-dark")">
+                        All
+                    </a>
+                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusPendingApproval" 
+                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusPendingApproval ? "btn-warning" : "btn-outline-warning")">
+                        Pending
+                    </a>
+                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusShipped" 
+                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusShipped ? "btn-info" : "btn-outline-info")">
+                        Shipped
+                    </a>
+                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusDelivered" 
+                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusDelivered ? "btn-success" : "btn-outline-success")">
+                        Delivered
+                    </a>
+                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusCancelled" 
+                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusCancelled ? "btn-danger" : "btn-outline-danger")">
+                        Cancelled
+                    </a>
+                </div>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-box-seam"></i>
+                    <h4>No Shipments Found</h4>
+                    <p>There are no shipments matching your filter.</p>
+                </div>
+            }
+            else
+            {
+                <table id="shipmentsTable" class="table admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Order</th>
+                            <th>Customer</th>
+                            <th>Destination</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Tracking</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model)
+                        {
+                            var badgeClass = s.ShipmentStatus switch
                             {
-                                <span>@s.TrackingNumber</span>
-                                if (!string.IsNullOrEmpty(s.Carrier))
-                                {
-                                    <br /><small>@s.Carrier</small>
-                                }
-                            }
-                            else
-                            {
-                                <span class="text-muted">—</span>
-                            }
-                        </td>
-                        <td>
-                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-info">Details</a>
-                            @if (s.ShipmentStatus == SD.ShipmentStatusPendingApproval)
-                            {
-                                <a asp-action="Approve" asp-route-id="@s.Id" class="btn btn-sm btn-success">Approve</a>
-                            }
-                            @if (s.ShipmentStatus != SD.ShipmentStatusShipped && s.ShipmentStatus != SD.ShipmentStatusDelivered && s.ShipmentStatus != SD.ShipmentStatusCancelled)
-                            {
-                                <a asp-action="Cancel" asp-route-id="@s.Id" class="btn btn-sm btn-danger">Cancel</a>
-                            }
-                            <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-warning">Edit</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                                SD.ShipmentStatusPendingApproval => "badge-pending",
+                                SD.ShipmentStatusShipped => "badge-company",
+                                SD.ShipmentStatusDelivered => "badge-paid",
+                                SD.ShipmentStatusCancelled => "badge-overdue",
+                                _ => "badge-pending"
+                            };
+
+                            <tr>
+                                <td><strong>#@s.Id</strong></td>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@s.OrderHeader.Id">
+                                        Order #@s.OrderHeader.Id
+                                    </a>
+                                </td>
+                                <td>@s.OrderHeader.Name</td>
+                                <td>
+                                    <small class="text-muted-light">@s.OrderHeader.City, @s.OrderHeader.PostalCode</small>
+                                </td>
+                                <td><strong>@s.OrderHeader.OrderTotal.ToString("C", culture)</strong></td>
+                                <td>
+                                    <span class="badge-status @badgeClass">@s.ShipmentStatus</span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(s.TrackingNumber))
+                                    {
+                                        <code>@s.TrackingNumber</code>
+                                        @if (!string.IsNullOrEmpty(s.Carrier))
+                                        {
+                                            <br /><small class="text-muted-light">via @s.Carrier</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-light">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a asp-action="Details" asp-route-id="@s.Id" 
+                                           class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        @if (s.ShipmentStatus == SD.ShipmentStatusPendingApproval)
+                                        {
+                                            <a asp-action="Approve" asp-route-id="@s.Id" 
+                                               class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="Approve">
+                                                <i class="bi bi-check-lg"></i>
+                                            </a>
+                                        }
+
+                                        @if (s.ShipmentStatus != SD.ShipmentStatusShipped && 
+                                             s.ShipmentStatus != SD.ShipmentStatusDelivered && 
+                                             s.ShipmentStatus != SD.ShipmentStatusCancelled)
+                                        {
+                                            <a asp-action="Cancel" asp-route-id="@s.Id" 
+                                               class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Cancel">
+                                                <i class="bi bi-x-lg"></i>
+                                            </a>
+                                        }
+
+                                        <a asp-action="Edit" asp-route-id="@s.Id" 
+                                           class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function() {
+            initAdminTable('#shipmentsTable', {
+                order: [[0, 'desc']],
+                columnDefs: [
+                    { targets: [-1], orderable: false }
+                ]
+            });
+        });
+    </script>
+}
