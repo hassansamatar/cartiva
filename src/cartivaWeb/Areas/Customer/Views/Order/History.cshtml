@@ -312,7 +312,7 @@
                                                 </small>
                                             </h5>
                                             <small class="text-muted">@coOrder.OrderDate.ToString("dd MMM yyyy 'at' HH:mm")</small>
-                                            @if (coOrder.PaymentDueDate != null)
+                                            @if (coOrder.PaymentStatus == SD.PaymentStatusDeferred && coOrder.PaymentDueDate != null)
                                             {
                                                 var daysLeft = coOrder.PaymentDueDate.Value.DayNumber - DateOnly.FromDateTime(DateTime.Now).DayNumber;
                                                 if (daysLeft < 0)
