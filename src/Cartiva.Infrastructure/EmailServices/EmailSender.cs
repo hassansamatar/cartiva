@@ -7,6 +7,20 @@ using System.Threading.Tasks;
 
 namespace Cartiva.Infrastructure.EmailServices
 {
+    /// <summary>
+    /// Legacy email sender for ASP.NET Core Identity compatibility.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ DEPRECATED: This class is kept only for Identity pages fallback support.
+    /// For all business notifications, use INotificationService instead.
+    /// The notification system provides better:
+    /// - Template management with RazorLight
+    /// - Background processing with queues
+    /// - Retry logic with Polly
+    /// - Audit trails in database
+    /// - Multi-channel support (Email, SMS, Push)
+    /// </remarks>
+    [Obsolete("Use INotificationService for business notifications. This is kept only for Identity fallback.")]
     public class EmailSender : IEmailSender
     {
         private readonly IConfiguration _configuration;

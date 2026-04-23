@@ -23,10 +23,11 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Email services
+        // ===========================================
+        // Legacy Email Service (Minimal - for Identity fallback only)
+        // NOTE: Use INotificationService for all business notifications
+        // ===========================================
         services.AddScoped<IEmailSender, EmailSender>();
-        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
-        services.AddScoped<EmailSender>(); // For direct injection when needed
 
         // Image services
         services.AddScoped<IImageService, ImageService>();

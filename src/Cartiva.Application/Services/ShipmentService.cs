@@ -2,12 +2,10 @@ using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
 using Cartiva.Domain.Enums;
 using Cartiva.Domain.Interfaces;
-using Cartiva.Infrastructure.EmailServices;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Infrastructure.ShippingServices;
 using Cartiva.Persistence;
 using Cartiva.Shared;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -21,26 +19,20 @@ public class ShipmentService : IShipmentService
     private readonly ApplicationDbContext _db;
     private readonly ILogger<ShipmentService> _logger;
     private readonly IBringShippingService _bringShippingService;
-    private readonly IEmailSender _emailSender;
     private readonly IQrCodeService _qrCodeService;
-    private readonly IEmailTemplateService _emailTemplateService;
     private readonly INotificationService _notificationService;
 
     public ShipmentService(
         ApplicationDbContext db,
         ILogger<ShipmentService> logger,
         IBringShippingService bringShippingService,
-        IEmailSender emailSender,
         IQrCodeService qrCodeService,
-        IEmailTemplateService emailTemplateService,
         INotificationService notificationService)
     {
         _db = db;
         _logger = logger;
         _bringShippingService = bringShippingService;
-        _emailSender = emailSender;
         _qrCodeService = qrCodeService;
-        _emailTemplateService = emailTemplateService;
         _notificationService = notificationService;
     }
 
@@ -125,10 +117,7 @@ public class ShipmentService : IShipmentService
 
         await _db.SaveChangesAsync();
 
-        // Send shipment confirmation email (legacy)
-        await SendShipmentConfirmationEmailAsync(shipment, baseUrl);
-
-        // Send order shipped notification (new system)
+        // Send order shipped notification
         var user = await _db.Users.FindAsync(shipment.OrderHeader.ApplicationUserId);
         if (user?.Email != null)
         {
@@ -307,47 +296,5 @@ public class ShipmentService : IShipmentService
         }
 
         return ShipmentOperationResult.Succeeded("Shipment marked as delivered.");
-    }
-
-    private async Task SendShipmentConfirmationEmailAsync(Shipment shipment, string baseUrl)
-    {
-        var user = await _db.Users.FindAsync(shipment.OrderHeader.ApplicationUserId);
-        if (user == null || string.IsNullOrEmpty(user.Email))
-            return;
-
-        var trackingUrl = $"{baseUrl}/Customer/Order/Track/{shipment.OrderHeader.Id}";
-        var subject = "Your order has shipped!";
-
-        try
-        {
-            if (_emailSender is EmailSender emailSender)
-            {
-                var qrCodeBytes = _qrCodeService.GenerateOrderQrCodeBytes(shipment.OrderHeader.Id);
-                var body = await _emailTemplateService.RenderTemplateAsync("shipment-confirmation", new Dictionary<string, string>
-                {
-                    { "OrderId", shipment.OrderHeader.Id.ToString() },
-                    { "TrackingNumber", shipment.TrackingNumber ?? "" },
-                    { "TrackingUrl", trackingUrl },
-                    { "QrCodeSrc", "cid:qrCode" }
-                });
-                await emailSender.SendEmailWithInlineImageAsync(user.Email, subject, body, qrCodeBytes);
-            }
-            else
-            {
-                var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(shipment.OrderHeader.Id);
-                var body = await _emailTemplateService.RenderTemplateAsync("shipment-confirmation", new Dictionary<string, string>
-                {
-                    { "OrderId", shipment.OrderHeader.Id.ToString() },
-                    { "TrackingNumber", shipment.TrackingNumber ?? "" },
-                    { "TrackingUrl", trackingUrl },
-                    { "QrCodeSrc", $"data:image/png;base64,{qrCodeBase64}" }
-                });
-                await _emailSender.SendEmailAsync(user.Email, subject, body);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send shipment confirmation email for order {OrderId}", shipment.OrderHeader.Id);
-        }
     }
 }

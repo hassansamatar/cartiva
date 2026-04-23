@@ -23,8 +23,6 @@ public class OrderController : Controller
     private readonly StripeSettings _stripeSettings;
     private readonly Cartiva.Infrastructure.QrCodeServices.IQrCodeService _qrCodeService;
     private readonly ILogger<OrderController> _logger;
-    private readonly IEmailSender _emailSender;
-    private readonly Cartiva.Infrastructure.EmailServices.IEmailTemplateService _emailTemplateService;
     private readonly IInvoiceService _invoiceService;
     private readonly IOrderService _orderService;
     private readonly IShipmentService _shipmentService;
@@ -34,8 +32,6 @@ public class OrderController : Controller
                            IOptions<StripeSettings> stripeSettings,
                            Cartiva.Infrastructure.QrCodeServices.IQrCodeService qrCodeService,
                            ILogger<OrderController> logger,
-                           IEmailSender emailSender,
-                           Cartiva.Infrastructure.EmailServices.IEmailTemplateService emailTemplateService,
                            IInvoiceService invoiceService,
                            IOrderService orderService,
                            IShipmentService shipmentService,
@@ -46,8 +42,6 @@ public class OrderController : Controller
         StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
         _qrCodeService = qrCodeService;
         _logger = logger;
-        _emailSender = emailSender;
-        _emailTemplateService = emailTemplateService;
         _invoiceService = invoiceService;
         _orderService = orderService;
         _shipmentService = shipmentService;
@@ -163,8 +157,7 @@ public class OrderController : Controller
                 }
             }
 
-            // Send order confirmation email
-            await SendOrderConfirmationEmailAsync(orderId, userId);
+            // Order confirmation email is now handled by OrderService via notification system
 
             if (result.RequiresPayment)
             {
@@ -179,39 +172,6 @@ public class OrderController : Controller
         {
             // Regular customer – always go to payment
             return RedirectToAction("Payment", new { orderId });
-        }
-    }
-
-    // Keep the rest of the controller methods that deal with payment processing
-    // as they require direct Stripe integration
-
-    private async Task SendOrderConfirmationEmailAsync(int orderId, string userId)
-    {
-        var user = await _db.Users.FindAsync(userId);
-        var order = await _orderService.GetOrderByIdAsync(orderId);
-
-        if (user == null || order == null || string.IsNullOrEmpty(user.Email))
-            return;
-
-        try
-        {
-            var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(orderId);
-            var trackingUrl = Url.Action("Track", "Order", new { id = orderId, area = "Customer" }, Request.Scheme);
-
-            var body = await _emailTemplateService.RenderTemplateAsync("order-confirmation", new Dictionary<string, string>
-            {
-                { "OrderId", orderId.ToString() },
-                { "CustomerName", order.Name },
-                { "OrderTotal", order.OrderTotal.ToString("C") },
-                { "TrackingUrl", trackingUrl ?? "" },
-                { "QrCodeSrc", $"data:image/png;base64,{qrCodeBase64}" }
-            });
-
-            await _emailSender.SendEmailAsync(user.Email, $"Order Confirmation #{orderId}", body);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", orderId);
         }
     }
 
@@ -374,8 +334,7 @@ public class OrderController : Controller
                     _logger.LogError(invEx, "Failed to record invoice payment for order {OrderId}", order.Id);
                 }
 
-                // Send order confirmation email for regular customers
-                await SendOrderConfirmationEmailAsync(order.Id, userId);
+                // Order confirmation email is now handled by OrderService via notification system
 
                 TempData["Success"] = "Payment successful! Your order is being prepared for shipment.";
                 return RedirectToAction("ShipmentPending", new { id = order.Id });

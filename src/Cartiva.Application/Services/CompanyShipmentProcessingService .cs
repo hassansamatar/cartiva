@@ -4,11 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
-using Cartiva.Infrastructure.EmailServices;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Persistence;
 using Cartiva.Shared;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -19,23 +17,17 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
 {
     private readonly ApplicationDbContext _db;
     private readonly ILogger<CompanyShipmentProcessingService> _logger;
-    private readonly IEmailSender _emailSender;
-    private readonly IEmailTemplateService _emailTemplateService;
     private readonly IConfiguration _configuration;
     private readonly IQrCodeService _qrCodeService;
 
     public CompanyShipmentProcessingService(
         ApplicationDbContext db,
         ILogger<CompanyShipmentProcessingService> logger,
-        IEmailSender emailSender,
-        IEmailTemplateService emailTemplateService,
         IConfiguration configuration,
         IQrCodeService qrCodeService)
     {
         _db = db;
         _logger = logger;
-        _emailSender = emailSender;
-        _emailTemplateService = emailTemplateService;
         _configuration = configuration;
         _qrCodeService = qrCodeService;
     }
@@ -87,29 +79,15 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
                 return;
             }
 
-            var baseUrl = _configuration["AppBaseUrl"] ?? "https://localhost:7000";
-            var trackingUrl = $"{baseUrl}/Order/Track/{shipment.OrderHeaderId}";
+            // NOTE: Email notifications are now handled by ShipmentService via the notification system
+            // This legacy email sending code has been removed to avoid duplicate notifications
 
-            // Generate QR code and create full data URL
-            var qrCodeBase64 = _qrCodeService.GenerateOrderQrCode(shipment.OrderHeaderId);
-            var qrCodeSrc = $"data:image/png;base64,{qrCodeBase64}";
-
-            var templateData = new Dictionary<string, string>
-        {
-            { "OrderId", shipment.OrderHeaderId.ToString() },
-            { "TrackingNumber", shipment.TrackingNumber ?? "N/A" },
-            { "TrackingUrl", trackingUrl },
-            { "CustomerName", user.UserName ?? user.Email },
-            { "QrCodeSrc", qrCodeSrc }   // ✅ Matches your template's {{QrCodeSrc}}
-        };
-
-            var body = await _emailTemplateService.RenderTemplateAsync("shipment-confirmation", templateData);
-            await _emailSender.SendEmailAsync(user.Email, "Your order has shipped", body);
-            _logger.LogInformation("Shipment email sent to {Email} for Order {OrderId}", user.Email, shipment.OrderHeaderId);
+            _logger.LogInformation("Shipment processed for Order {OrderId}. Email notification handled by ShipmentService.", 
+                shipment.OrderHeaderId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send shipment email for Order {OrderId}", shipment.OrderHeaderId);
+            _logger.LogError(ex, "Failed to process shipment for Order {OrderId}", shipment.OrderHeaderId);
         }
     }
 
