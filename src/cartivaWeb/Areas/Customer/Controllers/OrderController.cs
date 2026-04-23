@@ -351,6 +351,29 @@ public class OrderController : Controller
                 await _db.SaveChangesAsync();
                 _logger.LogInformation($"Order {orderId} updated to AwaitingShipmentApproval with pending shipment.");
 
+                // Record payment against the invoice (if one exists, e.g. deferred-payment company orders)
+                try
+                {
+                    var invoice = await _invoiceService.GetInvoiceByOrderIdAsync(order.Id);
+                    if (invoice != null && invoice.Status != InvoiceStatus.Paid)
+                    {
+                        await _invoiceService.RecordPaymentAsync(
+                            invoiceId: invoice.Id,
+                            amount: order.OrderTotal,
+                            paymentMethod: Cartiva.Domain.PaymentMethod.Card,
+                            transactionId: paymentIntentId,
+                            paymentReference: paymentIntentId,
+                            registeredBy: userId);
+
+                        await _invoiceService.RefreshInvoiceStatusAsync(invoice.Id);
+                        _logger.LogInformation("Recorded payment for invoice {InvoiceId} (order {OrderId})", invoice.Id, order.Id);
+                    }
+                }
+                catch (Exception invEx)
+                {
+                    _logger.LogError(invEx, "Failed to record invoice payment for order {OrderId}", order.Id);
+                }
+
                 // Send order confirmation email for regular customers
                 await SendOrderConfirmationEmailAsync(order.Id, userId);
 
