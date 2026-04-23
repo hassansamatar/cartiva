@@ -38,6 +38,7 @@ namespace Cartiva.Persistence
         public DbSet<InvoicePayment> InvoicePayments { get; set; }
         public DbSet<CreditNote> CreditNotes { get; set; }
         public DbSet<CreditNoteLine> CreditNoteLines { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         // ======================
         // Model configuration
@@ -161,6 +162,25 @@ namespace Cartiva.Persistence
                 .WithMany()
                 .HasForeignKey(il => il.ProductVariantId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // ======================
+            // NOTIFICATION
+            // ======================
+            modelBuilder.Entity<Notification>(e =>
+            {
+                e.HasKey(n => n.Id);
+                e.Property(n => n.Recipient).IsRequired().HasMaxLength(256);
+                e.Property(n => n.Subject).HasMaxLength(500);
+                e.Property(n => n.ErrorMessage).HasMaxLength(2000);
+                e.Property(n => n.UserId).HasMaxLength(450);
+                e.Property(n => n.ReferenceId).HasMaxLength(100);
+                e.Property(n => n.ReferenceType).HasMaxLength(100);
+
+                e.HasIndex(n => n.Status);
+                e.HasIndex(n => n.UserId);
+                e.HasIndex(n => new { n.ReferenceId, n.ReferenceType });
+                e.HasIndex(n => n.CreatedAt);
+            });
         }
     }
 }

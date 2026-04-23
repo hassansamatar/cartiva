@@ -1,6 +1,11 @@
 using Cartiva.Infrastructure.AddressService;
 using Cartiva.Infrastructure.EmailServices;
 using Cartiva.Infrastructure.ImageServices;
+using Cartiva.Infrastructure.Notifications;
+using Cartiva.Infrastructure.Notifications.Channels;
+using Cartiva.Infrastructure.Notifications.Interfaces;
+using Cartiva.Infrastructure.Notifications.Queue;
+using Cartiva.Infrastructure.Notifications.Templates;
 using Cartiva.Infrastructure.PaymentService;
 using Cartiva.Infrastructure.Promotions;
 using Cartiva.Infrastructure.QrCodeServices;
@@ -53,6 +58,29 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(baseUrl);
             client.DefaultRequestHeaders.Add("Accept", "application/xml");
         });
+
+        // ===========================================
+        // Notification System
+        // ===========================================
+
+        // Queue (Singleton for shared queue across app)
+        services.AddSingleton<INotificationQueue, NotificationQueue>();
+
+        // Template renderer
+        services.AddSingleton<ITemplateRenderer, RazorLightTemplateRenderer>();
+
+        // SMTP sender
+        services.AddScoped<ISmtpEmailSender, SmtpEmailSender>();
+
+        // Notification channels
+        services.AddScoped<INotificationChannel, EmailNotificationChannel>();
+        services.AddScoped<INotificationChannel, SmsNotificationChannel>();
+
+        // Channel resolver (must be scoped due to channel dependencies)
+        services.AddScoped<ChannelResolver>();
+
+        // Background worker
+        services.AddHostedService<NotificationWorker>();
 
         return services;
     }
