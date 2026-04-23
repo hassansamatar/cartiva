@@ -15,11 +15,16 @@ public class ReturnService : IReturnService
 {
     private readonly ApplicationDbContext _db;
     private readonly ILogger<ReturnService> _logger;
+    private readonly ICreditNoteService _creditNoteService;
 
-    public ReturnService(ApplicationDbContext db, ILogger<ReturnService> logger)
+    public ReturnService(
+        ApplicationDbContext db,
+        ILogger<ReturnService> logger,
+        ICreditNoteService creditNoteService)
     {
         _db = db;
         _logger = logger;
+        _creditNoteService = creditNoteService;
     }
 
     #region Queries
@@ -221,7 +226,9 @@ public class ReturnService : IReturnService
         var order = returnRequest.OrderDetail.OrderHeader;
         var refundAmount = returnRequest.RefundAmount ?? (returnRequest.OrderDetail.Price * returnRequest.Quantity);
 
-        // Process Stripe refund if payment was made via Stripe
+        // =========================
+        // STRIPE REFUND
+        // =========================
         if (!string.IsNullOrEmpty(order.PaymentIntentId) &&
             order.PaymentStatus == SD.PaymentStatusApproved)
         {
@@ -253,11 +260,26 @@ public class ReturnService : IReturnService
             }
         }
 
+        // =========================
+        // ✅ CREATE CREDIT NOTE HERE (BEFORE STATUS CHANGE)
+        // =========================
+        try
+        {
+            await _creditNoteService.CreateFromReturnRequestAsync(returnRequest.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create credit note for return {ReturnId}", id);
+            return ReturnOperationResult.Failed("Refund succeeded, but credit note creation failed.");
+        }
+
+        // =========================
+        // FINALIZE RETURN
+        // =========================
         returnRequest.Status = SD.ReturnStatusRefunded;
         returnRequest.RefundDate = DateTime.UtcNow;
         returnRequest.RefundAmount = refundAmount;
 
-        // Check if all items are returned/refunded — update order status
         await UpdateOrderStatusIfFullyRefundedAsync(order.Id);
 
         await _db.SaveChangesAsync();

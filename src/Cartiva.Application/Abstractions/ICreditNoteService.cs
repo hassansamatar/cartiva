@@ -25,6 +25,11 @@ namespace Cartiva.Application.Abstractions
         Task<CreditNote?> GetCreditNoteByIdAsync(int creditNoteId, CancellationToken ct = default);
 
         /// <summary>
+        /// Gets a credit note by the originating return request ID with all related data
+        /// </summary>
+        Task<CreditNote?> GetCreditNoteByReturnRequestIdAsync(int returnRequestId, CancellationToken ct = default);
+
+        /// <summary>
         /// Gets all credit notes for an invoice
         /// </summary>
         Task<List<CreditNote>> GetCreditNotesForInvoiceAsync(int invoiceId, CancellationToken ct = default);

@@ -42,5 +42,17 @@ namespace cartivaWeb.Areas.Admin.Controllers
 
             return View(creditNote);
         }
-    }
-}
+        public async Task<IActionResult> DetailsByReturn(int returnRequestId)
+        {
+            var creditNote = await _creditNoteService
+                .GetCreditNoteByReturnRequestIdAsync(returnRequestId);
+
+            if (creditNote == null)
+            {
+                TempData["error"] = "Credit note not found.";
+                return RedirectToAction("Index", "Return");
+            }
+
+            return View("Details", creditNote);
+        }
+    } }

@@ -7,29 +7,35 @@
     var productName = Model.OrderDetail?.ProductVariant?.Product?.Name ?? "Product";
     var color = Model.OrderDetail?.ProductVariant?.Color;
     var orderId = Model.OrderDetail?.OrderHeaderId;
-    var refundAmount = Model.RefundAmount ?? (Model.OrderDetail?.Price * Model.Quantity) ?? 0m;
+    var refundAmount = Model.RefundAmount ?? (Model.OrderDetail.Price * Model.Quantity);
 }
 
 <div class="card mb-3 shadow-sm">
     <div class="card-body">
         <div class="row">
 
-            <!-- Product Info -->
+            <!-- ITEM INFO -->
             <div class="col-md-4">
                 <h6 class="mb-1">@productName</h6>
+
                 <span class="badge bg-secondary">@color</span>
                 <span class="text-muted small ms-1">× @Model.Quantity</span>
 
-                <div class="mt-1">
-                    <small class="text-muted">
-                        Order
-                        <a asp-area="Customer"
-                           asp-controller="Order"
-                           asp-action="Details"
-                           asp-route-id="@orderId">
-                            #@orderId
-                        </a>
-                    </small>
+                <div class="mt-2">
+                    <a asp-area="Admin"
+                       asp-controller="CreditNote"
+                       asp-action="DetailsByReturn"
+                       asp-route-returnRequestId="@Model.Id"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-receipt"></i> View Credit Note (Order #@orderId)
+                    </a>
+                    <a asp-area="Admin"
+                       asp-controller="CreditNote"
+                       asp-action="Test"
+                       
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-receipt"></i> Test (Order #@orderId)
+                    </a>
                 </div>
 
                 <div class="mt-1">
@@ -40,7 +46,7 @@
                 </div>
             </div>
 
-            <!-- Return Details -->
+            <!-- RETURN DETAILS -->
             <div class="col-md-4">
                 <div class="mb-1">
                     <span class="badge bg-light text-dark border">@Model.Reason</span>
@@ -57,21 +63,23 @@
                 </small>
             </div>
 
-            <!-- Status & Actions -->
+            <!-- STATUS & ACTIONS -->
             <div class="col-md-4 text-end">
+
                 <div class="mb-2">
                     <span class="badge @SD.GetReturnStatusBadgeClass(Model.Status) fs-6">
                         @Model.Status
                     </span>
+
                     <div class="fw-bold mt-1">
                         @refundAmount.ToString("C", culture)
                     </div>
                 </div>
 
-                @* PENDING state: Approve/Reject buttons *@
                 @if (string.Equals(Model.Status, SD.ReturnStatusPending, StringComparison.OrdinalIgnoreCase))
                 {
                     <div class="d-flex justify-content-end gap-1 flex-wrap">
+
                         <form asp-area="Admin"
                               asp-controller="Return"
                               asp-action="Approve"
@@ -93,10 +101,9 @@
                                 <i class="bi bi-x-lg"></i> Reject
                             </button>
                         </form>
+
                     </div>
                 }
-
-                @* APPROVED state: Process Refund button *@
                 else if (string.Equals(Model.Status, SD.ReturnStatusApproved, StringComparison.OrdinalIgnoreCase))
                 {
                     <form asp-area="Admin"
@@ -107,14 +114,14 @@
                           class="btn-swal-confirm-form"
                           data-swal-title="Process refund of @refundAmount.ToString("C", culture)?"
                           data-swal-text="This will issue a Stripe refund to the customer.">
+
                         @Html.AntiForgeryToken()
+
                         <button type="submit" class="btn btn-sm btn-success">
                             <i class="bi bi-credit-card"></i> Process Refund
                         </button>
                     </form>
                 }
-
-                @* RESOLVED / REFUNDED state: Show admin note & refund info *@
                 else
                 {
                     if (!string.IsNullOrEmpty(Model.AdminNote))
@@ -137,31 +144,8 @@
                             Stripe: @Model.RefundId
                         </small>
                     }
-
-                    @* CREDIT NOTE LINK - FIXED: uses CreditNote.Id if navigation property exists *@
-                    if (string.Equals(Model.Status, SD.ReturnStatusRefunded, StringComparison.OrdinalIgnoreCase) &&
-                        Model.CreditNote != null)
-                    {
-                        <div class="mt-2">
-                            <a asp-area="Admin"
-                               asp-controller="CreditNote"
-                               asp-action="Details"
-                               asp-route-id="@Model.CreditNote.Id"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-receipt"></i> View Credit Note
-                            </a>
-                        </div>
-                    }
-                    else if (string.Equals(Model.Status, SD.ReturnStatusRefunded, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Fallback: CreditNote not loaded or missing – show disabled button or log warning
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-outline-secondary" disabled>
-                                <i class="bi bi-receipt"></i> Credit Note Unavailable
-                            </button>
-                        </div>
-                    }
                 }
+
             </div>
         </div>
     </div>

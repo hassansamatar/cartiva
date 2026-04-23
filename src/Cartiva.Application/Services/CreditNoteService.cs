@@ -163,6 +163,15 @@ namespace Cartiva.Application.Services
                 .FirstOrDefaultAsync(c => c.Id == creditNoteId, ct);
         }
 
+        public async Task<CreditNote?> GetCreditNoteByReturnRequestIdAsync(int returnRequestId, CancellationToken ct = default)
+        {
+            return await _db.CreditNotes
+                .Include(c => c.Lines)
+                .Include(c => c.OriginalInvoice)
+                .Include(c => c.ReturnRequest)
+                .FirstOrDefaultAsync(c => c.ReturnRequestId == returnRequestId, ct);
+        }
+
         public async Task<List<CreditNote>> GetCreditNotesForInvoiceAsync(int invoiceId, CancellationToken ct = default)
         {
             return await _db.Set<CreditNote>()
