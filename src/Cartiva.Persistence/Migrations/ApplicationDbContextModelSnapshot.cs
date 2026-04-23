@@ -1206,9 +1206,6 @@ namespace Cartiva.Persistence.Migrations
                     b.Property<decimal>("DiscountPercent")
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<decimal>("PriceExVat")
                         .HasColumnType("decimal(18,2)");
 
