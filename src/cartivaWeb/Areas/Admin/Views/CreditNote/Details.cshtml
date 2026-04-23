@@ -26,11 +26,36 @@
                     <p class="mb-1"><strong>Customer:</strong> @Model.CustomerName</p>
                     <p class="mb-1"><strong>Reason:</strong> @Model.Reason</p>
                     <p class="mb-1"><strong>Currency:</strong> @Model.Currency</p>
+                    @if (Model.ReturnRequestId.HasValue)
+                    {
+                        <p class="mb-1"><strong>Return Request:</strong> #@Model.ReturnRequestId</p>
+                    }
                 </div>
 
                 <div class="col-md-6 text-md-end">
                     <p class="mb-1"><strong>Date:</strong> @Model.CreatedAt.ToString("dd.MM.yyyy")</p>
                     <p class="mb-1"><strong>Status:</strong> @Model.Status</p>
+                    @if (Model.OriginalInvoice != null)
+                    {
+                        <p class="mb-1">
+                            <strong>Original Invoice:</strong>
+                            <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@Model.OriginalInvoiceId">
+                                @Model.OriginalInvoice.InvoiceNumber
+                            </a>
+                        </p>
+                        <p class="mb-1">
+                            <strong>Invoice Date:</strong>
+                            @Model.OriginalInvoice.IssueDate.ToString("dd.MM.yyyy")
+                        </p>
+                        <p class="mb-1">
+                            <strong>Invoice Total:</strong>
+                            @Model.OriginalInvoice.TotalAmount.ToString("C", culture)
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="mb-1"><strong>Original Invoice ID:</strong> @Model.OriginalInvoiceId</p>
+                    }
                 </div>
             </div>
 

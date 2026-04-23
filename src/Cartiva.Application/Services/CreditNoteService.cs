@@ -41,12 +41,7 @@ namespace Cartiva.Application.Services
 
             var orderId = returnRequest.OrderDetail.OrderHeaderId;
 
-            // Get the invoice for this order (it is now optional)
-            var invoice = await _db.Set<Invoice>()
-                .Include(i => i.Lines)
-                .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
-
-            // Check if credit note already exists for this return
+            // Check if credit note already exists for this return (idempotency)
             var existingCreditNote = await _db.Set<CreditNote>()
                 .FirstOrDefaultAsync(c => c.ReturnRequestId == returnRequestId, ct);
 
@@ -56,36 +51,36 @@ namespace Cartiva.Application.Services
                 return existingCreditNote;
             }
 
+            // Get the invoice for this order — AUTO-GENERATE if missing.
+            // This unifies the flow for both Customer and Company users.
+            var invoice = await _db.Set<Invoice>()
+                .Include(i => i.Lines)
+                .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
+
+            if (invoice == null)
+            {
+                _logger.LogInformation(
+                    "No invoice found for Order {OrderId}. Auto-generating invoice before creating credit note.",
+                    orderId);
+
+                // GenerateInvoiceFromOrderAsync works for both Customer and Company users
+                invoice = await _invoiceService.GenerateInvoiceFromOrderAsync(orderId, ct);
+
+                // Reload with Lines to ensure navigation is populated
+                invoice = await _db.Set<Invoice>()
+                    .Include(i => i.Lines)
+                    .FirstAsync(i => i.Id == invoice.Id, ct);
+            }
+
             var sequence = await _invoiceService.GetNextCreditNoteSequenceAsync(ct);
             var creditNoteNumber = SD.GenerateCreditNoteNumber(sequence);
 
-            CreditNote creditNote;
-
-            if (invoice != null)
-            {
-                // Use existing logic for invoice-based credit notes
-                creditNote = CreditNote.FromReturnRequest(returnRequest, invoice);
-            }
-            else
-            {
-                // Create a new credit note manually for orders without an invoice
-                var orderHeader = returnRequest.OrderDetail.OrderHeader;
-                creditNote = new CreditNote
-                {
-                    ReturnRequestId = returnRequestId,
-                    Reason = returnRequest.Reason,
-                    CreatedByUserId = returnRequest.ApplicationUserId,
-                    CustomerName = $"{orderHeader.Name} {orderHeader.Name}",
-                    CustomerAddress = $"{orderHeader.StreetAddress}, {orderHeader.PostalCode} {orderHeader.City}",
-                    Currency = orderHeader.Currency ?? SD.DefaultCurrency,
-                    // No OriginalInvoiceId since there is no invoice
-                };
-            }
-
+            // Unified logic: always create credit note from the invoice
+            var creditNote = CreditNote.FromReturnRequest(returnRequest, invoice);
             creditNote.CreditNoteNumber = creditNoteNumber;
 
-            // Find the matching invoice line if an invoice exists
-            var invoiceLine = invoice?.Lines.FirstOrDefault(l =>
+            // Find the matching invoice line
+            var invoiceLine = invoice.Lines.FirstOrDefault(l =>
                 l.ProductVariantId == returnRequest.OrderDetail.ProductVariantId);
 
             if (invoiceLine != null)

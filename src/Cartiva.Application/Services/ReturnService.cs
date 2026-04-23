@@ -252,9 +252,9 @@ public class ReturnService : IReturnService
         }
 
         // ==========================================
-        // PROCESS STRIPE REFUND (if applicable)
+        // PROCESS STRIPE REFUND (if applicable and not already done)
         // ==========================================
-        if (!string.IsNullOrEmpty(order.PaymentIntentId))
+        if (!string.IsNullOrEmpty(order.PaymentIntentId) && string.IsNullOrEmpty(returnRequest.RefundId))
         {
             try
             {
@@ -272,12 +272,21 @@ public class ReturnService : IReturnService
                 returnRequest.RefundId = refund.Id;
                 _logger.LogInformation("Stripe refund {RefundId} for return {ReturnId} processed.", refund.Id, id);
             }
+            catch (Stripe.StripeException sex) when (sex.Message != null && sex.Message.Contains("already been refunded", StringComparison.OrdinalIgnoreCase))
+            {
+                // Stripe charge is already refunded (from a previous attempt) — treat as success
+                _logger.LogWarning("Stripe charge already refunded for ReturnId {Id}. Continuing to finalize return.", id);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Stripe refund error for ReturnId {Id}", id);
                 // Note: At this point, a credit note exists but the Stripe refund failed. This may require manual intervention.
                 return ReturnOperationResult.Failed($"Stripe refund failed: {ex.Message}. A credit note was created but the refund could not be processed automatically.");
             }
+        }
+        else if (!string.IsNullOrEmpty(order.PaymentIntentId))
+        {
+            _logger.LogInformation("Stripe refund already processed (RefundId={RefundId}) for ReturnId {Id}. Skipping Stripe call.", returnRequest.RefundId, id);
         }
         else
         {
