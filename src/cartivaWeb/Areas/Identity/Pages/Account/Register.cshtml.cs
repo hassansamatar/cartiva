@@ -3,6 +3,8 @@
 #nullable disable
 
 using Cartiva.Persistence;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -34,6 +36,7 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
         private readonly IEmailSender _emailSender;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _db;
+        private readonly INotificationService _notificationService;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
@@ -42,7 +45,8 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
             ILogger<RegisterModel> logger,
             RoleManager<IdentityRole> roleManager,
             IEmailSender emailSender,
-            ApplicationDbContext db)
+            ApplicationDbContext db,
+            INotificationService notificationService)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -52,6 +56,7 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
             _emailSender = emailSender;
             _roleManager = roleManager;
             _db = db;
+            _notificationService = notificationService;
         }
 
         [BindProperty]
@@ -162,8 +167,27 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
                         values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    // Send welcome email notification using new system
+                    try
+                    {
+                        await _notificationService.SendAsync(new NotificationRequest(
+                            Recipient: Input.Email,
+                            Type: NotificationType.WelcomeEmail,
+                            TemplateData: new Dictionary<string, object>
+                            {
+                                ["userName"] = Input.Name,
+                                ["verificationLink"] = callbackUrl
+                            },
+                            UserId: userId,
+                            Subject: "Welcome to Cartiva!"
+                        ));
+                    }
+                    catch (Exception)
+                    {
+                        // Fallback to legacy email sender if notification fails
+                        await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
+                            $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    }
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

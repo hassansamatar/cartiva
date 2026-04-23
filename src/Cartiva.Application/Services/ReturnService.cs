@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -13,15 +15,18 @@ public class ReturnService : IReturnService
     private readonly ApplicationDbContext _db;
     private readonly ILogger<ReturnService> _logger;
     private readonly ICreditNoteService _creditNoteService;
+    private readonly INotificationService _notificationService;
 
     public ReturnService(
         ApplicationDbContext db,
         ILogger<ReturnService> logger,
-        ICreditNoteService creditNoteService)
+        ICreditNoteService creditNoteService,
+        INotificationService notificationService)
     {
         _db = db;
         _logger = logger;
         _creditNoteService = creditNoteService;
+        _notificationService = notificationService;
     }
 
     #region Queries
@@ -137,6 +142,37 @@ public class ReturnService : IReturnService
         _db.ReturnRequests.Add(rr);
         await _db.SaveChangesAsync();
 
+        // Send return request received notification
+        var user = await _db.Users.FindAsync(userId);
+        if (user?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: user.Email,
+                        Type: NotificationType.ReturnRequestReceived,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = od.OrderHeaderId.ToString(),
+                            ["productName"] = od.ProductVariant?.Product?.Name ?? "Product",
+                            ["quantity"] = quantity.ToString(),
+                            ["refundAmount"] = rr.RefundAmount.Value.ToString("C")
+                        },
+                        UserId: userId,
+                        ReferenceId: rr.Id.ToString(),
+                        ReferenceType: "ReturnRequest",
+                        Subject: "Return Request Received"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send return request notification for return {ReturnId}", rr.Id);
+                }
+            });
+        }
+
         return ReturnOperationResult.Succeeded("Return created.", rr.Id);
     }
 
@@ -148,7 +184,11 @@ public class ReturnService : IReturnService
     {
         var rr = await _db.ReturnRequests
             .Include(r => r.OrderDetail)
-            .ThenInclude(o => o.OrderHeader)
+                .ThenInclude(o => o.OrderHeader)
+                    .ThenInclude(h => h.ApplicationUser)
+            .Include(r => r.OrderDetail)
+                .ThenInclude(o => o.ProductVariant)
+                    .ThenInclude(pv => pv.Product)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (rr == null)
@@ -164,12 +204,47 @@ public class ReturnService : IReturnService
 
         await _db.SaveChangesAsync();
 
+        // Send return request approved notification
+        if (rr.OrderDetail.OrderHeader.ApplicationUser?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: rr.OrderDetail.OrderHeader.ApplicationUser.Email,
+                        Type: NotificationType.ReturnRequestApproved,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = rr.OrderDetail.OrderHeaderId.ToString(),
+                            ["productName"] = rr.OrderDetail.ProductVariant?.Product?.Name ?? "Product",
+                            ["refundAmount"] = rr.RefundAmount.Value.ToString("C"),
+                            ["note"] = note ?? ""
+                        },
+                        UserId: rr.ApplicationUserId,
+                        ReferenceId: rr.Id.ToString(),
+                        ReferenceType: "ReturnRequest",
+                        Subject: "Return Request Approved"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send return approved notification for return {ReturnId}", id);
+                }
+            });
+        }
+
         return ReturnOperationResult.Succeeded("Approved.");
     }
 
     public async Task<ReturnOperationResult> RejectReturnAsync(int id, string? note)
     {
-        var rr = await _db.ReturnRequests.FindAsync(id);
+        var rr = await _db.ReturnRequests
+            .Include(r => r.ApplicationUser)
+            .Include(r => r.OrderDetail)
+                .ThenInclude(o => o.ProductVariant)
+                    .ThenInclude(pv => pv.Product)
+            .FirstOrDefaultAsync(r => r.Id == id);
 
         if (rr == null)
             return ReturnOperationResult.Failed("Not found.");
@@ -179,6 +254,35 @@ public class ReturnService : IReturnService
         rr.ResolvedDate = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // Send return request rejected notification
+        if (rr.ApplicationUser?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: rr.ApplicationUser.Email,
+                        Type: NotificationType.ReturnRequestRejected,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = rr.OrderDetailId.ToString(),
+                            ["productName"] = rr.OrderDetail?.ProductVariant?.Product?.Name ?? "Product",
+                            ["reason"] = note ?? "Does not meet return policy requirements"
+                        },
+                        UserId: rr.ApplicationUserId,
+                        ReferenceId: rr.Id.ToString(),
+                        ReferenceType: "ReturnRequest",
+                        Subject: "Return Request Update"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send return rejected notification for return {ReturnId}", id);
+                }
+            });
+        }
 
         return ReturnOperationResult.Succeeded("Rejected.");
     }

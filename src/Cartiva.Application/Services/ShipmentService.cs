@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Cartiva.Infrastructure.EmailServices;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Infrastructure.ShippingServices;
@@ -22,6 +24,7 @@ public class ShipmentService : IShipmentService
     private readonly IEmailSender _emailSender;
     private readonly IQrCodeService _qrCodeService;
     private readonly IEmailTemplateService _emailTemplateService;
+    private readonly INotificationService _notificationService;
 
     public ShipmentService(
         ApplicationDbContext db,
@@ -29,7 +32,8 @@ public class ShipmentService : IShipmentService
         IBringShippingService bringShippingService,
         IEmailSender emailSender,
         IQrCodeService qrCodeService,
-        IEmailTemplateService emailTemplateService)
+        IEmailTemplateService emailTemplateService,
+        INotificationService notificationService)
     {
         _db = db;
         _logger = logger;
@@ -37,6 +41,7 @@ public class ShipmentService : IShipmentService
         _emailSender = emailSender;
         _qrCodeService = qrCodeService;
         _emailTemplateService = emailTemplateService;
+        _notificationService = notificationService;
     }
 
     public async Task<List<Shipment>> GetShipmentsAsync(string? statusFilter = null)
@@ -120,8 +125,39 @@ public class ShipmentService : IShipmentService
 
         await _db.SaveChangesAsync();
 
-        // Send shipment confirmation email
+        // Send shipment confirmation email (legacy)
         await SendShipmentConfirmationEmailAsync(shipment, baseUrl);
+
+        // Send order shipped notification (new system)
+        var user = await _db.Users.FindAsync(shipment.OrderHeader.ApplicationUserId);
+        if (user?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: user.Email,
+                        Type: NotificationType.OrderShipped,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = shipment.OrderHeader.Id.ToString(),
+                            ["trackingNumber"] = shipment.TrackingNumber ?? "N/A",
+                            ["carrier"] = shipment.Carrier ?? "Bring",
+                            ["estimatedDeliveryDate"] = shipment.ShippingDate?.ToString("yyyy-MM-dd") ?? "TBD"
+                        },
+                        UserId: shipment.OrderHeader.ApplicationUserId,
+                        ReferenceId: shipment.OrderHeader.Id.ToString(),
+                        ReferenceType: "Shipment",
+                        Subject: $"Your Order #{shipment.OrderHeader.Id} Has Shipped!"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send order shipped notification for shipment {ShipmentId}", shipmentId);
+                }
+            });
+        }
 
         return ShipmentOperationResult.Succeeded(
             $"Shipment approved. Tracking number: {shipment.TrackingNumber}",
@@ -226,6 +262,7 @@ public class ShipmentService : IShipmentService
     {
         var shipment = await _db.Shipments
             .Include(s => s.OrderHeader)
+                .ThenInclude(o => o.ApplicationUser)
             .FirstOrDefaultAsync(s => s.Id == shipmentId);
 
         if (shipment == null)
@@ -239,6 +276,35 @@ public class ShipmentService : IShipmentService
         shipment.OrderHeader.OrderStatus = SD.StatusDelivered;
 
         await _db.SaveChangesAsync();
+
+        // Send order delivered notification
+        if (shipment.OrderHeader.ApplicationUser?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: shipment.OrderHeader.ApplicationUser.Email,
+                        Type: NotificationType.OrderDelivered,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = shipment.OrderHeader.Id.ToString(),
+                            ["deliveryDate"] = shipment.DeliveredDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                            ["customerName"] = shipment.OrderHeader.Name
+                        },
+                        UserId: shipment.OrderHeader.ApplicationUserId,
+                        ReferenceId: shipment.OrderHeader.Id.ToString(),
+                        ReferenceType: "Shipment",
+                        Subject: $"Your Order #{shipment.OrderHeader.Id} Has Been Delivered!"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send order delivered notification for shipment {ShipmentId}", shipmentId);
+                }
+            });
+        }
 
         return ShipmentOperationResult.Succeeded("Shipment marked as delivered.");
     }

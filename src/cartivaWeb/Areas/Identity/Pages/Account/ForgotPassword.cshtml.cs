@@ -7,6 +7,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -20,11 +22,16 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IEmailSender _emailSender;
+        private readonly INotificationService _notificationService;
 
-        public ForgotPasswordModel(UserManager<IdentityUser> userManager, IEmailSender emailSender)
+        public ForgotPasswordModel(
+            UserManager<IdentityUser> userManager, 
+            IEmailSender emailSender,
+            INotificationService notificationService)
         {
             _userManager = userManager;
             _emailSender = emailSender;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -70,10 +77,30 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
                     values: new { area = "Identity", code },
                     protocol: Request.Scheme);
 
-                await _emailSender.SendEmailAsync(
-                    Input.Email,
-                    "Reset Password",
-                    $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                // Send password reset notification using new notification system
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: Input.Email,
+                        Type: NotificationType.PasswordReset,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["userName"] = user.UserName ?? Input.Email,
+                            ["resetLink"] = callbackUrl,
+                            ["expirationTime"] = "24 hours"
+                        },
+                        UserId: user.Id,
+                        Subject: "Reset Your Password"
+                    ));
+                }
+                catch (Exception)
+                {
+                    // Fallback to legacy email sender if notification fails
+                    await _emailSender.SendEmailAsync(
+                        Input.Email,
+                        "Reset Password",
+                        $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                }
 
                 return RedirectToPage("./ForgotPasswordConfirmation");
             }

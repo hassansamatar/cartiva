@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Cartiva.Domain.ViewModels;
 using Cartiva.Infrastructure.Promotions;
 using Cartiva.Persistence;
@@ -16,15 +18,18 @@ public class OrderService : IOrderService
 {
     private readonly ApplicationDbContext _db;
     private readonly IPromotionService _promotionService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<OrderService> _logger;
 
     public OrderService(
         ApplicationDbContext db,
         IPromotionService promotionService,
+        INotificationService notificationService,
         ILogger<OrderService> logger)
     {
         _db = db;
         _promotionService = promotionService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -259,6 +264,37 @@ public class OrderService : IOrderService
 
             _logger.LogInformation("Order {OrderId} placed successfully for user {UserId}", orderHeader.Id, userId);
 
+            // Send order confirmation notification (fire-and-forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var user = await _db.Users.FindAsync(userId);
+                    if (user?.Email != null)
+                    {
+                        await _notificationService.SendAsync(new NotificationRequest(
+                            Recipient: user.Email,
+                            Type: NotificationType.OrderConfirmation,
+                            TemplateData: new Dictionary<string, object>
+                            {
+                                ["orderNumber"] = orderHeader.Id.ToString(),
+                                ["customerName"] = $"{orderHeader.Name}",
+                                ["orderDate"] = orderHeader.OrderDate.ToString("yyyy-MM-dd"),
+                                ["totalAmount"] = orderHeader.OrderTotal.ToString("C")
+                            },
+                            UserId: userId,
+                            ReferenceId: orderHeader.Id.ToString(),
+                            ReferenceType: "Order",
+                            Subject: $"Order Confirmation - Order #{orderHeader.Id}"
+                        ));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send order confirmation notification for order {OrderId}", orderHeader.Id);
+                }
+            });
+
             return PlaceOrderResult.Succeeded(
                 orderHeader.Id,
                 requiresPayment,
@@ -330,7 +366,10 @@ public class OrderService : IOrderService
 
     public async Task<OrderOperationResult> ProcessPaymentSuccessAsync(int orderId, string paymentIntentId)
     {
-        var order = await _db.OrderHeaders.FindAsync(orderId);
+        var order = await _db.OrderHeaders
+            .Include(o => o.ApplicationUser)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
         if (order == null)
             return OrderOperationResult.Failed("Order not found.");
 
@@ -342,6 +381,36 @@ public class OrderService : IOrderService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Payment processed successfully for order {OrderId}", orderId);
+
+        // Send payment received notification
+        if (order.ApplicationUser?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: order.ApplicationUser.Email,
+                        Type: NotificationType.PaymentReceived,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = orderId.ToString(),
+                            ["amount"] = order.OrderTotal.ToString("C"),
+                            ["paymentDate"] = order.PaymentDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd")
+                        },
+                        UserId: order.ApplicationUserId,
+                        ReferenceId: orderId.ToString(),
+                        ReferenceType: "Order",
+                        Subject: $"Payment Received - Order #{orderId}"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send payment received notification for order {OrderId}", orderId);
+                }
+            });
+        }
+
         return OrderOperationResult.Succeeded("Payment processed successfully.");
     }
 
@@ -350,6 +419,7 @@ public class OrderService : IOrderService
         var order = await _db.OrderHeaders
             .Include(o => o.OrderDetails)
                 .ThenInclude(d => d.ProductVariant)
+            .Include(o => o.ApplicationUser)
             .FirstOrDefaultAsync(o => o.Id == orderId);
 
         if (order == null)
@@ -368,6 +438,36 @@ public class OrderService : IOrderService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Order {OrderId} cancelled. Reason: {Reason}", orderId, reason ?? "Not specified");
+
+        // Send order cancelled notification
+        if (order.ApplicationUser?.Email != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: order.ApplicationUser.Email,
+                        Type: NotificationType.OrderCancelled,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["orderNumber"] = orderId.ToString(),
+                            ["reason"] = reason ?? "Not specified",
+                            ["customerName"] = order.Name
+                        },
+                        UserId: order.ApplicationUserId,
+                        ReferenceId: orderId.ToString(),
+                        ReferenceType: "Order",
+                        Subject: $"Order Cancelled - Order #{orderId}"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send order cancelled notification for order {OrderId}", orderId);
+                }
+            });
+        }
+
         return OrderOperationResult.Succeeded("Order cancelled successfully.");
     }
 
