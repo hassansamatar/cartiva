@@ -41,13 +41,10 @@ namespace Cartiva.Application.Services
 
             var orderId = returnRequest.OrderDetail.OrderHeaderId;
 
-            // Get the invoice for this order
+            // Get the invoice for this order (it is now optional)
             var invoice = await _db.Set<Invoice>()
                 .Include(i => i.Lines)
                 .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
-
-            if (invoice == null)
-                throw new InvalidOperationException($"No invoice found for Order {orderId}. Credit note cannot be created.");
 
             // Check if credit note already exists for this return
             var existingCreditNote = await _db.Set<CreditNote>()
@@ -62,11 +59,33 @@ namespace Cartiva.Application.Services
             var sequence = await _invoiceService.GetNextCreditNoteSequenceAsync(ct);
             var creditNoteNumber = SD.GenerateCreditNoteNumber(sequence);
 
-            var creditNote = CreditNote.FromReturnRequest(returnRequest, invoice);
+            CreditNote creditNote;
+
+            if (invoice != null)
+            {
+                // Use existing logic for invoice-based credit notes
+                creditNote = CreditNote.FromReturnRequest(returnRequest, invoice);
+            }
+            else
+            {
+                // Create a new credit note manually for orders without an invoice
+                var orderHeader = returnRequest.OrderDetail.OrderHeader;
+                creditNote = new CreditNote
+                {
+                    ReturnRequestId = returnRequestId,
+                    Reason = returnRequest.Reason,
+                    CreatedByUserId = returnRequest.ApplicationUserId,
+                    CustomerName = $"{orderHeader.Name} {orderHeader.Name}",
+                    CustomerAddress = $"{orderHeader.StreetAddress}, {orderHeader.PostalCode} {orderHeader.City}",
+                    Currency = orderHeader.Currency ?? SD.DefaultCurrency,
+                    // No OriginalInvoiceId since there is no invoice
+                };
+            }
+
             creditNote.CreditNoteNumber = creditNoteNumber;
 
-            // Find the matching invoice line
-            var invoiceLine = invoice.Lines.FirstOrDefault(l =>
+            // Find the matching invoice line if an invoice exists
+            var invoiceLine = invoice?.Lines.FirstOrDefault(l =>
                 l.ProductVariantId == returnRequest.OrderDetail.ProductVariantId);
 
             if (invoiceLine != null)
@@ -76,7 +95,7 @@ namespace Cartiva.Application.Services
             }
             else
             {
-                // Fallback: create line from order detail
+                // This is the primary path for non-invoice orders, and a fallback for invoice orders
                 var creditLine = new CreditNoteLine
                 {
                     Description = returnRequest.OrderDetail.ProductVariant?.Product?.Name ?? "Returned Item",
@@ -89,10 +108,10 @@ namespace Cartiva.Application.Services
             }
 
             creditNote.RecalculateTotals();
-
+            creditNote.Issue();
             // Set refund amount on return request
             returnRequest.RefundAmount = creditNote.TotalAmount;
-
+            
             _db.Set<CreditNote>().Add(creditNote);
             await _db.SaveChangesAsync(ct);
 

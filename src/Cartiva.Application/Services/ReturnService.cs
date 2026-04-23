@@ -8,9 +8,6 @@ using Stripe;
 
 namespace Cartiva.Application.Services;
 
-/// <summary>
-/// Service for managing return request operations
-/// </summary>
 public class ReturnService : IReturnService
 {
     private readonly ApplicationDbContext _db;
@@ -30,8 +27,7 @@ public class ReturnService : IReturnService
     #region Queries
 
     public async Task<List<ReturnRequest>> GetAllReturnRequestsAsync()
-    {
-        return await _db.ReturnRequests
+        => await _db.ReturnRequests
             .Include(r => r.ApplicationUser)
             .Include(r => r.OrderDetail)
                 .ThenInclude(od => od.ProductVariant)
@@ -40,11 +36,9 @@ public class ReturnService : IReturnService
                 .ThenInclude(od => od.OrderHeader)
             .OrderByDescending(r => r.RequestDate)
             .ToListAsync();
-    }
 
     public async Task<List<ReturnRequest>> GetUserReturnRequestsAsync(string userId)
-    {
-        return await _db.ReturnRequests
+        => await _db.ReturnRequests
             .Include(r => r.OrderDetail)
                 .ThenInclude(od => od.ProductVariant)
                     .ThenInclude(pv => pv.Product)
@@ -53,11 +47,9 @@ public class ReturnService : IReturnService
             .Where(r => r.ApplicationUserId == userId)
             .OrderByDescending(r => r.RequestDate)
             .ToListAsync();
-    }
 
     public async Task<ReturnRequest?> GetReturnRequestByIdAsync(int id)
-    {
-        return await _db.ReturnRequests
+        => await _db.ReturnRequests
             .Include(r => r.ApplicationUser)
             .Include(r => r.OrderDetail)
                 .ThenInclude(od => od.ProductVariant)
@@ -65,76 +57,72 @@ public class ReturnService : IReturnService
             .Include(r => r.OrderDetail)
                 .ThenInclude(od => od.OrderHeader)
             .FirstOrDefaultAsync(r => r.Id == id);
-    }
 
     public async Task<bool> HasExistingReturnAsync(int orderDetailId)
-    {
-        return await _db.ReturnRequests
-            .AnyAsync(r => r.OrderDetailId == orderDetailId
-                && (r.Status == SD.ReturnStatusPending || r.Status == SD.ReturnStatusApproved || r.Status == SD.ReturnStatusRefunded));
-    }
+        => await _db.ReturnRequests.AnyAsync(r =>
+            r.OrderDetailId == orderDetailId &&
+            (r.Status == SD.ReturnStatusPending ||
+             r.Status == SD.ReturnStatusApproved ||
+             r.Status == SD.ReturnStatusRefunded));
 
     #endregion
 
-    #region Customer Operations
+    #region Customer
 
     public async Task<ReturnValidationResult> ValidateReturnRequestAsync(string userId, int orderDetailId)
     {
         var orderDetail = await _db.OrderDetails
-            .Include(od => od.OrderHeader)
-            .Include(od => od.ProductVariant)
-                .ThenInclude(pv => pv.Product)
-            .Include(od => od.ProductVariant)
-                .ThenInclude(pv => pv.SizeValue)
-            .FirstOrDefaultAsync(od => od.Id == orderDetailId && od.OrderHeader.ApplicationUserId == userId);
+            .Include(o => o.OrderHeader)
+            .Include(o => o.ProductVariant)
+                .ThenInclude(p => p.Product)
+            .FirstOrDefaultAsync(o =>
+                o.Id == orderDetailId &&
+                o.OrderHeader.ApplicationUserId == userId);
 
         if (orderDetail == null)
-        {
-            return ReturnValidationResult.Failure("Order detail not found.");
-        }
+            return ReturnValidationResult.Failure("Order not found.");
 
         if (orderDetail.OrderHeader.OrderStatus != SD.StatusDelivered)
-        {
-            return ReturnValidationResult.Failure("Returns can only be requested for delivered orders.");
-        }
+            return ReturnValidationResult.Failure("Order not delivered.");
 
-        // Check return window
         var deliveredDate = orderDetail.OrderHeader.OrderDate;
+
         var shipment = await _db.Shipments
-            .FirstOrDefaultAsync(s => s.OrderHeaderId == orderDetail.OrderHeaderId && s.DeliveredDate != null);
+            .FirstOrDefaultAsync(s =>
+                s.OrderHeaderId == orderDetail.OrderHeaderId &&
+                s.DeliveredDate != null);
+
         if (shipment?.DeliveredDate != null)
             deliveredDate = shipment.DeliveredDate.Value;
 
-        var daysSinceDelivery = (DateTime.UtcNow - deliveredDate).Days;
-        if (daysSinceDelivery > SD.ReturnWindowDays)
-        {
-            return ReturnValidationResult.Failure($"The {SD.ReturnWindowDays}-day return window has expired.");
-        }
+        if ((DateTime.UtcNow - deliveredDate).Days > SD.ReturnWindowDays)
+            return ReturnValidationResult.Failure("Return window expired.");
 
         if (await HasExistingReturnAsync(orderDetailId))
-        {
-            return ReturnValidationResult.Failure("A return request already exists for this item.");
-        }
+            return ReturnValidationResult.Failure("Return already exists.");
 
-        return ReturnValidationResult.Success(orderDetail, SD.ReturnWindowDays - daysSinceDelivery);
+        return ReturnValidationResult.Success(orderDetail,
+            SD.ReturnWindowDays - (DateTime.UtcNow - deliveredDate).Days);
     }
 
-    public async Task<ReturnOperationResult> CreateReturnRequestAsync(string userId, int orderDetailId, string reason, string? description, int quantity)
+    public async Task<ReturnOperationResult> CreateReturnRequestAsync(
+        string userId,
+        int orderDetailId,
+        string reason,
+        string? description,
+        int quantity)
     {
         var validation = await ValidateReturnRequestAsync(userId, orderDetailId);
+
         if (!validation.CanReturn)
-        {
             return ReturnOperationResult.Failed(validation.ErrorMessage!);
-        }
 
-        var orderDetail = validation.OrderDetail!;
+        var od = validation.OrderDetail!;
 
-        if (quantity < 1 || quantity > orderDetail.Count)
-        {
-            return ReturnOperationResult.Failed($"Quantity must be between 1 and {orderDetail.Count}.");
-        }
+        if (quantity < 1 || quantity > od.Count)
+            return ReturnOperationResult.Failed("Invalid quantity.");
 
-        var returnRequest = new ReturnRequest
+        var rr = new ReturnRequest
         {
             OrderDetailId = orderDetailId,
             ApplicationUserId = userId,
@@ -143,68 +131,61 @@ public class ReturnService : IReturnService
             Quantity = quantity,
             RequestDate = DateTime.UtcNow,
             Status = SD.ReturnStatusPending,
-            RefundAmount = orderDetail.Price * quantity
+            RefundAmount = od.Price * quantity
         };
 
-        _db.ReturnRequests.Add(returnRequest);
+        _db.ReturnRequests.Add(rr);
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Return request {ReturnId} created by user {UserId} for order detail {OrderDetailId}",
-            returnRequest.Id, userId, orderDetailId);
-
-        return ReturnOperationResult.Succeeded("Return request submitted. We will review it shortly.", returnRequest.Id);
+        return ReturnOperationResult.Succeeded("Return created.", rr.Id);
     }
 
     #endregion
 
-    #region Admin Operations
+    #region Admin
 
-    public async Task<ReturnOperationResult> ApproveReturnAsync(int id, string? adminNote)
+    public async Task<ReturnOperationResult> ApproveReturnAsync(int id, string? note)
     {
-        var returnRequest = await _db.ReturnRequests
+        var rr = await _db.ReturnRequests
             .Include(r => r.OrderDetail)
-                .ThenInclude(od => od.OrderHeader)
+            .ThenInclude(o => o.OrderHeader)
             .FirstOrDefaultAsync(r => r.Id == id);
 
-        if (returnRequest == null)
-        {
-            return ReturnOperationResult.Failed("Return request not found.");
-        }
+        if (rr == null)
+            return ReturnOperationResult.Failed("Not found.");
 
-        returnRequest.Status = SD.ReturnStatusApproved;
-        returnRequest.AdminNote = adminNote;
-        returnRequest.ResolvedDate = DateTime.UtcNow;
+        rr.Status = SD.ReturnStatusApproved;
+        rr.AdminNote = note;
+        rr.ResolvedDate = DateTime.UtcNow;
 
-        // Restore stock
-        var variant = await _db.ProductVariants.FindAsync(returnRequest.OrderDetail.ProductVariantId);
+        var variant = await _db.ProductVariants.FindAsync(rr.OrderDetail.ProductVariantId);
         if (variant != null)
-        {
-            variant.Stock += returnRequest.Quantity;
-        }
+            variant.Stock += rr.Quantity;
 
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Return request {ReturnId} approved", id);
-        return ReturnOperationResult.Succeeded("Return approved. Stock restored. You can now process the refund.");
+        return ReturnOperationResult.Succeeded("Approved.");
     }
 
-    public async Task<ReturnOperationResult> RejectReturnAsync(int id, string? adminNote)
+    public async Task<ReturnOperationResult> RejectReturnAsync(int id, string? note)
     {
-        var returnRequest = await _db.ReturnRequests.FindAsync(id);
-        if (returnRequest == null)
-        {
-            return ReturnOperationResult.Failed("Return request not found.");
-        }
+        var rr = await _db.ReturnRequests.FindAsync(id);
 
-        returnRequest.Status = SD.ReturnStatusRejected;
-        returnRequest.AdminNote = adminNote;
-        returnRequest.ResolvedDate = DateTime.UtcNow;
+        if (rr == null)
+            return ReturnOperationResult.Failed("Not found.");
+
+        rr.Status = SD.ReturnStatusRejected;
+        rr.AdminNote = note;
+        rr.ResolvedDate = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Return request {ReturnId} rejected", id);
-        return ReturnOperationResult.Succeeded("Return request rejected.");
+        return ReturnOperationResult.Succeeded("Rejected.");
     }
+
+    #endregion
+
+    #region Refund (FIXED CORE LOGIC - WORKS FOR ALL CUSTOMERS)
 
     public async Task<ReturnOperationResult> ProcessRefundAsync(int id)
     {
@@ -226,85 +207,118 @@ public class ReturnService : IReturnService
         var order = returnRequest.OrderDetail.OrderHeader;
         var refundAmount = returnRequest.RefundAmount ?? (returnRequest.OrderDetail.Price * returnRequest.Quantity);
 
-        // =========================
-        // STRIPE REFUND
-        // =========================
-        if (!string.IsNullOrEmpty(order.PaymentIntentId) &&
-            order.PaymentStatus == SD.PaymentStatusApproved)
+        // ==========================================
+        // UNIFIED "IS PAID" VALIDATION LOGIC
+        // ==========================================
+        bool isPaid = false;
+        if (!string.IsNullOrEmpty(order.PaymentIntentId))
         {
-            try
-            {
-                var options = new RefundCreateOptions
-                {
-                    PaymentIntent = order.PaymentIntentId,
-                    Amount = (long)(refundAmount * 100)
-                };
-                var service = new RefundService();
-                var refund = await service.CreateAsync(options);
-
-                if (refund.Status == "succeeded" || refund.Status == "pending")
-                {
-                    returnRequest.RefundId = refund.Id;
-                    _logger.LogInformation("Stripe refund {RefundId} for return {ReturnId}, amount {Amount}",
-                        refund.Id, id, refundAmount);
-                }
-                else
-                {
-                    return ReturnOperationResult.Failed($"Stripe refund status: {refund.Status}. Please try again.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Stripe refund failed for return {ReturnId}", id);
-                return ReturnOperationResult.Failed("Refund failed: " + ex.Message);
-            }
+            // Any order with a Stripe Payment Intent is considered paid for refund purposes.
+            // Stripe's API will be the final check.
+            isPaid = true;
+        }
+        else if (order.PaymentStatus == SD.PaymentStatusPaid)
+        {
+            // If no Stripe ID, check if it's an invoice-based order marked as 'Paid'.
+            isPaid = true;
+        }
+        else if (order.PaymentStatus == SD.PaymentStatusApproved)
+        {
+            // Also consider 'Approved' as a paid status for non-Stripe scenarios if applicable.
+            isPaid = true;
         }
 
-        // =========================
-        // ✅ CREATE CREDIT NOTE HERE (BEFORE STATUS CHANGE)
-        // =========================
+        if (!isPaid)
+        {
+            _logger.LogWarning(
+                "Refund blocked for ReturnId {Id}. Order {OrderId} is not in a paid state. PaymentStatus: {Status}, HasPaymentIntent: {HasIntent}",
+                id, order.Id, order.PaymentStatus, !string.IsNullOrEmpty(order.PaymentIntentId));
+
+            return ReturnOperationResult.Failed(
+                $"Order is not considered paid (current status: {order.PaymentStatus}). Refund not allowed.");
+        }
+
+        // ==========================================
+        // CREATE CREDIT NOTE (before status change)
+        // ==========================================
         try
         {
             await _creditNoteService.CreateFromReturnRequestAsync(returnRequest.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create credit note for return {ReturnId}", id);
-            return ReturnOperationResult.Failed("Refund succeeded, but credit note creation failed.");
+            _logger.LogError(ex, "Credit note creation failed for ReturnId {Id}. Refund process stopped.", id);
+            return ReturnOperationResult.Failed("Refund failed because credit note could not be created: " + ex.Message);
         }
 
-        // =========================
-        // FINALIZE RETURN
-        // =========================
+        // ==========================================
+        // PROCESS STRIPE REFUND (if applicable)
+        // ==========================================
+        if (!string.IsNullOrEmpty(order.PaymentIntentId))
+        {
+            try
+            {
+                var service = new RefundService();
+                var refund = await service.CreateAsync(new RefundCreateOptions
+                {
+                    PaymentIntent = order.PaymentIntentId,
+                    Amount = (long)(refundAmount * 100)
+                });
+
+                if (refund.Status != "succeeded" && refund.Status != "pending")
+                {
+                    return ReturnOperationResult.Failed($"Stripe refund failed with status: {refund.Status}.");
+                }
+                returnRequest.RefundId = refund.Id;
+                _logger.LogInformation("Stripe refund {RefundId} for return {ReturnId} processed.", refund.Id, id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Stripe refund error for ReturnId {Id}", id);
+                // Note: At this point, a credit note exists but the Stripe refund failed. This may require manual intervention.
+                return ReturnOperationResult.Failed($"Stripe refund failed: {ex.Message}. A credit note was created but the refund could not be processed automatically.");
+            }
+        }
+        else
+        {
+            _logger.LogInformation("Processing refund for non-Stripe order {OrderId}. Manual money transfer is required.", order.Id);
+        }
+
+        // ==========================================
+        // FINALIZE RETURN STATUS
+        // ==========================================
         returnRequest.Status = SD.ReturnStatusRefunded;
         returnRequest.RefundDate = DateTime.UtcNow;
         returnRequest.RefundAmount = refundAmount;
 
         await UpdateOrderStatusIfFullyRefundedAsync(order.Id);
-
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Refund processed for return {ReturnId}, amount {Amount}", id, refundAmount);
-        return ReturnOperationResult.Succeeded($"Refund of {refundAmount:C} processed successfully.", id, refundAmount);
+        _logger.LogInformation("Refund process completed for return {ReturnId}.", id);
+        return ReturnOperationResult.Succeeded($"Refund for {refundAmount:C} completed.", id, refundAmount);
     }
 
-    private async Task UpdateOrderStatusIfFullyRefundedAsync(int orderHeaderId)
+    #endregion
+
+    #region Helpers
+
+    private async Task UpdateOrderStatusIfFullyRefundedAsync(int orderId)
     {
-        var allOrderDetails = await _db.OrderDetails
-            .Where(od => od.OrderHeaderId == orderHeaderId)
+        var details = await _db.OrderDetails
+            .Where(x => x.OrderHeaderId == orderId)
             .ToListAsync();
 
-        var allDetailIds = allOrderDetails.Select(od => od.Id).ToList();
-        var allReturns = await _db.ReturnRequests
-            .Where(r => allDetailIds.Contains(r.OrderDetailId) && r.Status == SD.ReturnStatusRefunded)
+        var detailIds = details.Select(x => x.Id).ToList();
+
+        var refunded = await _db.ReturnRequests
+            .Where(r => detailIds.Contains(r.OrderDetailId)
+                && r.Status == SD.ReturnStatusRefunded)
             .ToListAsync();
 
-        var totalOrderedQty = allOrderDetails.Sum(od => od.Count);
-        var totalRefundedQty = allReturns.Sum(r => r.Quantity);
-
-        if (totalRefundedQty >= totalOrderedQty)
+        if (refunded.Sum(x => x.Quantity) >= details.Sum(x => x.Count))
         {
-            var order = await _db.OrderHeaders.FindAsync(orderHeaderId);
+            var order = await _db.OrderHeaders.FindAsync(orderId);
+
             if (order != null)
             {
                 order.OrderStatus = SD.StatusRefunded;
@@ -315,30 +329,32 @@ public class ReturnService : IReturnService
 
     #endregion
 
-    #region Helpers
+    #region Helpers Public
 
     public async Task<int> GetDaysRemainingInReturnWindowAsync(int orderDetailId)
     {
-        var orderDetail = await _db.OrderDetails
-            .Include(od => od.OrderHeader)
-            .FirstOrDefaultAsync(od => od.Id == orderDetailId);
+        var od = await _db.OrderDetails
+            .Include(o => o.OrderHeader)
+            .FirstOrDefaultAsync(o => o.Id == orderDetailId);
 
-        if (orderDetail == null) return 0;
+        if (od == null) return 0;
 
-        var deliveredDate = orderDetail.OrderHeader.OrderDate;
+        var date = od.OrderHeader.OrderDate;
+
         var shipment = await _db.Shipments
-            .FirstOrDefaultAsync(s => s.OrderHeaderId == orderDetail.OrderHeaderId && s.DeliveredDate != null);
-        if (shipment?.DeliveredDate != null)
-            deliveredDate = shipment.DeliveredDate.Value;
+            .FirstOrDefaultAsync(s =>
+                s.OrderHeaderId == od.OrderHeaderId &&
+                s.DeliveredDate != null);
 
-        var daysSinceDelivery = (DateTime.UtcNow - deliveredDate).Days;
-        return Math.Max(0, SD.ReturnWindowDays - daysSinceDelivery);
+        if (shipment?.DeliveredDate != null)
+            date = shipment.DeliveredDate.Value;
+
+        return Math.Max(0,
+            SD.ReturnWindowDays - (DateTime.UtcNow - date).Days);
     }
 
     public List<string> GetReturnReasons()
-    {
-        return SD.GetReturnReasons().ToList();
-    }
+        => SD.GetReturnReasons().ToList();
 
     #endregion
 }
