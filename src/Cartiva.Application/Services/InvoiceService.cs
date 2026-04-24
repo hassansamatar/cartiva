@@ -238,7 +238,9 @@ namespace Cartiva.Application.Services
                     UserId: invoice.OrderHeader?.ApplicationUserId,
                     ReferenceId: invoice.Id.ToString(),
                     ReferenceType: "Invoice",
-                    Subject: $"Invoice {invoice.InvoiceNumber}"
+                    Subject: invoice.Status == InvoiceStatus.Paid
+                        ? $"Payment Receipt - Invoice {invoice.InvoiceNumber}"
+                        : $"Invoice {invoice.InvoiceNumber} - Due {invoice.DueDate:dd MMM yyyy}"
                 ));
             }
             catch (Exception ex)
