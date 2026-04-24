@@ -8,6 +8,8 @@ using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Stripe;
+using DomainCreditNote = Cartiva.Domain.CreditNote;
 
 namespace Cartiva.Application.Services;
 
@@ -19,17 +21,20 @@ public class OrderService : IOrderService
     private readonly ApplicationDbContext _db;
     private readonly IPromotionService _promotionService;
     private readonly INotificationService _notificationService;
+    private readonly ICreditNoteService _creditNoteService;
     private readonly ILogger<OrderService> _logger;
 
     public OrderService(
         ApplicationDbContext db,
         IPromotionService promotionService,
         INotificationService notificationService,
+        ICreditNoteService creditNoteService,
         ILogger<OrderService> logger)
     {
         _db = db;
         _promotionService = promotionService;
         _notificationService = notificationService;
+        _creditNoteService = creditNoteService;
         _logger = logger;
     }
 
@@ -45,6 +50,7 @@ public class OrderService : IOrderService
                 .ThenInclude(d => d.ProductVariant)
                     .ThenInclude(v => v.SizeValue)
             .Include(o => o.ApplicationUser)
+            .Include(o => o.Shipments)
             .FirstOrDefaultAsync(o => o.Id == orderId);
     }
 
@@ -64,6 +70,7 @@ public class OrderService : IOrderService
         var query = _db.OrderHeaders
             .Include(o => o.OrderDetails)
             .Include(o => o.ApplicationUser)
+            .Include(o => o.Shipments)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(statusFilter))
@@ -421,6 +428,69 @@ public class OrderService : IOrderService
         if (order == null)
             return OrderOperationResult.Failed("Order not found.");
 
+        if (order.OrderStatus == SD.StatusCancelled)
+            return OrderOperationResult.Failed("Order is already cancelled.");
+
+        var cancellationReason = string.IsNullOrWhiteSpace(reason) ? "Not specified" : reason;
+
+        DomainCreditNote? creditNote = null;
+        string? refundReference = null;
+
+        if (IsPaidOrder(order))
+        {
+            try
+            {
+                creditNote = await _creditNoteService.CreateFromCancelledOrderAsync(
+                    orderId,
+                    $"Order cancellation - {cancellationReason}",
+                    order.ApplicationUserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Credit note creation failed for cancelled order {OrderId}", orderId);
+                return OrderOperationResult.Failed("Order cancellation failed because the credit note could not be created.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(order.PaymentIntentId))
+            {
+                try
+                {
+                    var refundService = new RefundService();
+                    var refundAmount = creditNote?.TotalAmount ?? order.OrderTotal;
+
+                    var refund = await refundService.CreateAsync(new RefundCreateOptions
+                    {
+                        PaymentIntent = order.PaymentIntentId,
+                        Amount = (long)Math.Round(refundAmount * 100, MidpointRounding.AwayFromZero)
+                    });
+
+                    if (refund.Status != "succeeded" && refund.Status != "pending")
+                    {
+                        return OrderOperationResult.Failed($"Refund failed with status: {refund.Status}.");
+                    }
+
+                    refundReference = refund.Id;
+                }
+                catch (StripeException ex) when (ex.Message != null && ex.Message.Contains("already been refunded", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Stripe payment already refunded for order {OrderId}", orderId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Refund processing failed for cancelled order {OrderId}", orderId);
+                    return OrderOperationResult.Failed("Order cancellation failed because the refund could not be processed automatically.");
+                }
+            }
+
+            order.PaymentStatus = SD.PaymentStatusRefunded;
+            order.PaymentDate = DateTime.UtcNow;
+
+            if (creditNote != null && !string.IsNullOrWhiteSpace(refundReference))
+            {
+                creditNote.ExternalRefundReference = refundReference;
+            }
+        }
+
         // Restore stock
         foreach (var detail in order.OrderDetails)
         {
@@ -433,7 +503,7 @@ public class OrderService : IOrderService
         order.OrderStatus = SD.StatusCancelled;
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Order {OrderId} cancelled. Reason: {Reason}", orderId, reason ?? "Not specified");
+        _logger.LogInformation("Order {OrderId} cancelled. Reason: {Reason}", orderId, cancellationReason);
 
         // Send order cancelled notification
         if (order.ApplicationUser?.Email != null)
@@ -452,7 +522,7 @@ public class OrderService : IOrderService
                         ["currency"] = order.Currency,
                         ["orderStatus"] = order.OrderStatus ?? string.Empty,
                         ["paymentStatus"] = order.PaymentStatus ?? string.Empty,
-                        ["cancellationReason"] = reason ?? "Not specified"
+                        ["cancellationReason"] = cancellationReason
                     },
                     UserId: order.ApplicationUserId,
                     ReferenceId: orderId.ToString(),
@@ -467,6 +537,17 @@ public class OrderService : IOrderService
         }
 
         return OrderOperationResult.Succeeded("Order cancelled successfully.");
+    }
+
+    private static bool IsPaidOrder(OrderHeader order)
+    {
+        if (!string.IsNullOrWhiteSpace(order.PaymentIntentId))
+        {
+            return true;
+        }
+
+        return order.PaymentStatus == SD.PaymentStatusApproved ||
+               order.PaymentStatus == SD.PaymentStatusPaid;
     }
 
     #endregion

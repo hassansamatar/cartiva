@@ -10,7 +10,7 @@
     var refundAmount = Model.RefundAmount ?? (Model.OrderDetail.Price * Model.Quantity);
 }
 
-<div class="card mb-3 shadow-sm">
+<div id="return-@Model.Id" class="card mb-3 shadow-sm">
     <div class="card-body">
         <div class="row">
 

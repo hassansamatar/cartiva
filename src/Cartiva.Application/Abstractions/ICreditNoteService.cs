@@ -20,6 +20,15 @@ namespace Cartiva.Application.Abstractions
             CancellationToken ct = default);
 
         /// <summary>
+        /// Creates a credit note for a fully cancelled order.
+        /// </summary>
+        Task<CreditNote> CreateFromCancelledOrderAsync(
+            int orderId,
+            string reason,
+            string? createdByUserId = null,
+            CancellationToken ct = default);
+
+        /// <summary>
         /// Gets a credit note by ID with all related data
         /// </summary>
         Task<CreditNote?> GetCreditNoteByIdAsync(int creditNoteId, CancellationToken ct = default);
@@ -33,6 +42,11 @@ namespace Cartiva.Application.Abstractions
         /// Gets all credit notes for an invoice
         /// </summary>
         Task<List<CreditNote>> GetCreditNotesForInvoiceAsync(int invoiceId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Gets all credit notes with related invoice and return context.
+        /// </summary>
+        Task<List<CreditNote>> GetAllCreditNotesAsync(CancellationToken ct = default);
 
         /// <summary>
         /// Issues a draft credit note (makes it official)

@@ -443,11 +443,8 @@ For notification system to work:
 
 ## 👨‍💻 Contributors
 
-- Hassan Samatar - Lead Developer
-- GitHub Copilot - AI Assistant
-
+ Hassan Samatar 
 ---
-
 ## 📄 License
 
 This project is for educational purposes.

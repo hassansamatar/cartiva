@@ -18,18 +18,45 @@ namespace cartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: Admin/CreditNote
-        public async Task<IActionResult> Index(int? invoiceId)
+        public async Task<IActionResult> Index(int? invoiceId, string? search, string? status, string? type)
         {
-            if (invoiceId == null)
+            var creditNotes = invoiceId == null
+                ? await _creditNoteService.GetAllCreditNotesAsync()
+                : await _creditNoteService.GetCreditNotesForInvoiceAsync(invoiceId.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                // later you can replace with "GetAll"
-                return View(new List<CreditNote>());
+                var normalizedSearch = search.Trim();
+                creditNotes = creditNotes.Where(c =>
+                        c.CreditNoteNumber.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        c.CustomerName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        c.Reason.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        (c.OriginalInvoice != null && c.OriginalInvoice.InvoiceNumber.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)) ||
+                        (c.OriginalInvoice?.OrderHeaderId?.ToString() ?? string.Empty).Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        (c.ReturnRequestId?.ToString() ?? string.Empty).Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
 
-            var list = await _creditNoteService
-                .GetCreditNotesForInvoiceAsync(invoiceId.Value);
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<CreditNoteStatus>(status, true, out var parsedStatus))
+            {
+                creditNotes = creditNotes.Where(c => c.Status == parsedStatus).ToList();
+            }
 
-            return View(list);
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                creditNotes = type switch
+                {
+                    "return" => creditNotes.Where(c => c.ReturnRequestId.HasValue).ToList(),
+                    "cancellation" => creditNotes.Where(c => !c.ReturnRequestId.HasValue).ToList(),
+                    _ => creditNotes
+                };
+            }
+
+            ViewBag.CurrentSearch = search;
+            ViewBag.CurrentStatus = status;
+            ViewBag.CurrentType = type;
+
+            return View(creditNotes);
         }
 
         // GET: Admin/CreditNote/Details/5

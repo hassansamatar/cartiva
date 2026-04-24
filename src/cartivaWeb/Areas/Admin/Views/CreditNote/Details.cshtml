@@ -17,24 +17,52 @@
         </span>
     </div>
 
+    @{
+        var orderId = Model.OriginalInvoice?.OrderHeaderId
+            ?? Model.ReturnRequest?.OrderDetail?.OrderHeaderId;
+        var relatedReturnId = Model.ReturnRequestId;
+        var noteType = relatedReturnId.HasValue ? "Return credit note" : "Cancellation / manual credit note";
+    }
+
     <!-- HEADER INFO -->
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
 
             <div class="row">
                 <div class="col-md-6">
+                    <p class="mb-1"><strong>Type:</strong> @noteType</p>
                     <p class="mb-1"><strong>Customer:</strong> @Model.CustomerName</p>
                     <p class="mb-1"><strong>Reason:</strong> @Model.Reason</p>
                     <p class="mb-1"><strong>Currency:</strong> @Model.Currency</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.CustomerAddress))
+                    {
+                        <p class="mb-1"><strong>Address:</strong> @Model.CustomerAddress</p>
+                    }
                     @if (Model.ReturnRequestId.HasValue)
                     {
-                        <p class="mb-1"><strong>Return Request:</strong> #@Model.ReturnRequestId</p>
+                        <p class="mb-1">
+                            <strong>Return Request:</strong>
+                            <a asp-area="Admin" asp-controller="Return" asp-action="Index" asp-fragment="return-@Model.ReturnRequestId">#@Model.ReturnRequestId</a>
+                        </p>
+                    }
+                    @if (orderId.HasValue)
+                    {
+                        <p class="mb-1">
+                            <strong>Order:</strong>
+                            <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@orderId.Value">
+                                #@orderId.Value
+                            </a>
+                        </p>
                     }
                 </div>
 
                 <div class="col-md-6 text-md-end">
                     <p class="mb-1"><strong>Date:</strong> @Model.CreatedAt.ToString("dd.MM.yyyy")</p>
                     <p class="mb-1"><strong>Status:</strong> @Model.Status</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.ExternalRefundReference))
+                    {
+                        <p class="mb-1"><strong>Refund Ref:</strong> @Model.ExternalRefundReference</p>
+                    }
                     @if (Model.OriginalInvoice != null)
                     {
                         <p class="mb-1">
@@ -142,9 +170,24 @@
 
     <!-- BACK BUTTON -->
     <div class="mt-3">
-        <a asp-area="Admin" asp-controller="Return" asp-action="Index" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Returns
+        <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Credit Notes
         </a>
+        <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@Model.OriginalInvoiceId" class="btn btn-outline-primary">
+            <i class="bi bi-receipt"></i> View Original Invoice
+        </a>
+        @if (orderId.HasValue)
+        {
+            <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@orderId.Value" class="btn btn-outline-dark">
+                <i class="bi bi-bag"></i> View Order
+            </a>
+        }
+        @if (relatedReturnId.HasValue)
+        {
+            <a asp-area="Admin" asp-controller="Return" asp-action="Index" asp-fragment="return-@relatedReturnId" class="btn btn-outline-info">
+                <i class="bi bi-arrow-return-left"></i> View Return Queue
+            </a>
+        }
     </div>
 
 </div>

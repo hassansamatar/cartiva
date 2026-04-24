@@ -548,33 +548,6 @@ public class OrderController : Controller
             });
         }
 
-        // If payment was made, issue refund via Stripe
-        if (!string.IsNullOrEmpty(order.PaymentIntentId) && order.PaymentStatus == SD.PaymentStatusApproved)
-        {
-            try
-            {
-                var options = new RefundCreateOptions
-                {
-                    PaymentIntent = order.PaymentIntentId
-                };
-                var service = new RefundService();
-                var refund = await service.CreateAsync(options);
-
-                if (refund.Status == "succeeded" || refund.Status == "pending")
-                {
-                    order.PaymentStatus = SD.PaymentStatusRefunded;
-                }
-            }
-            catch (Exception ex)
-            {
-                return Json(new
-                {
-                    success = false,
-                    message = "Error processing refund: " + ex.Message
-                });
-            }
-        }
-
         var cancelResult = await _orderService.CancelOrderAsync(id, "Cancelled by customer");
         if (!cancelResult.Success)
         {

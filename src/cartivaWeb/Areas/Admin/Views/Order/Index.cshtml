@@ -104,13 +104,34 @@
                                 <td>@order.Name</td>
                                 <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
                                 <td><span class="badge-status @SD.GetOrderStatusBadgeClass(order.OrderStatus)">@order.OrderStatus</span></td>
-                                <td><span class="badge-status @SD.GetPaymentStatusBadgeClass(order.PaymentStatus)">@order.PaymentStatus</span></td>
+                                <td>
+                                    <span class="badge-status @SD.GetPaymentStatusBadgeClass(order.PaymentStatus)">@order.PaymentStatus</span>
+                                    @if (order.PaymentStatus == SD.PaymentStatusRefunded)
+                                    {
+                                        <br />
+                                        <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{order.Id}")" class="small text-decoration-none">
+                                            View credit note
+                                        </a>
+                                    }
+                                </td>
                                 <td><strong>@order.OrderTotal.ToString("C", culture)</strong></td>
                                 <td>
-                                    <div class="d-flex gap-1">
+                                    <div class="d-flex gap-1 flex-wrap">
                                         <a asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        @if (order.Shipments.Any())
+                                        {
+                                            <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@order.Shipments.OrderByDescending(s => s.Id).First().Id" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Shipment">
+                                                <i class="bi bi-truck"></i>
+                                            </a>
+                                        }
+                                        @if (order.PaymentStatus == SD.PaymentStatusRefunded)
+                                        {
+                                            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{order.Id}")" class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Notes">
+                                                <i class="bi bi-receipt"></i>
+                                            </a>
+                                        }
                                         @if (order.OrderStatus != SD.StatusCancelled)
                                         {
                                             <a asp-action="Cancel" asp-route-orderId="@order.Id" class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Cancel Order">

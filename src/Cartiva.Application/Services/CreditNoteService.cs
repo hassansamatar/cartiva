@@ -116,6 +116,97 @@ namespace Cartiva.Application.Services
             return creditNote;
         }
 
+        public async Task<CreditNote> CreateFromCancelledOrderAsync(
+            int orderId,
+            string reason,
+            string? createdByUserId = null,
+            CancellationToken ct = default)
+        {
+            var order = await _db.OrderHeaders
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant)
+                        .ThenInclude(pv => pv.Product)
+                .Include(o => o.ApplicationUser)
+                .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+            if (order == null)
+                throw new InvalidOperationException($"Order with ID {orderId} not found.");
+
+            var invoice = await _db.Set<Invoice>()
+                .Include(i => i.Lines)
+                .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
+
+            if (invoice == null)
+            {
+                invoice = await _invoiceService.GenerateInvoiceFromOrderAsync(orderId, ct);
+                invoice = await _db.Set<Invoice>()
+                    .Include(i => i.Lines)
+                    .FirstAsync(i => i.Id == invoice.Id, ct);
+            }
+
+            var existingCreditNote = await _db.Set<CreditNote>()
+                .FirstOrDefaultAsync(c => c.OriginalInvoiceId == invoice.Id && c.Reason == reason, ct);
+
+            if (existingCreditNote != null)
+            {
+                _logger.LogWarning("Credit note already exists for cancelled order {OrderId}", orderId);
+                return existingCreditNote;
+            }
+
+            var sequence = await _invoiceService.GetNextCreditNoteSequenceAsync(ct);
+            var creditNoteNumber = SD.GenerateCreditNoteNumber(sequence);
+
+            var creditNote = new CreditNote
+            {
+                OriginalInvoiceId = invoice.Id,
+                CreditNoteNumber = creditNoteNumber,
+                IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Reason = reason,
+                Notes = $"Cancelled order #{orderId}",
+                CreatedByUserId = createdByUserId,
+                CustomerName = invoice.CustomerName,
+                CustomerOrgNumber = invoice.CustomerOrgNumber,
+                CustomerAddress = invoice.CustomerAddress,
+                Currency = invoice.Currency
+            };
+
+            int sortOrder = 1;
+            foreach (var orderDetail in order.OrderDetails)
+            {
+                var invoiceLine = invoice.Lines.FirstOrDefault(l => l.ProductVariantId == orderDetail.ProductVariantId);
+
+                CreditNoteLine creditLine;
+                if (invoiceLine != null)
+                {
+                    creditLine = CreditNoteLine.FromInvoiceLine(invoiceLine, orderDetail.Count);
+                }
+                else
+                {
+                    creditLine = new CreditNoteLine
+                    {
+                        Description = orderDetail.ProductName ?? orderDetail.ProductVariant?.Product?.Name ?? "Cancelled Item",
+                        Quantity = orderDetail.Count,
+                        UnitPrice = orderDetail.PriceExVat > 0 ? orderDetail.PriceExVat : orderDetail.Price,
+                        VatPercent = orderDetail.VatRate > 0 ? orderDetail.VatRate : SD.VatRateStandard
+                    };
+                    creditLine.Calculate();
+                }
+
+                creditLine.SortOrder = sortOrder++;
+                creditNote.Lines.Add(creditLine);
+            }
+
+            creditNote.RecalculateTotals();
+            creditNote.Issue();
+
+            _db.Set<CreditNote>().Add(creditNote);
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Created credit note {CreditNoteNumber} for cancelled order {OrderId}", creditNoteNumber, orderId);
+
+            return creditNote;
+        }
+
         public async Task<CreditNote> CreateCreditNoteAsync(
             int invoiceId,
             string reason,
@@ -190,7 +281,25 @@ namespace Cartiva.Application.Services
         {
             return await _db.Set<CreditNote>()
                 .Include(c => c.Lines)
+                .Include(c => c.OriginalInvoice)
+                    .ThenInclude(i => i.OrderHeader)
+                .Include(c => c.ReturnRequest)
+                    .ThenInclude(r => r.OrderDetail)
+                        .ThenInclude(od => od.OrderHeader)
                 .Where(c => c.OriginalInvoiceId == invoiceId)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync(ct);
+        }
+
+        public async Task<List<CreditNote>> GetAllCreditNotesAsync(CancellationToken ct = default)
+        {
+            return await _db.Set<CreditNote>()
+                .Include(c => c.Lines)
+                .Include(c => c.OriginalInvoice)
+                    .ThenInclude(i => i.OrderHeader)
+                .Include(c => c.ReturnRequest)
+                    .ThenInclude(r => r.OrderDetail)
+                        .ThenInclude(od => od.OrderHeader)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync(ct);
         }
