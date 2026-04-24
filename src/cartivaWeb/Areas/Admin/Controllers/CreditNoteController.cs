@@ -18,11 +18,19 @@ namespace cartivaWeb.Areas.Admin.Controllers
         }
 
         // GET: Admin/CreditNote
-        public async Task<IActionResult> Index(int? invoiceId, string? search, string? status, string? type)
+        public async Task<IActionResult> Index(int? invoiceId, int? orderId, string? search, string? status, string? type)
         {
             var creditNotes = invoiceId == null
                 ? await _creditNoteService.GetAllCreditNotesAsync()
                 : await _creditNoteService.GetCreditNotesForInvoiceAsync(invoiceId.Value);
+
+            if (orderId.HasValue)
+            {
+                creditNotes = creditNotes.Where(c =>
+                        c.OriginalInvoice?.OrderHeaderId == orderId.Value ||
+                        c.ReturnRequest?.OrderDetail?.OrderHeaderId == orderId.Value)
+                    .ToList();
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -55,6 +63,7 @@ namespace cartivaWeb.Areas.Admin.Controllers
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentType = type;
+            ViewBag.CurrentOrderId = orderId;
 
             return View(creditNotes);
         }

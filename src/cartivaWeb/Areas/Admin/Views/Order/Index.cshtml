@@ -128,7 +128,7 @@
                                         }
                                         @if (order.PaymentStatus == SD.PaymentStatusRefunded)
                                         {
-                                            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{order.Id}")" class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Notes">
+                                            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@order.Id" asp-route-type="cancellation" class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Notes">
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                         }

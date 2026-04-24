@@ -6,6 +6,7 @@
     ViewData["Title"] = $"Order Details #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var latestShipment = Model.Shipments.OrderByDescending(s => s.Id).FirstOrDefault();
+    var relatedInvoice = ViewBag.RelatedInvoice as Invoice;
 }
 
 <div class="container mt-4">
@@ -32,7 +33,7 @@
                             @if (Model.PaymentStatus == SD.PaymentStatusRefunded)
                             {
                                 <div class="mt-1">
-                                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{Model.Id}")" class="small text-decoration-none">
+                                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="small text-decoration-none">
                                         View related credit note(s)
                                     </a>
                                 </div>
@@ -128,7 +129,7 @@
         }
         @if (Model.PaymentStatus == SD.PaymentStatusRefunded)
         {
-            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{Model.Id}")" class="btn btn-outline-primary">View Credit Note</a>
+            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="btn btn-outline-primary">View Credit Note</a>
         }
         @if (Model.OrderStatus != SD.StatusCancelled)
         {
