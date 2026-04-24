@@ -110,6 +110,8 @@ namespace cartivaWeb.Areas.Admin.Controllers
             var invoice = await _invoiceService.GetInvoiceByIdAsync(id);
             if (invoice == null) return NotFound();
 
+            ViewBag.CartivaContact = _cartivaContact;
+
             return View(invoice);
         }
 
@@ -121,20 +123,25 @@ namespace cartivaWeb.Areas.Admin.Controllers
             var invoice = await _db.Invoices.FindAsync(id);
             if (invoice != null)
             {
-                await _invoiceService.MarkInvoiceAsSentAsync(id);
-                TempData["Success"] = $"Invoice {invoice.InvoiceNumber} marked as sent.";
+                await _invoiceService.SendInvoiceAsync(id);
+                TempData["Success"] = $"Invoice {invoice.InvoiceNumber} was sent by email.";
                 return RedirectToAction(nameof(Index));
             }
 
             // Fallback to legacy OrderHeader
             var order = await _db.OrderHeaders.FindAsync(id);
-            if (order == null || order.InvoiceSent)
+            if (order == null)
                 return NotFound();
+
+            var generatedInvoice = await _invoiceService.GetInvoiceByOrderIdAsync(order.Id)
+                ?? await _invoiceService.GenerateInvoiceFromOrderAsync(order.Id);
+
+            await _invoiceService.SendInvoiceAsync(generatedInvoice.Id);
 
             order.InvoiceSent = true;
             await _db.SaveChangesAsync();
 
-            TempData["Success"] = $"Invoice for Order #{id} marked as sent.";
+            TempData["Success"] = $"Invoice {generatedInvoice.InvoiceNumber} was sent by email.";
             return RedirectToAction(nameof(Index));
         }
 

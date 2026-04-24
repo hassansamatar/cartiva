@@ -24,6 +24,9 @@ public class OrderController : Controller
     public async Task<IActionResult> Index(string? status = null)
     {
         var orders = await _orderService.GetAllOrdersAsync(status);
+        ViewBag.InvoiceByOrderId = await _db.Set<Invoice>()
+            .Where(i => i.OrderHeaderId.HasValue)
+            .ToDictionaryAsync(i => i.OrderHeaderId!.Value, i => i.Id);
         ViewBag.CurrentStatus = status;
         return View(orders);
     }

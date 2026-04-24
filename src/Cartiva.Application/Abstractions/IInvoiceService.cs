@@ -25,6 +25,11 @@ namespace Cartiva.Application.Abstractions
         Task<bool> MarkInvoiceAsSentAsync(int invoiceId, CancellationToken ct = default);
 
         /// <summary>
+        /// Sends an invoice email and marks the invoice as sent.
+        /// </summary>
+        Task<bool> SendInvoiceAsync(int invoiceId, CancellationToken ct = default);
+
+        /// <summary>
         /// Records a payment against an invoice
         /// </summary>
         Task<InvoicePayment> RecordPaymentAsync(

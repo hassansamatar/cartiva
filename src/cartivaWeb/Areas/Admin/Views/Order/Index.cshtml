@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "Order Management";
     var currentStatus = ViewBag.CurrentStatus as string;
+    var invoiceByOrderId = ViewBag.InvoiceByOrderId as Dictionary<int, int> ?? new Dictionary<int, int>();
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var allOrders = Model.ToList();
     var pendingCount = allOrders.Count(o => o.OrderStatus == SD.StatusPending);
@@ -124,6 +125,12 @@
                                         {
                                             <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@order.Shipments.OrderByDescending(s => s.Id).First().Id" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Shipment">
                                                 <i class="bi bi-truck"></i>
+                                            </a>
+                                        }
+                                        @if (invoiceByOrderId.TryGetValue(order.Id, out var invoiceId))
+                                        {
+                                            <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoiceId" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Invoice">
+                                                <i class="bi bi-receipt"></i>
                                             </a>
                                         }
                                         @if (order.PaymentStatus == SD.PaymentStatusRefunded)
