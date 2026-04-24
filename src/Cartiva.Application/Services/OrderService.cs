@@ -285,7 +285,8 @@ public class OrderService : IOrderService
                     ["orderId"] = orderHeader.Id.ToString(),
                     ["name"] = string.IsNullOrWhiteSpace(user.Name) ? orderHeader.Name : user.Name,
                     ["orderDate"] = orderHeader.OrderDate.ToString("yyyy-MM-dd"),
-                    ["totalAmount"] = orderHeader.OrderTotal.ToString("C")
+                    ["totalAmount"] = $"{orderHeader.OrderTotal:N2} {SD.DefaultCurrency}",
+                    ["currency"] = SD.DefaultCurrency
                 },
                 UserId: userId,
                 ReferenceId: orderHeader.Id.ToString(),

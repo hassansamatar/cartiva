@@ -46,7 +46,6 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
                     .ThenInclude(u => u.Company)
             .Where(s => s.ShipmentStatus == SD.ShipmentStatusApproved &&
                         s.OrderHeader.OrderStatus != SD.StatusShipped &&
-                        s.OrderHeader.PaymentStatus == SD.PaymentStatusDeferred &&
                         s.OrderHeader.ApplicationUser.CompanyId != null &&
                         s.OrderHeader.ApplicationUser.Company != null &&
                         s.OrderHeader.ApplicationUser.Company.IsActive)
@@ -92,7 +91,7 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
             }
         }
 
-        _logger.LogInformation("Processed {Count} active-company deferred shipments with shipment and invoice emails.", shipments.Count);
+        _logger.LogInformation("Processed {Count} active-company shipments with shipment and invoice emails.", shipments.Count);
         return shipments.Count;
     }
 

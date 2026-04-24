@@ -1,4 +1,10 @@
 @model Cartiva.Infrastructure.Templates.Models.OrderConfirmationModel
+@using Cartiva.Shared
+
+@{
+    var customerName = string.IsNullOrWhiteSpace(Model.Name) ? "Customer" : Model.Name;
+    var totalAmount = string.IsNullOrWhiteSpace(Model.TotalAmount) ? $"0.00 {SD.DefaultCurrency}" : Model.TotalAmount;
+}
 
 <!DOCTYPE html>
 <html>
@@ -7,11 +13,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Order Confirmation</title>
 </head>
-<body>
-    <p>Hello @Model.Name,</p>
-    <p>Thank you for your order.</p>
-    <p><strong>Order Number:</strong> @Model.OrderId</p>
-    <p><strong>Order Date:</strong> @Model.OrderDate</p>
-    <p><strong>Total Amount:</strong> @Model.TotalAmount</p>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h1 style="color: #2c3e50;">Order Confirmation</h1>
+    <p>Hello @customerName,</p>
+    <p>Thank you for your order. We are preparing it now and will keep you updated.</p>
+
+    <div style="background-color: #f8f9fa; border-left: 4px solid #2c3e50; padding: 16px; margin: 20px 0; border-radius: 6px;">
+        <p style="margin: 0 0 8px 0;"><strong>Order Number:</strong> @Model.OrderId</p>
+        <p style="margin: 0 0 8px 0;"><strong>Order Date:</strong> @Model.OrderDate</p>
+        <p style="margin: 0;"><strong>Total Amount:</strong> @totalAmount</p>
+    </div>
+
+    <p>Currency: NOK</p>
+    <p>We appreciate your business.</p>
+    <p>Best regards,<br />The Cartiva Team</p>
 </body>
 </html>
