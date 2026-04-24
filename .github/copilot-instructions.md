@@ -10,6 +10,7 @@
 ## Invoicing & Billing
 - Link every order to an invoice; provide direct per-order navigation from each order to its invoice in admin order management.
 - Generate invoices on the fly for all orders, including orders paid at checkout.
+- Auto-process company flows for companies with IsActive = true and deferred payment; treat inactive companies as individual customers (do not apply company-specific deferred-processing).
 - Show invoice status explicitly as "Paid" or "Outstanding/Deferred".
 - Include a due date on outstanding/deferred invoices.
 - Provide a send-invoice link in invoice management for sending receipts or outstanding notices.

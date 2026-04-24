@@ -117,47 +117,74 @@ public class ShipmentService : IShipmentService
 
         await _db.SaveChangesAsync();
 
-        // Send order shipped notification
-        var user = await _db.Users.FindAsync(shipment.OrderHeader.ApplicationUserId);
-        if (user?.Email != null)
+        var emailResult = await SendShipmentEmailAsync(shipment.Id);
+        if (!emailResult.Success)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await _notificationService.SendAsync(new NotificationRequest(
-                        Recipient: user.Email,
-                        Type: NotificationType.OrderShipped,
-                        TemplateData: new Dictionary<string, object>
-                        {
-                            ["shipmentId"] = shipment.Id.ToString(),
-                            ["orderId"] = shipment.OrderHeader.Id.ToString(),
-                            ["trackingNumber"] = shipment.TrackingNumber ?? "N/A",
-                            ["carrier"] = shipment.Carrier ?? "Bring",
-                            ["service"] = shipment.Service ?? string.Empty,
-                            ["trackingUrl"] = shipment.TrackingUrl ?? string.Empty,
-                            ["shippingDate"] = shipment.ShippingDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
-                            ["shippedDate"] = shipment.ShippedDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
-                            ["estimatedDeliveryDate"] = shipment.ShippingDate?.AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
-                            ["shipmentStatus"] = shipment.ShipmentStatus
-                        },
-                        UserId: shipment.OrderHeader.ApplicationUserId,
-                        ReferenceId: shipment.OrderHeader.Id.ToString(),
-                        ReferenceType: "Shipment",
-                        Subject: $"Your Order #{shipment.OrderHeader.Id} Has Shipped!"
-                    ));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send order shipped notification for shipment {ShipmentId}", shipmentId);
-                }
-            });
+            _logger.LogWarning("Shipment {ShipmentId} was approved but shipment email could not be queued: {Message}", shipment.Id, emailResult.Message);
         }
 
         return ShipmentOperationResult.Succeeded(
             $"Shipment approved. Tracking number: {shipment.TrackingNumber}",
             shipment.TrackingNumber,
             shipment.LabelUrl);
+    }
+
+    public async Task<ShipmentOperationResult> SendShipmentEmailAsync(int shipmentId)
+    {
+        var shipment = await _db.Shipments
+            .Include(s => s.OrderHeader)
+                .ThenInclude(o => o.ApplicationUser)
+            .FirstOrDefaultAsync(s => s.Id == shipmentId);
+
+        if (shipment == null)
+            return ShipmentOperationResult.Failed("Shipment not found.");
+
+        if (shipment.OrderHeader?.ApplicationUserId == null)
+            return ShipmentOperationResult.Failed("Shipment is not linked to a customer order.");
+
+        var user = shipment.OrderHeader.ApplicationUser ?? await _db.Users.FindAsync(shipment.OrderHeader.ApplicationUserId);
+        if (string.IsNullOrWhiteSpace(user?.Email))
+            return ShipmentOperationResult.Failed("Customer email address is missing.");
+
+        if (string.IsNullOrWhiteSpace(shipment.TrackingUrl) &&
+            !string.IsNullOrWhiteSpace(shipment.Carrier) &&
+            !string.IsNullOrWhiteSpace(shipment.TrackingNumber))
+        {
+            shipment.TrackingUrl = SD.GetTrackingUrl(shipment.Carrier, shipment.TrackingNumber);
+            await _db.SaveChangesAsync();
+        }
+
+        try
+        {
+            await _notificationService.SendAsync(new NotificationRequest(
+                Recipient: user.Email,
+                Type: NotificationType.OrderShipped,
+                TemplateData: new Dictionary<string, object>
+                {
+                    ["shipmentId"] = shipment.Id.ToString(),
+                    ["orderId"] = shipment.OrderHeader.Id.ToString(),
+                    ["trackingNumber"] = shipment.TrackingNumber ?? "N/A",
+                    ["carrier"] = shipment.Carrier ?? "Carrier",
+                    ["service"] = shipment.Service ?? string.Empty,
+                    ["trackingUrl"] = shipment.TrackingUrl ?? string.Empty,
+                    ["shippingDate"] = shipment.ShippingDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                    ["shippedDate"] = shipment.ShippedDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                    ["estimatedDeliveryDate"] = shipment.ShippingDate?.AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                    ["shipmentStatus"] = shipment.ShipmentStatus
+                },
+                UserId: shipment.OrderHeader.ApplicationUserId,
+                ReferenceId: shipment.Id.ToString(),
+                ReferenceType: "Shipment",
+                Subject: $"Your Order #{shipment.OrderHeader.Id} Has Shipped"
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to queue shipment email for shipment {ShipmentId}", shipmentId);
+            return ShipmentOperationResult.Failed("Shipment email could not be sent.");
+        }
+
+        return ShipmentOperationResult.Succeeded("Shipment email sent successfully.");
     }
 
     public async Task<ShipmentOperationResult> UpdateShipmentAsync(int shipmentId, ShipmentUpdateRequest request)

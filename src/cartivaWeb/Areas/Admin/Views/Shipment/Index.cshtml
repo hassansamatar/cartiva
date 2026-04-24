@@ -179,6 +179,16 @@
                                             </a>
                                         }
 
+                                        @if (s.ShipmentStatus == SD.ShipmentStatusShipped || s.ShipmentStatus == SD.ShipmentStatusDelivered)
+                                        {
+                                            <form asp-action="SendEmail" asp-route-id="@s.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="Send Shipment Email">
+                                                    <i class="bi bi-envelope"></i>
+                                                </button>
+                                            </form>
+                                        }
+
                                         @if (s.ShipmentStatus == SD.ShipmentStatusPendingApproval)
                                         {
                                             <a asp-action="Approve" asp-route-id="@s.Id" 

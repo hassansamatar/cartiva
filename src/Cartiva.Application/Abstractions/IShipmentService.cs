@@ -51,6 +51,11 @@ public interface IShipmentService
     /// Mark shipment as delivered
     /// </summary>
     Task<ShipmentOperationResult> MarkAsDeliveredAsync(int shipmentId);
+
+    /// <summary>
+    /// Send the shipment email for an already created shipment.
+    /// </summary>
+    Task<ShipmentOperationResult> SendShipmentEmailAsync(int shipmentId);
 }
 
 /// <summary>
