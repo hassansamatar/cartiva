@@ -6,6 +6,13 @@
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var contact = ViewBag.CartivaContact as dynamic;
     var isPaid = Model.Status == Cartiva.Domain.InvoiceStatus.Paid;
+    var orderId = Model.OrderHeaderId;
+    var latestShipment = Model.OrderHeader?.Shipments?.OrderByDescending(s => s.Id).FirstOrDefault();
+    var hasCreditNotes = Model.CreditNotes?.Any() == true;
+    var statusText = isPaid ? "Paid - this invoice also serves as the payment receipt" : "Deferred / Outstanding";
+    var statusHelp = isPaid
+        ? $"Paid on {Model.PaidDate?.ToString("dd MMM yyyy") ?? "recorded date unavailable"}."
+        : $"Payment is due by {Model.DueDate.ToString("dd MMM yyyy")}.";
 }
 <!DOCTYPE html>
 <html>
@@ -242,10 +249,16 @@
             <div class="header-right">
                 <strong>@contact?.Name</strong><br />
                 @contact?.Address<br />
-                Org.nr: @contact?.OrgNumber<br />
+                Org. No.: @contact?.OrgNumber<br />
                 Tel: @contact?.Phone<br />
                 @contact?.Email
             </div>
+        </div>
+
+        <div class="info-box" style="margin-bottom: 20px; border-left: 4px solid @(isPaid ? "#27ae60" : "#e67e22");">
+            <h4>Invoice Status</h4>
+            <p><strong>@statusText</strong></p>
+            <p>@statusHelp</p>
         </div>
 
         <div class="info-grid">
@@ -254,7 +267,7 @@
                 <p><strong>@Model.CustomerName</strong></p>
                 @if (!string.IsNullOrEmpty(Model.CustomerOrgNumber))
                 {
-                    <p>Org.nr: @Model.CustomerOrgNumber</p>
+                    <p>Org. No.: @Model.CustomerOrgNumber</p>
                 }
                 <p>@Model.CustomerAddress</p>
                 <p>@Model.CustomerEmail</p>
@@ -310,7 +323,7 @@
                         <td class="text-right">@Model.NetAmount.ToString("C", culture)</td>
                     </tr>
                     <tr>
-                        <td>VAT (MVA):</td>
+                        <td>VAT:</td>
                         <td class="text-right">@Model.VatAmount.ToString("C", culture)</td>
                     </tr>
                     <tr class="total-row">
@@ -407,6 +420,29 @@
             </div>
 
             <div class="no-print" style="text-align: center; margin-top: 30px;">
+                <form asp-area="Admin" asp-controller="Invoice" asp-action="Send" asp-route-id="@Model.Id" method="post" style="display:inline-block; margin-right:10px;">
+                    <button type="submit" style="padding: 10px 30px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Send Invoice Email
+                    </button>
+                </form>
+                @if (orderId.HasValue)
+                {
+                    <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@orderId.Value" style="display:inline-block; padding: 10px 30px; font-size: 16px; background: #2c3e50; color: white; text-decoration:none; border-radius: 5px; margin-right: 10px;">
+                        View Order
+                    </a>
+                }
+                @if (latestShipment != null)
+                {
+                    <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id" style="display:inline-block; padding: 10px 30px; font-size: 16px; background: #8e44ad; color: white; text-decoration:none; border-radius: 5px; margin-right: 10px;">
+                        View Shipment
+                    </a>
+                }
+                @if (hasCreditNotes)
+                {
+                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-invoiceId="@Model.Id" style="display:inline-block; padding: 10px 30px; font-size: 16px; background: #16a085; color: white; text-decoration:none; border-radius: 5px; margin-right: 10px;">
+                        View Credit Notes
+                    </a>
+                }
                 <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
                     Print / Save PDF
                 </button>

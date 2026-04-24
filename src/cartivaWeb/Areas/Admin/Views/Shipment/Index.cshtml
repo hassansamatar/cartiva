@@ -160,11 +160,24 @@
                                     }
                                 </td>
                                 <td>
-                                    <div class="d-flex gap-1">
+                                    <div class="d-flex gap-1 flex-wrap">
                                         <a asp-action="Details" asp-route-id="@s.Id" 
                                            class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
+
+                                        <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@s.OrderHeader.Id"
+                                           class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
+                                            <i class="bi bi-bag"></i>
+                                        </a>
+
+                                        @if (s.OrderHeader.PaymentStatus == SD.PaymentStatusRefunded)
+                                        {
+                                            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@s.OrderHeader.Id" asp-route-type="cancellation"
+                                               class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Note">
+                                                <i class="bi bi-receipt"></i>
+                                            </a>
+                                        }
 
                                         @if (s.ShipmentStatus == SD.ShipmentStatusPendingApproval)
                                         {

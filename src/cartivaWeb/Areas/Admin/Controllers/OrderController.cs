@@ -1,7 +1,10 @@
 using Cartiva.Application.Abstractions;
+using Cartiva.Domain;
+using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CartivaWeb.Areas.Admin.Controllers;
 
@@ -10,15 +13,20 @@ namespace CartivaWeb.Areas.Admin.Controllers;
 public class OrderController : Controller
 {
     private readonly IOrderService _orderService;
+    private readonly ApplicationDbContext _db;
 
-    public OrderController(IOrderService orderService)
+    public OrderController(IOrderService orderService, ApplicationDbContext db)
     {
         _orderService = orderService;
+        _db = db;
     }
 
     public async Task<IActionResult> Index(string? status = null)
     {
         var orders = await _orderService.GetAllOrdersAsync(status);
+        ViewBag.InvoiceByOrderId = await _db.Set<Invoice>()
+            .Where(i => i.OrderHeaderId.HasValue)
+            .ToDictionaryAsync(i => i.OrderHeaderId!.Value, i => i.Id);
         ViewBag.CurrentStatus = status;
         return View(orders);
     }
@@ -30,6 +38,9 @@ public class OrderController : Controller
         {
             return NotFound();
         }
+
+        ViewBag.RelatedInvoice = await _db.Set<Invoice>()
+            .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId);
 
         return View(order);
     }

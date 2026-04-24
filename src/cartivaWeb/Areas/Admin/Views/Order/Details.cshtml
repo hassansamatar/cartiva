@@ -6,6 +6,7 @@
     ViewData["Title"] = $"Order Details #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var latestShipment = Model.Shipments.OrderByDescending(s => s.Id).FirstOrDefault();
+    var relatedInvoice = ViewBag.RelatedInvoice as Invoice;
 }
 
 <div class="container mt-4">
@@ -32,7 +33,7 @@
                             @if (Model.PaymentStatus == SD.PaymentStatusRefunded)
                             {
                                 <div class="mt-1">
-                                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{Model.Id}")" class="small text-decoration-none">
+                                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="small text-decoration-none">
                                         View related credit note(s)
                                     </a>
                                 </div>
@@ -41,6 +42,20 @@
 
                         <dt class="col-sm-4">Total</dt>
                         <dd class="col-sm-8">@Model.OrderTotal.ToString("C", culture)</dd>
+
+                        <dt class="col-sm-4">Invoice</dt>
+                        <dd class="col-sm-8">
+                            @if (relatedInvoice != null)
+                            {
+                                <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@relatedInvoice.Id">
+                                    @relatedInvoice.InvoiceNumber
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No invoice available</span>
+                            }
+                        </dd>
 
                         <dt class="col-sm-4">Shipment</dt>
                         <dd class="col-sm-8">
@@ -122,13 +137,17 @@
 
     <div class="mt-3">
         <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        @if (relatedInvoice != null)
+        {
+            <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@relatedInvoice.Id" class="btn btn-outline-primary">View Invoice</a>
+        }
         @if (latestShipment != null)
         {
             <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id" class="btn btn-outline-dark">View Shipment</a>
         }
         @if (Model.PaymentStatus == SD.PaymentStatusRefunded)
         {
-            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{Model.Id}")" class="btn btn-outline-primary">View Credit Note</a>
+            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="btn btn-outline-primary">View Credit Note</a>
         }
         @if (Model.OrderStatus != SD.StatusCancelled)
         {

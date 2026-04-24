@@ -20,6 +20,7 @@ public class OrderService : IOrderService
 {
     private readonly ApplicationDbContext _db;
     private readonly IPromotionService _promotionService;
+    private readonly IInvoiceService _invoiceService;
     private readonly INotificationService _notificationService;
     private readonly ICreditNoteService _creditNoteService;
     private readonly ILogger<OrderService> _logger;
@@ -27,12 +28,14 @@ public class OrderService : IOrderService
     public OrderService(
         ApplicationDbContext db,
         IPromotionService promotionService,
+        IInvoiceService invoiceService,
         INotificationService notificationService,
         ICreditNoteService creditNoteService,
         ILogger<OrderService> logger)
     {
         _db = db;
         _promotionService = promotionService;
+        _invoiceService = invoiceService;
         _notificationService = notificationService;
         _creditNoteService = creditNoteService;
         _logger = logger;
@@ -266,6 +269,8 @@ public class OrderService : IOrderService
             orderHeader.OrderDetails = orderDetails;
             orderHeader.RecalculateTotals();
             await _db.SaveChangesAsync();
+
+            await _invoiceService.GenerateInvoiceFromOrderAsync(orderHeader.Id);
 
             await transaction.CommitAsync();
 

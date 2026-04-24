@@ -314,8 +314,10 @@ public class OrderController : Controller
                 // Record payment against the invoice (if one exists, e.g. deferred-payment company orders)
                 try
                 {
-                    var invoice = await _invoiceService.GetInvoiceByOrderIdAsync(order.Id);
-                    if (invoice != null && invoice.Status != InvoiceStatus.Paid)
+                    var invoice = await _invoiceService.GetInvoiceByOrderIdAsync(order.Id)
+                        ?? await _invoiceService.GenerateInvoiceFromOrderAsync(order.Id);
+
+                    if (invoice.Status != InvoiceStatus.Paid)
                     {
                         await _invoiceService.RecordPaymentAsync(
                             invoiceId: invoice.Id,

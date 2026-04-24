@@ -1,5 +1,16 @@
 @model Cartiva.Infrastructure.Templates.Models.InvoiceGeneratedModel
 
+@{
+    var isPaid = Model.Status == Cartiva.Domain.InvoiceStatus.Paid || Model.RemainingAmount <= 0;
+    var headerTitle = isPaid ? "Payment Receipt" : "Invoice Ready";
+    var introText = isPaid
+        ? $"Thank you. We have received payment for invoice {Model.InvoiceNumber}."
+        : $"Your invoice for order #{Model.OrderHeaderId} is ready.";
+    var statusText = isPaid
+        ? $"Paid on {Model.PaidDate?.ToString("dd MMM yyyy") ?? "the recorded payment date"}"
+        : $"Payment due by {Model.DueDate:dd MMM yyyy}";
+}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -58,44 +69,74 @@
 </head>
 <body>
     <div class="header">
-        <h1>📄 Invoice Ready</h1>
+        <h1>📄 @headerTitle</h1>
     </div>
 
     <div class="content">
         <p>Hello @Model.CustomerName,</p>
 
-        <p>Your invoice is now ready for order <strong>#@Model.OrderHeaderId</strong>.</p>
+        <p>@introText</p>
 
         <div class="invoice-box">
             <h3>Invoice Details</h3>
             <p><strong>Invoice Number:</strong> @Model.InvoiceNumber</p>
             <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
-            <p><strong>Total Amount:</strong> @Model.TotalAmount</p>
-            <p><strong>Due Date:</strong> @Model.DueDate</p>
+            <p><strong>Status:</strong> @statusText</p>
+            <p><strong>Total Amount:</strong> @Model.TotalAmount.ToString("N2") @Model.Currency</p>
+            <p><strong>Issue Date:</strong> @Model.IssueDate.ToString("dd MMM yyyy")</p>
+            <p><strong>Due Date:</strong> @Model.DueDate.ToString("dd MMM yyyy")</p>
+            <p><strong>KID / Reference:</strong> @Model.KID</p>
+            @if (isPaid)
+            {
+                <p><strong>Amount Paid:</strong> @Model.TotalPaid.ToString("N2") @Model.Currency</p>
+            }
+            else
+            {
+                <p><strong>Amount Outstanding:</strong> @Model.RemainingAmount.ToString("N2") @Model.Currency</p>
+            }
         </div>
 
-        <div class="important">
-            <strong>⏰ Payment Due:</strong> Please ensure payment is received by <strong>@Model.DueDate</strong> to avoid late fees.
-        </div>
+        @if (isPaid)
+        {
+            <div class="important">
+                <strong>Payment received:</strong> This invoice can be kept as your receipt for this order.
+            </div>
+        }
+        else
+        {
+            <div class="important">
+                <strong>Payment due:</strong> Please make sure payment is received by <strong>@Model.DueDate.ToString("dd MMM yyyy")</strong>.
+            </div>
+        }
 
-        <h3>Payment Methods:</h3>
-        <ul>
-            <li><strong>Bank Transfer:</strong> Use KID number on invoice for automatic matching</li>
-            <li><strong>Online Payment:</strong> Log in to your account to pay online</li>
-        </ul>
+        @if (!isPaid)
+        {
+            <h3>Payment Information</h3>
+            <ul>
+                <li><strong>Bank Transfer:</strong> Use KID / reference <strong>@Model.KID</strong> for automatic matching</li>
+                @if (!string.IsNullOrWhiteSpace(Model.BankAccountNumber))
+                {
+                    <li><strong>Bank Account:</strong> @Model.BankAccountNumber</li>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.IBAN))
+                {
+                    <li><strong>IBAN:</strong> @Model.IBAN</li>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.BIC))
+                {
+                    <li><strong>BIC / SWIFT:</strong> @Model.BIC</li>
+                }
+            </ul>
+        }
 
-        <p>
-            <a href="https://cartiva.no/invoices/@Model.InvoiceNumber" class="button">View & Download Invoice</a>
-        </p>
-
-        <p>If you have any questions about this invoice, please contact our billing department.</p>
+        <p>If you have any questions about this invoice, please contact our billing team.</p>
 
         <p>Best regards,<br/>The Cartiva Team</p>
     </div>
 
     <div class="footer">
         <p>&copy; @DateTime.UtcNow.Year Cartiva AS. All rights reserved.</p>
-        <p>Exampleveien 1, 0655 Oslo | <a href="mailto:post@cartiva.no">post@cartiva.no</a></p>
+        <p>@(Model.SellerAddress ?? "Cartiva") | <a href="mailto:@(Model.SellerEmail ?? "post@cartiva.no")">@(Model.SellerEmail ?? "post@cartiva.no")</a></p>
     </div>
 </body>
 </html>

@@ -129,60 +129,6 @@ namespace Cartiva.Application.Services
 
             _logger.LogInformation("Generated invoice {InvoiceNumber} for Order {OrderId}", invoiceNumber, orderId);
 
-            // Send invoice generated notification
-            if (order.ApplicationUser?.Email != null)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _notificationService.SendAsync(new NotificationRequest(
-                            Recipient: order.ApplicationUser.Email,
-                            Type: NotificationType.InvoiceGenerated,
-                            TemplateData: new Dictionary<string, object>
-                            {
-                                ["invoiceId"] = invoice.Id.ToString(),
-                                ["invoiceNumber"] = invoiceNumber,
-                                ["orderId"] = orderId.ToString(),
-                                ["kid"] = invoice.KID,
-                                ["issueDate"] = invoice.IssueDate.ToString("yyyy-MM-dd"),
-                                ["dueDate"] = invoice.DueDate.ToString("yyyy-MM-dd"),
-                                ["netAmount"] = invoice.NetAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                ["vatAmount"] = invoice.VatAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                ["totalAmount"] = invoice.TotalAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                ["currency"] = invoice.Currency,
-                                ["status"] = invoice.Status.ToString(),
-                                ["sellerName"] = invoice.SellerName,
-                                ["sellerOrgNumber"] = invoice.SellerOrgNumber,
-                                ["sellerAddress"] = invoice.SellerAddress ?? string.Empty,
-                                ["sellerEmail"] = invoice.SellerEmail ?? string.Empty,
-                                ["sellerPhone"] = invoice.SellerPhone ?? string.Empty,
-                                ["customerName"] = invoice.CustomerName,
-                                ["customerOrgNumber"] = invoice.CustomerOrgNumber ?? string.Empty,
-                                ["customerAddress"] = invoice.CustomerAddress ?? string.Empty,
-                                ["customerEmail"] = invoice.CustomerEmail ?? string.Empty,
-                                ["bankAccountNumber"] = invoice.BankAccountNumber ?? string.Empty,
-                                ["iban"] = invoice.IBAN ?? string.Empty,
-                                ["bic"] = invoice.BIC ?? string.Empty,
-                                ["sentDate"] = invoice.SentDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
-                                ["pdfUrl"] = invoice.PdfUrl ?? string.Empty,
-                                ["paidDate"] = invoice.PaidDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
-                                ["totalPaid"] = invoice.TotalPaid.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                ["remainingAmount"] = invoice.RemainingAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                            },
-                            UserId: order.ApplicationUserId,
-                            ReferenceId: invoice.Id.ToString(),
-                            ReferenceType: "Invoice",
-                            Subject: $"Invoice {invoiceNumber} - Order #{orderId}"
-                        ));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to send invoice notification for invoice {InvoiceNumber}", invoiceNumber);
-                    }
-                });
-            }
-
             return invoice;
         }
 
@@ -194,6 +140,8 @@ namespace Cartiva.Application.Services
                 .Include(i => i.CreditNotes)
                 .Include(i => i.OrderHeader)
                     .ThenInclude(o => o!.ApplicationUser)
+                .Include(i => i.OrderHeader)
+                    .ThenInclude(o => o!.Shipments)
                 .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
         }
 
@@ -203,6 +151,10 @@ namespace Cartiva.Application.Services
                 .Include(i => i.Lines)
                 .Include(i => i.Payments)
                 .Include(i => i.CreditNotes)
+                .Include(i => i.OrderHeader)
+                    .ThenInclude(o => o!.ApplicationUser)
+                .Include(i => i.OrderHeader)
+                    .ThenInclude(o => o!.Shipments)
                 .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
         }
 
@@ -211,17 +163,93 @@ namespace Cartiva.Application.Services
             var invoice = await _db.Set<Invoice>().FindAsync(new object[] { invoiceId }, ct);
             if (invoice == null) return false;
 
-            if (invoice.Status == InvoiceStatus.Draft)
+            if (invoice.Status == InvoiceStatus.Draft || invoice.Status == InvoiceStatus.Issued)
             {
-                invoice.Status = InvoiceStatus.Issued;
+                invoice.Status = InvoiceStatus.Sent;
             }
 
-            invoice.Status = InvoiceStatus.Sent;
             invoice.SentDate = DateTime.UtcNow;
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Invoice {InvoiceId} marked as sent", invoiceId);
+            return true;
+        }
+
+        public async Task<bool> SendInvoiceAsync(int invoiceId, CancellationToken ct = default)
+        {
+            var invoice = await _db.Set<Invoice>()
+                .Include(i => i.OrderHeader)
+                    .ThenInclude(o => o!.ApplicationUser)
+                .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
+
+            if (invoice == null)
+            {
+                return false;
+            }
+
+            if (!await MarkInvoiceAsSentAsync(invoiceId, ct))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(invoice.CustomerEmail))
+            {
+                _logger.LogWarning("Invoice {InvoiceId} has no customer email address. Marked as sent without email notification.", invoiceId);
+                return true;
+            }
+
+            try
+            {
+                await _notificationService.SendAsync(new NotificationRequest(
+                    Recipient: invoice.CustomerEmail,
+                    Type: NotificationType.InvoiceGenerated,
+                    TemplateData: new Dictionary<string, object>
+                    {
+                        ["invoiceId"] = invoice.Id.ToString(),
+                        ["invoiceNumber"] = invoice.InvoiceNumber,
+                        ["orderId"] = invoice.OrderHeaderId?.ToString() ?? string.Empty,
+                        ["kid"] = invoice.KID,
+                        ["issueDate"] = invoice.IssueDate.ToString("yyyy-MM-dd"),
+                        ["dueDate"] = invoice.DueDate.ToString("yyyy-MM-dd"),
+                        ["netAmount"] = invoice.NetAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["vatAmount"] = invoice.VatAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["totalAmount"] = invoice.TotalAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["currency"] = invoice.Currency,
+                        ["status"] = invoice.Status.ToString(),
+                        ["sellerName"] = invoice.SellerName,
+                        ["sellerOrgNumber"] = invoice.SellerOrgNumber,
+                        ["sellerAddress"] = invoice.SellerAddress ?? string.Empty,
+                        ["sellerEmail"] = invoice.SellerEmail ?? string.Empty,
+                        ["sellerPhone"] = invoice.SellerPhone ?? string.Empty,
+                        ["customerName"] = invoice.CustomerName,
+                        ["customerOrgNumber"] = invoice.CustomerOrgNumber ?? string.Empty,
+                        ["customerAddress"] = invoice.CustomerAddress ?? string.Empty,
+                        ["customerEmail"] = invoice.CustomerEmail ?? string.Empty,
+                        ["bankAccountNumber"] = invoice.BankAccountNumber ?? string.Empty,
+                        ["iban"] = invoice.IBAN ?? string.Empty,
+                        ["bic"] = invoice.BIC ?? string.Empty,
+                        ["sentDate"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss"),
+                        ["pdfUrl"] = invoice.PdfUrl ?? string.Empty,
+                        ["paidDate"] = invoice.PaidDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                        ["totalPaid"] = invoice.TotalPaid.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["remainingAmount"] = invoice.RemainingAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    },
+                    UserId: invoice.OrderHeader?.ApplicationUserId,
+                    ReferenceId: invoice.Id.ToString(),
+                    ReferenceType: "Invoice",
+                    Subject: invoice.Status == InvoiceStatus.Paid
+                        ? $"Payment Receipt - Invoice {invoice.InvoiceNumber}"
+                        : $"Invoice {invoice.InvoiceNumber} - Due {invoice.DueDate:dd MMM yyyy}"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send invoice email for Invoice {InvoiceId}", invoiceId);
+                throw;
+            }
+
+            _logger.LogInformation("Invoice {InvoiceId} email queued successfully", invoiceId);
             return true;
         }
 
