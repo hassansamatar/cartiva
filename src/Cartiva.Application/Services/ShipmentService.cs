@@ -130,7 +130,7 @@ public class ShipmentService : IShipmentService
                         Type: NotificationType.OrderShipped,
                         TemplateData: new Dictionary<string, object>
                         {
-                            ["orderNumber"] = shipment.OrderHeader.Id.ToString(),
+                            ["orderId"] = shipment.OrderHeader.Id.ToString(),
                             ["trackingNumber"] = shipment.TrackingNumber ?? "N/A",
                             ["carrier"] = shipment.Carrier ?? "Bring",
                             ["estimatedDeliveryDate"] = shipment.ShippingDate?.ToString("yyyy-MM-dd") ?? "TBD"
@@ -278,9 +278,11 @@ public class ShipmentService : IShipmentService
                         Type: NotificationType.OrderDelivered,
                         TemplateData: new Dictionary<string, object>
                         {
-                            ["orderNumber"] = shipment.OrderHeader.Id.ToString(),
+                            ["orderId"] = shipment.OrderHeader.Id.ToString(),
                             ["deliveryDate"] = shipment.DeliveredDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"),
-                            ["customerName"] = shipment.OrderHeader.Name
+                            ["name"] = string.IsNullOrWhiteSpace(shipment.OrderHeader.ApplicationUser?.Name)
+                                ? shipment.OrderHeader.Name
+                                : shipment.OrderHeader.ApplicationUser.Name
                         },
                         UserId: shipment.OrderHeader.ApplicationUserId,
                         ReferenceId: shipment.OrderHeader.Id.ToString(),

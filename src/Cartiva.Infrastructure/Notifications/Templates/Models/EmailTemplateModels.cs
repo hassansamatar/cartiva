@@ -2,8 +2,8 @@ namespace Cartiva.Infrastructure.Notifications.Templates.Models;
 
 public class OrderConfirmationModel
 {
-    public string OrderNumber { get; set; } = string.Empty;
-    public string CustomerName { get; set; } = string.Empty;
+    public string OrderId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public string OrderDate { get; set; } = string.Empty;
     public string TotalAmount { get; set; } = string.Empty;
     public List<string> Items { get; set; } = new();
@@ -11,22 +11,28 @@ public class OrderConfirmationModel
 
 public class OrderShippedModel
 {
-    public string OrderNumber { get; set; } = string.Empty;
+    public string OrderId { get; set; } = string.Empty;
     public string TrackingNumber { get; set; } = string.Empty;
     public string Carrier { get; set; } = string.Empty;
     public string EstimatedDeliveryDate { get; set; } = string.Empty;
+
+    public string OrderNumber
+    {
+        get => OrderId;
+        set => OrderId = value;
+    }
 }
 
 public class PasswordResetModel
 {
-    public string UserName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public string ResetLink { get; set; } = string.Empty;
     public string ExpirationTime { get; set; } = string.Empty;
 }
 
 public class WelcomeEmailModel
 {
-    public string UserName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public string? VerificationLink { get; set; }
 }
 

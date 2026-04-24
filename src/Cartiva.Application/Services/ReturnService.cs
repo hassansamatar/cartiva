@@ -242,6 +242,8 @@ public class ReturnService : IReturnService
         var rr = await _db.ReturnRequests
             .Include(r => r.ApplicationUser)
             .Include(r => r.OrderDetail)
+                .ThenInclude(o => o.OrderHeader)
+            .Include(r => r.OrderDetail)
                 .ThenInclude(o => o.ProductVariant)
                     .ThenInclude(pv => pv.Product)
             .FirstOrDefaultAsync(r => r.Id == id);
@@ -267,7 +269,7 @@ public class ReturnService : IReturnService
                         Type: NotificationType.ReturnRequestRejected,
                         TemplateData: new Dictionary<string, object>
                         {
-                            ["orderNumber"] = rr.OrderDetailId.ToString(),
+                            ["orderNumber"] = rr.OrderDetail?.OrderHeaderId.ToString() ?? string.Empty,
                             ["productName"] = rr.OrderDetail?.ProductVariant?.Product?.Name ?? "Product",
                             ["reason"] = note ?? "Does not meet return policy requirements"
                         },

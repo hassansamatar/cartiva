@@ -45,13 +45,13 @@
     </div>
 
     <div class="content">
-        <p>Hello @Model.Data["customerName"],</p>
+        <p>Hello @Model.Data["name"],</p>
 
         <p>We're writing to confirm that your order has been cancelled as requested.</p>
 
         <div class="cancel-box">
             <h3>Cancellation Details</h3>
-            <p><strong>Order Number:</strong> @Model.Data["orderNumber"]</p>
+            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
             <p><strong>Reason:</strong> @Model.Data["reason"]</p>
         </div>
 

@@ -142,10 +142,12 @@ namespace Cartiva.Application.Services
                             TemplateData: new Dictionary<string, object>
                             {
                                 ["invoiceNumber"] = invoiceNumber,
-                                ["orderNumber"] = orderId.ToString(),
+                                ["orderId"] = orderId.ToString(),
                                 ["totalAmount"] = invoice.TotalAmount.ToString("C"),
                                 ["dueDate"] = invoice.DueDate.ToString("yyyy-MM-dd"),
-                                ["customerName"] = invoice.CustomerName ?? order.Name
+                                ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name)
+                                    ? (invoice.CustomerName ?? order.Name)
+                                    : order.ApplicationUser.Name
                             },
                             UserId: order.ApplicationUserId,
                             ReferenceId: invoice.Id.ToString(),

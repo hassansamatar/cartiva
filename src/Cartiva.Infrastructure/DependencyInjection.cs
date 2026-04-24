@@ -1,5 +1,4 @@
 using Cartiva.Infrastructure.AddressService;
-using Cartiva.Infrastructure.EmailServices;
 using Cartiva.Infrastructure.ImageServices;
 using Cartiva.Infrastructure.Notifications;
 using Cartiva.Infrastructure.Notifications.Channels;
@@ -10,7 +9,6 @@ using Cartiva.Infrastructure.PaymentService;
 using Cartiva.Infrastructure.Promotions;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Infrastructure.ShippingServices;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,12 +21,6 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // ===========================================
-        // Legacy Email Service (Minimal - for Identity fallback only)
-        // NOTE: Use INotificationService for all business notifications
-        // ===========================================
-        services.AddScoped<IEmailSender, EmailSender>();
-
         // Image services
         services.AddScoped<IImageService, ImageService>();
 

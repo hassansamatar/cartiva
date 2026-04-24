@@ -1,0 +1,56 @@
+@model IEnumerable<Cartiva.Domain.Notification>
+
+@{
+    ViewData["Title"] = "Notification Test Dashboard";
+}
+
+<div class="container">
+    <h2>Notification Test Dashboard</h2>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Actions</h5>
+            <a asp-action="ProcessPending" class="btn btn-primary">Process Pending Notifications</a>
+        </div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Subject</th>
+                <th>Created</th>
+                <th>Processed</th>
+                <th>Sent</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var notification in Model)
+            {
+                <tr class="@(notification.Status == Cartiva.Domain.Enums.NotificationStatus.Failed ? "table-danger" : 
+                            notification.Status == Cartiva.Domain.Enums.NotificationStatus.Sent ? "table-success" : 
+                            notification.Status == Cartiva.Domain.Enums.NotificationStatus.Processing ? "table-warning" : "")">
+                    <td>@notification.Id</td>
+                    <td>@notification.Type</td>
+                    <td>@notification.Recipient</td>
+                    <td>
+                        <span class="badge bg-@(notification.Status == Cartiva.Domain.Enums.NotificationStatus.Sent ? "success" : 
+                                                notification.Status == Cartiva.Domain.Enums.NotificationStatus.Failed ? "danger" : 
+                                                notification.Status == Cartiva.Domain.Enums.NotificationStatus.Processing ? "warning" : "secondary")">
+                            @notification.Status
+                        </span>
+                    </td>
+                    <td>@notification.Subject</td>
+                    <td>@notification.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@(notification.ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</td>
+                    <td>@(notification.SentAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</td>
+                    <td>@(notification.ErrorMessage ?? "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

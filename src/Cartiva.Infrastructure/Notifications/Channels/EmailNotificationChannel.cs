@@ -155,8 +155,16 @@ public class EmailNotificationChannel : INotificationChannel
     {
         return new OrderConfirmationModel
         {
-            OrderNumber = data.TryGetValue("orderNumber", out var orderNum) ? orderNum.ToString() ?? "" : "",
-            CustomerName = data.TryGetValue("customerName", out var name) ? name.ToString() ?? "" : "",
+            OrderId = data.TryGetValue("orderId", out var orderId)
+                ? orderId.ToString() ?? ""
+                : data.TryGetValue("orderNumber", out var orderNum)
+                    ? orderNum.ToString() ?? ""
+                    : "",
+            Name = data.TryGetValue("name", out var name)
+                ? name.ToString() ?? ""
+                : data.TryGetValue("customerName", out var customerName)
+                    ? customerName.ToString() ?? ""
+                    : "",
             OrderDate = data.TryGetValue("orderDate", out var date) ? date.ToString() ?? "" : "",
             TotalAmount = data.TryGetValue("totalAmount", out var total) ? total.ToString() ?? "" : "",
             Items = new List<string>()
@@ -167,7 +175,11 @@ public class EmailNotificationChannel : INotificationChannel
     {
         return new OrderShippedModel
         {
-            OrderNumber = data.TryGetValue("orderNumber", out var orderNum) ? orderNum.ToString() ?? "" : "",
+            OrderId = data.TryGetValue("orderId", out var orderId)
+                ? orderId.ToString() ?? ""
+                : data.TryGetValue("orderNumber", out var orderNum)
+                    ? orderNum.ToString() ?? ""
+                    : "",
             TrackingNumber = data.TryGetValue("trackingNumber", out var tracking) ? tracking.ToString() ?? "" : "",
             Carrier = data.TryGetValue("carrier", out var carrier) ? carrier.ToString() ?? "" : "",
             EstimatedDeliveryDate = data.TryGetValue("estimatedDeliveryDate", out var date) ? date.ToString() ?? "" : ""
@@ -178,7 +190,11 @@ public class EmailNotificationChannel : INotificationChannel
     {
         return new PasswordResetModel
         {
-            UserName = data.TryGetValue("userName", out var name) ? name.ToString() ?? "" : "",
+            Name = data.TryGetValue("name", out var name)
+                ? name.ToString() ?? ""
+                : data.TryGetValue("userName", out var userName)
+                    ? userName.ToString() ?? ""
+                    : "",
             ResetLink = data.TryGetValue("resetLink", out var link) ? link.ToString() ?? "" : "",
             ExpirationTime = data.TryGetValue("expirationTime", out var exp) ? exp.ToString() ?? "24 hours" : "24 hours"
         };
@@ -188,7 +204,11 @@ public class EmailNotificationChannel : INotificationChannel
     {
         return new WelcomeEmailModel
         {
-            UserName = data.TryGetValue("userName", out var name) ? name.ToString() ?? "" : "",
+            Name = data.TryGetValue("name", out var name)
+                ? name.ToString() ?? ""
+                : data.TryGetValue("userName", out var userName)
+                    ? userName.ToString() ?? ""
+                    : "",
             VerificationLink = data.TryGetValue("verificationLink", out var link) ? link.ToString() : null
         };
     }

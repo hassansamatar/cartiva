@@ -1,11 +1,20 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.OrderConfirmationModel
-
+@model Cartiva.Domain.OrderHeader
+@{
+    Layout = null;
+    
+    var culture = string.Equals(Model.Currency, "NOK", StringComparison.OrdinalIgnoreCase)
+        ? new System.Globalization.CultureInfo("nb-NO")
+        : System.Globalization.CultureInfo.InvariantCulture;
+    
+    var totalAmount = string.Format(culture, "{0:C}", Model.OrderTotal);
+    var customerName = Model.ApplicationUser?.Name ?? Model.Name;
+}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Order Confirmation</title>
+    <title>Order Confirmation - @Model.OrderId</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -31,12 +40,6 @@
             margin: 20px 0;
             border-radius: 5px;
         }
-        .footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 12px;
-            color: #666;
-        }
         .button {
             display: inline-block;
             padding: 10px 20px;
@@ -46,6 +49,12 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -54,26 +63,26 @@
     </div>
 
     <div class="content">
-        <p>Hello @Model.CustomerName,</p>
+        <p>Hello @customerName,</p>
 
         <p>Thank you for your order! We're pleased to confirm that we've received your order and it's being processed.</p>
 
         <div class="order-details">
             <h3>Order Details</h3>
-            <p><strong>Order Number:</strong> @Model.OrderNumber</p>
-            <p><strong>Order Date:</strong> @Model.OrderDate</p>
-            <p><strong>Total Amount:</strong> @Model.TotalAmount</p>
+            <p><strong>Order Number:</strong> @Model.OrderId</p>
+            <p><strong>Order Date:</strong> @Model.OrderDate.ToString("yyyy-MM-dd")</p>
+            <p><strong>Total Amount:</strong> @totalAmount</p>
         </div>
 
         <p>We'll send you another email when your order ships.</p>
 
         <p>
-            <a href="https://cartiva.no/orders/@Model.OrderNumber" class="button">View Order Details</a>
+            <a href="https://cartiva.no/orders/@Model.OrderId" class="button">View Order Details</a>
         </p>
 
         <p>If you have any questions, please don't hesitate to contact us.</p>
 
-        <p>Best regards,<br/>The Cartiva Team</p>
+        <p>Best regards,<br />The Cartiva Team</p>
     </div>
 
     <div class="footer">

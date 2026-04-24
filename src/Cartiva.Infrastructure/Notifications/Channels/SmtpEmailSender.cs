@@ -26,9 +26,12 @@ public class SmtpEmailSender : ISmtpEmailSender
     {
         try
         {
+            var normalizedPassword = (_settings.Password ?? string.Empty).Replace(" ", string.Empty);
+
             using var client = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
             {
-                Credentials = new NetworkCredential(_settings.SenderEmail, _settings.Password),
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(_settings.SenderEmail, normalizedPassword),
                 EnableSsl = _settings.EnableSsl
             };
 
@@ -46,6 +49,11 @@ public class SmtpEmailSender : ISmtpEmailSender
 
             _logger.LogInformation("Email sent successfully to {Recipient}", to);
             return true;
+        }
+        catch (SmtpException ex)
+        {
+            _logger.LogError(ex, "SMTP authentication or transport failure for {Recipient}. Sender {SenderEmail} was rejected by {Server}:{Port}.", to, _settings.SenderEmail, _settings.SmtpServer, _settings.SmtpPort);
+            return false;
         }
         catch (Exception ex)
         {

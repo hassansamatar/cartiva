@@ -264,36 +264,24 @@ public class OrderService : IOrderService
 
             _logger.LogInformation("Order {OrderId} placed successfully for user {UserId}", orderHeader.Id, userId);
 
-            // Send order confirmation notification (fire-and-forget)
-            _ = Task.Run(async () =>
-            {
-                try
+            // Send order confirmation notification
+            var orderConfirmationRequest = new NotificationRequest(
+                Recipient: user.Email,
+                Type: NotificationType.OrderConfirmation,
+                TemplateData: new Dictionary<string, object>
                 {
-                    var user = await _db.Users.FindAsync(userId);
-                    if (user?.Email != null)
-                    {
-                        await _notificationService.SendAsync(new NotificationRequest(
-                            Recipient: user.Email,
-                            Type: NotificationType.OrderConfirmation,
-                            TemplateData: new Dictionary<string, object>
-                            {
-                                ["orderNumber"] = orderHeader.Id.ToString(),
-                                ["customerName"] = $"{orderHeader.Name}",
-                                ["orderDate"] = orderHeader.OrderDate.ToString("yyyy-MM-dd"),
-                                ["totalAmount"] = orderHeader.OrderTotal.ToString("C")
-                            },
-                            UserId: userId,
-                            ReferenceId: orderHeader.Id.ToString(),
-                            ReferenceType: "Order",
-                            Subject: $"Order Confirmation - Order #{orderHeader.Id}"
-                        ));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send order confirmation notification for order {OrderId}", orderHeader.Id);
-                }
-            });
+                    ["orderId"] = orderHeader.Id.ToString(),
+                    ["name"] = string.IsNullOrWhiteSpace(user.Name) ? orderHeader.Name : user.Name,
+                    ["orderDate"] = orderHeader.OrderDate.ToString("yyyy-MM-dd"),
+                    ["totalAmount"] = orderHeader.OrderTotal.ToString("C")
+                },
+                UserId: userId,
+                ReferenceId: orderHeader.Id.ToString(),
+                ReferenceType: "Order",
+                Subject: $"Order Confirmation - Order #{orderHeader.Id}"
+            );
+
+            await _notificationService.SendAsync(orderConfirmationRequest);
 
             return PlaceOrderResult.Succeeded(
                 orderHeader.Id,
@@ -394,7 +382,7 @@ public class OrderService : IOrderService
                         Type: NotificationType.PaymentReceived,
                         TemplateData: new Dictionary<string, object>
                         {
-                            ["orderNumber"] = orderId.ToString(),
+                            ["orderId"] = orderId.ToString(),
                             ["amount"] = order.OrderTotal.ToString("C"),
                             ["paymentDate"] = order.PaymentDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd")
                         },
@@ -451,9 +439,9 @@ public class OrderService : IOrderService
                         Type: NotificationType.OrderCancelled,
                         TemplateData: new Dictionary<string, object>
                         {
-                            ["orderNumber"] = orderId.ToString(),
+                            ["orderId"] = orderId.ToString(),
                             ["reason"] = reason ?? "Not specified",
-                            ["customerName"] = order.Name
+                            ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name) ? order.Name : order.ApplicationUser.Name
                         },
                         UserId: order.ApplicationUserId,
                         ReferenceId: orderId.ToString(),

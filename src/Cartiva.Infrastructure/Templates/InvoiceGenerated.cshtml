@@ -62,14 +62,14 @@
     </div>
 
     <div class="content">
-        <p>Hello @Model.Data["customerName"],</p>
+        <p>Hello @Model.Data["name"],</p>
 
-        <p>Your invoice is now ready for order <strong>#@Model.Data["orderNumber"]</strong>.</p>
+        <p>Your invoice is now ready for order <strong>#@Model.Data["orderId"]</strong>.</p>
 
         <div class="invoice-box">
             <h3>Invoice Details</h3>
             <p><strong>Invoice Number:</strong> @Model.Data["invoiceNumber"]</p>
-            <p><strong>Order Number:</strong> @Model.Data["orderNumber"]</p>
+            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
             <p><strong>Total Amount:</strong> @Model.Data["totalAmount"]</p>
             <p><strong>Due Date:</strong> @Model.Data["dueDate"]</p>
         </div>

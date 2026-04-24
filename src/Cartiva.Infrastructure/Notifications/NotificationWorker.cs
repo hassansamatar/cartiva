@@ -26,33 +26,53 @@ public class NotificationWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Notification Worker started");
+        _logger.LogInformation("🚀 Notification Worker STARTING...");
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                // Dequeue notification ID
-                var notificationId = await _queue.DequeueAsync(stoppingToken);
+            // Give the app time to fully start
+            await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
 
-                if (notificationId.HasValue)
+            _logger.LogInformation("✅ Notification Worker started and ready to process notifications");
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
                 {
-                    await ProcessNotificationAsync(notificationId.Value, stoppingToken);
+                    _logger.LogDebug("⏳ Waiting for notification in queue...");
+
+                    // Dequeue notification ID
+                    var notificationId = await _queue.DequeueAsync(stoppingToken);
+
+                    if (notificationId.HasValue)
+                    {
+                        _logger.LogInformation("📨 Dequeued notification {NotificationId} for processing", notificationId.Value);
+                        await ProcessNotificationAsync(notificationId.Value, stoppingToken);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("💤 No notification received, continuing loop...");
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("⏹️ Notification Worker stopping (operation cancelled)");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Error in notification worker loop - will retry in 5 seconds");
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // Expected when stopping
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in notification worker loop");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "💥 FATAL: Notification Worker failed to start");
+            throw;
         }
 
-        _logger.LogInformation("Notification Worker stopped");
+        _logger.LogInformation("🛑 Notification Worker stopped");
     }
 
     private async Task ProcessNotificationAsync(int notificationId, CancellationToken cancellationToken)

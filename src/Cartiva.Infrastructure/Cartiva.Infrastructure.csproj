@@ -19,4 +19,10 @@
     <ProjectReference Include="..\Cartiva.Persistence\Cartiva.Persistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Templates\**\*.cshtml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
