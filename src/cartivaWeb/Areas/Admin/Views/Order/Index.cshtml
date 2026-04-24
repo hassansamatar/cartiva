@@ -1,0 +1,145 @@
+@model IEnumerable<OrderHeader>
+@using System.Globalization
+@using Cartiva.Shared
+
+@{
+    ViewData["Title"] = "Order Management";
+    var currentStatus = ViewBag.CurrentStatus as string;
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var allOrders = Model.ToList();
+    var pendingCount = allOrders.Count(o => o.OrderStatus == SD.StatusPending);
+    var approvedCount = allOrders.Count(o => o.OrderStatus == SD.StatusApproved || o.OrderStatus == SD.StatusAwaitingShipmentApproval);
+    var shippedCount = allOrders.Count(o => o.OrderStatus == SD.StatusShipped);
+    var cancelledCount = allOrders.Count(o => o.OrderStatus == SD.StatusCancelled);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
+
+<div class="admin-dashboard">
+    <div class="container-fluid">
+        <h2><i class="bi bi-bag-check"></i> Order Management</h2>
+
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-warning">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-hourglass-split"></i> Pending</h5>
+                        <h3>@pendingCount</h3>
+                        <p>Awaiting action</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-check2-square"></i> Approved</h5>
+                        <h3>@approvedCount</h3>
+                        <p>Ready for fulfillment</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-truck"></i> Shipped</h5>
+                        <h3>@shippedCount</h3>
+                        <p>In progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-danger">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-x-circle"></i> Cancelled</h5>
+                        <h3>@cancelledCount</h3>
+                        <p>Closed orders</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <div class="section-header">
+                <h3><i class="bi bi-table"></i> All Orders</h3>
+                <div class="btn-group" role="group">
+                    <a asp-action="Index" asp-route-status="" class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-dark" : "btn-outline-dark")">All</a>
+                    <a asp-action="Index" asp-route-status="@SD.StatusPending" class="btn btn-sm @(currentStatus == SD.StatusPending ? "btn-warning" : "btn-outline-warning")">Pending</a>
+                    <a asp-action="Index" asp-route-status="@SD.StatusAwaitingShipmentApproval" class="btn btn-sm @(currentStatus == SD.StatusAwaitingShipmentApproval ? "btn-info" : "btn-outline-info")">Awaiting Shipment</a>
+                    <a asp-action="Index" asp-route-status="@SD.StatusShipped" class="btn btn-sm @(currentStatus == SD.StatusShipped ? "btn-success" : "btn-outline-success")">Shipped</a>
+                    <a asp-action="Index" asp-route-status="@SD.StatusCancelled" class="btn btn-sm @(currentStatus == SD.StatusCancelled ? "btn-danger" : "btn-outline-danger")">Cancelled</a>
+                </div>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <h4>No Orders Found</h4>
+                    <p>There are no orders matching your filter.</p>
+                </div>
+            }
+            else
+            {
+                <table id="ordersTable" class="table admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Customer</th>
+                            <th>Order Date</th>
+                            <th>Order Status</th>
+                            <th>Payment Status</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model)
+                        {
+                            <tr>
+                                <td><strong>#@order.Id</strong></td>
+                                <td>@order.Name</td>
+                                <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td><span class="badge-status @SD.GetOrderStatusBadgeClass(order.OrderStatus)">@order.OrderStatus</span></td>
+                                <td><span class="badge-status @SD.GetPaymentStatusBadgeClass(order.PaymentStatus)">@order.PaymentStatus</span></td>
+                                <td><strong>@order.OrderTotal.ToString("C", culture)</strong></td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        @if (order.OrderStatus != SD.StatusCancelled)
+                                        {
+                                            <a asp-action="Cancel" asp-route-orderId="@order.Id" class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Cancel Order">
+                                                <i class="bi bi-x-lg"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function () {
+            initAdminTable('#ordersTable', {
+                order: [[0, 'desc']],
+                columnDefs: [{ targets: [-1], orderable: false }]
+            });
+        });
+    </script>
+}

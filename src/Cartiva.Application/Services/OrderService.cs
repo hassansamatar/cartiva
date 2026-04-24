@@ -438,35 +438,32 @@ public class OrderService : IOrderService
         // Send order cancelled notification
         if (order.ApplicationUser?.Email != null)
         {
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await _notificationService.SendAsync(new NotificationRequest(
-                        Recipient: order.ApplicationUser.Email,
-                        Type: NotificationType.OrderCancelled,
-                        TemplateData: new Dictionary<string, object>
-                        {
-                            ["orderId"] = orderId.ToString(),
-                            ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name) ? order.Name : order.ApplicationUser.Name,
-                            ["orderDate"] = order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss"),
-                            ["orderTotal"] = order.OrderTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            ["currency"] = order.Currency,
-                            ["orderStatus"] = order.OrderStatus ?? string.Empty,
-                            ["paymentStatus"] = order.PaymentStatus ?? string.Empty,
-                            ["cancellationReason"] = reason ?? "Not specified"
-                        },
-                        UserId: order.ApplicationUserId,
-                        ReferenceId: orderId.ToString(),
-                        ReferenceType: "Order",
-                        Subject: $"Order Cancelled - Order #{orderId}"
-                    ));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send order cancelled notification for order {OrderId}", orderId);
-                }
-            });
+                await _notificationService.SendAsync(new NotificationRequest(
+                    Recipient: order.ApplicationUser.Email,
+                    Type: NotificationType.OrderCancelled,
+                    TemplateData: new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId.ToString(),
+                        ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name) ? order.Name : order.ApplicationUser.Name,
+                        ["orderDate"] = order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                        ["orderTotal"] = order.OrderTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["currency"] = order.Currency,
+                        ["orderStatus"] = order.OrderStatus ?? string.Empty,
+                        ["paymentStatus"] = order.PaymentStatus ?? string.Empty,
+                        ["cancellationReason"] = reason ?? "Not specified"
+                    },
+                    UserId: order.ApplicationUserId,
+                    ReferenceId: orderId.ToString(),
+                    ReferenceType: "Order",
+                    Subject: $"Order Cancelled - Order #{orderId}"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send order cancelled notification for order {OrderId}", orderId);
+            }
         }
 
         return OrderOperationResult.Succeeded("Order cancelled successfully.");

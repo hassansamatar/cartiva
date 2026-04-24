@@ -575,24 +575,15 @@ public class OrderController : Controller
             }
         }
 
-        order.OrderStatus = SD.StatusCancelled;
-
-        var shipment = order.Shipments?.FirstOrDefault();
-        if (shipment != null && shipment.ShipmentStatus != SD.ShipmentStatusCancelled)
+        var cancelResult = await _orderService.CancelOrderAsync(id, "Cancelled by customer");
+        if (!cancelResult.Success)
         {
-            shipment.ShipmentStatus = SD.ShipmentStatusCancelled;
-        }
-
-        foreach (var detail in order.OrderDetails)
-        {
-            var variant = await _db.ProductVariants.FindAsync(detail.ProductVariantId);
-            if (variant != null)
+            return Json(new
             {
-                variant.Stock += detail.Count;
-            }
+                success = false,
+                message = cancelResult.Message
+            });
         }
-
-        await _db.SaveChangesAsync();
 
         if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
         {
