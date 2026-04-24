@@ -1,5 +1,7 @@
 ﻿using Cartiva.Application.Abstractions;
+using Cartiva.Application.Interfaces;
 using Cartiva.Application.Services;
+using Cartiva.Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cartiva.Application;
@@ -43,6 +45,10 @@ public static class DependencyInjection
 
         // Home/Browsing services
         services.AddScoped<IHomeService, HomeService>();
+
+        // Notification services
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IChannelResolver, ChannelResolver>();
 
         return services;
     }

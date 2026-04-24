@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cartiva.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260419235509_AddVatPricingFields")]
-    partial class AddVatPricingFields
+    [Migration("20260423015943_SyncModel")]
+    partial class SyncModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -843,8 +843,8 @@ namespace Cartiva.Persistence.Migrations
 
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal?>("RefundAmount")
                         .HasColumnType("decimal(18,2)");
@@ -1208,9 +1208,6 @@ namespace Cartiva.Persistence.Migrations
 
                     b.Property<decimal>("DiscountPercent")
                         .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PriceExVat")
                         .HasColumnType("decimal(18,2)");

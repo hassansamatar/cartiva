@@ -41,15 +41,7 @@ namespace Cartiva.Application.Services
 
             var orderId = returnRequest.OrderDetail.OrderHeaderId;
 
-            // Get the invoice for this order
-            var invoice = await _db.Set<Invoice>()
-                .Include(i => i.Lines)
-                .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
-
-            if (invoice == null)
-                throw new InvalidOperationException($"No invoice found for Order {orderId}. Credit note cannot be created.");
-
-            // Check if credit note already exists for this return
+            // Check if credit note already exists for this return (idempotency)
             var existingCreditNote = await _db.Set<CreditNote>()
                 .FirstOrDefaultAsync(c => c.ReturnRequestId == returnRequestId, ct);
 
@@ -59,9 +51,31 @@ namespace Cartiva.Application.Services
                 return existingCreditNote;
             }
 
+            // Get the invoice for this order — AUTO-GENERATE if missing.
+            // This unifies the flow for both Customer and Company users.
+            var invoice = await _db.Set<Invoice>()
+                .Include(i => i.Lines)
+                .FirstOrDefaultAsync(i => i.OrderHeaderId == orderId, ct);
+
+            if (invoice == null)
+            {
+                _logger.LogInformation(
+                    "No invoice found for Order {OrderId}. Auto-generating invoice before creating credit note.",
+                    orderId);
+
+                // GenerateInvoiceFromOrderAsync works for both Customer and Company users
+                invoice = await _invoiceService.GenerateInvoiceFromOrderAsync(orderId, ct);
+
+                // Reload with Lines to ensure navigation is populated
+                invoice = await _db.Set<Invoice>()
+                    .Include(i => i.Lines)
+                    .FirstAsync(i => i.Id == invoice.Id, ct);
+            }
+
             var sequence = await _invoiceService.GetNextCreditNoteSequenceAsync(ct);
             var creditNoteNumber = SD.GenerateCreditNoteNumber(sequence);
 
+            // Unified logic: always create credit note from the invoice
             var creditNote = CreditNote.FromReturnRequest(returnRequest, invoice);
             creditNote.CreditNoteNumber = creditNoteNumber;
 
@@ -76,7 +90,7 @@ namespace Cartiva.Application.Services
             }
             else
             {
-                // Fallback: create line from order detail
+                // This is the primary path for non-invoice orders, and a fallback for invoice orders
                 var creditLine = new CreditNoteLine
                 {
                     Description = returnRequest.OrderDetail.ProductVariant?.Product?.Name ?? "Returned Item",
@@ -89,10 +103,10 @@ namespace Cartiva.Application.Services
             }
 
             creditNote.RecalculateTotals();
-
+            creditNote.Issue();
             // Set refund amount on return request
             returnRequest.RefundAmount = creditNote.TotalAmount;
-
+            
             _db.Set<CreditNote>().Add(creditNote);
             await _db.SaveChangesAsync(ct);
 
@@ -161,6 +175,15 @@ namespace Cartiva.Application.Services
                 .Include(c => c.OriginalInvoice)
                 .Include(c => c.ReturnRequest)
                 .FirstOrDefaultAsync(c => c.Id == creditNoteId, ct);
+        }
+
+        public async Task<CreditNote?> GetCreditNoteByReturnRequestIdAsync(int returnRequestId, CancellationToken ct = default)
+        {
+            return await _db.CreditNotes
+                .Include(c => c.Lines)
+                .Include(c => c.OriginalInvoice)
+                .Include(c => c.ReturnRequest)
+                .FirstOrDefaultAsync(c => c.ReturnRequestId == returnRequestId, ct);
         }
 
         public async Task<List<CreditNote>> GetCreditNotesForInvoiceAsync(int invoiceId, CancellationToken ct = default)

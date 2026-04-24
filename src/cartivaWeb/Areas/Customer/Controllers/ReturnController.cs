@@ -1,7 +1,9 @@
 using Cartiva.Application.Abstractions;
+using Cartiva.Domain.ViewModels;
+using Cartiva.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Cartiva.Shared;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
 
 namespace CartivaWeb.Areas.Customer.Controllers
@@ -17,7 +19,8 @@ namespace CartivaWeb.Areas.Customer.Controllers
             _returnService = returnService;
         }
 
-        // GET: /Customer/Return/Create?orderDetailId=5
+        [HttpGet]
+        // GET: Create return
         [HttpGet]
         public async Task<IActionResult> Create(int orderDetailId)
         {
@@ -29,47 +32,63 @@ namespace CartivaWeb.Areas.Customer.Controllers
             {
                 TempData["error"] = validation.ErrorMessage;
 
-                // Try to get the order header ID for redirect
-                var returnRequest = await _returnService.GetReturnRequestByIdAsync(orderDetailId);
-                if (returnRequest?.OrderDetail?.OrderHeaderId != null)
-                {
-                    return RedirectToAction("Details", "Order", new { area = "Customer", id = returnRequest.OrderDetail.OrderHeaderId });
-                }
-                return RedirectToAction("Index", "Order", new { area = "Customer" });
+                return RedirectToAction("Details", "Order",
+                    new { area = "Customer", id = validation.OrderDetail?.OrderHeaderId });
             }
 
-            ViewBag.OrderDetail = validation.OrderDetail;
-            ViewBag.DaysRemaining = validation.DaysRemaining;
-            ViewBag.ReturnReasons = _returnService.GetReturnReasons();
-            return View();
+            var vm = new ReturnVm
+            {
+                OrderDetailId = orderDetailId,
+                OrderDetail = validation.OrderDetail!,
+                DaysRemaining = validation.DaysRemaining,
+                Reasons = SD.GetReturnReasons()
+                    .Select(r => new SelectListItem
+                    {
+                        Text = r,
+                        Value = r
+                    })
+            };
+
+            return View(vm);
         }
 
-        // POST: /Customer/Return/Create
+        // POST: Create return
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(int orderDetailId, string reason, string? description, int quantity)
+        public async Task<IActionResult> Create(ReturnVm vm, string reason, string? description, int quantity)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            var result = await _returnService.CreateReturnRequestAsync(userId, orderDetailId, reason, description, quantity);
-
-            if (result.Success)
+            // basic safety check
+            if (vm.OrderDetailId <= 0)
             {
-                TempData["success"] = result.Message;
-            }
-            else
-            {
-                TempData["error"] = result.Message;
+                TempData["error"] = "Invalid order item.";
+                return RedirectToAction("Index", "Order", new { area = "Customer" });
             }
 
-            // Get the order detail to find the order header ID for redirect
-            var validation = await _returnService.ValidateReturnRequestAsync(userId, orderDetailId);
+            var result = await _returnService.CreateReturnRequestAsync(
+                userId,
+                vm.OrderDetailId,
+                reason,
+                description,
+                quantity
+            );
+
+            TempData[result.Success ? "success" : "error"] = result.Message;
+
+            // get order header for redirect
+            var validation = await _returnService.ValidateReturnRequestAsync(userId, vm.OrderDetailId);
+
             if (validation.OrderDetail?.OrderHeaderId != null)
             {
-                return RedirectToAction("Details", "Order", new { area = "Customer", id = validation.OrderDetail.OrderHeaderId });
+                return RedirectToAction("Details", "Order", new
+                {
+                    area = "Customer",
+                    id = validation.OrderDetail.OrderHeaderId
+                });
             }
 
-            return RedirectToAction("Index", "Order", new { area = "Customer" });
+            return RedirectToAction("History", "Order", new { area = "Customer" });
         }
 
         // GET: /Customer/Return/MyReturns

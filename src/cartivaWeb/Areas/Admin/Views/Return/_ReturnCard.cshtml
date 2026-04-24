@@ -13,68 +13,110 @@
 <div class="card mb-3 shadow-sm">
     <div class="card-body">
         <div class="row">
-            <!-- Item Info -->
+
+            <!-- ITEM INFO -->
             <div class="col-md-4">
                 <h6 class="mb-1">@productName</h6>
+
                 <span class="badge bg-secondary">@color</span>
                 <span class="text-muted small ms-1">× @Model.Quantity</span>
-                <div class="mt-1">
-                    <small class="text-muted">
-                        Order <a asp-area="Customer" asp-controller="Order" asp-action="Details" asp-route-id="@orderId">#@orderId</a>
-                    </small>
+
+                <div class="mt-2">
+                    <a asp-area="Admin"
+                       asp-controller="CreditNote"
+                       asp-action="DetailsByReturn"
+                       asp-route-returnRequestId="@Model.Id"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-receipt"></i> View Credit Note (Order #@orderId)
+                    </a>
+                    <a asp-area="Admin"
+                       asp-controller="CreditNote"
+                       asp-action="Test"
+                       
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-receipt"></i> Test (Order #@orderId)
+                    </a>
                 </div>
+
                 <div class="mt-1">
                     <i class="bi bi-person me-1"></i>
-                    <small>@(Model.ApplicationUser?.Name ?? Model.ApplicationUser?.Email ?? "Customer")</small>
+                    <small>
+                        @(Model.ApplicationUser?.Name ?? Model.ApplicationUser?.Email ?? "Customer")
+                    </small>
                 </div>
             </div>
 
-            <!-- Return Details -->
+            <!-- RETURN DETAILS -->
             <div class="col-md-4">
                 <div class="mb-1">
                     <span class="badge bg-light text-dark border">@Model.Reason</span>
                 </div>
+
                 @if (!string.IsNullOrEmpty(Model.Description))
                 {
                     <p class="small text-muted mb-1">@Model.Description</p>
                 }
+
                 <small class="text-muted">
-                    <i class="bi bi-calendar"></i> @Model.RequestDate.ToString("dd MMM yyyy HH:mm")
+                    <i class="bi bi-calendar"></i>
+                    @Model.RequestDate.ToString("dd MMM yyyy HH:mm")
                 </small>
             </div>
 
-            <!-- Status & Actions -->
+            <!-- STATUS & ACTIONS -->
             <div class="col-md-4 text-end">
+
                 <div class="mb-2">
-                    <span class="badge @SD.GetReturnStatusBadgeClass(Model.Status) fs-6">@Model.Status</span>
-                    <div class="fw-bold mt-1">@refundAmount.ToString("C", culture)</div>
+                    <span class="badge @SD.GetReturnStatusBadgeClass(Model.Status) fs-6">
+                        @Model.Status
+                    </span>
+
+                    <div class="fw-bold mt-1">
+                        @refundAmount.ToString("C", culture)
+                    </div>
                 </div>
 
-                @if (Model.Status == SD.ReturnStatusPending)
+                @if (string.Equals(Model.Status, SD.ReturnStatusPending, StringComparison.OrdinalIgnoreCase))
                 {
                     <div class="d-flex justify-content-end gap-1 flex-wrap">
-                        <form asp-area="Admin" asp-controller="Return" asp-action="Approve" asp-route-id="@Model.Id" method="post" class="d-inline">
+
+                        <form asp-area="Admin"
+                              asp-controller="Return"
+                              asp-action="Approve"
+                              asp-route-id="@Model.Id"
+                              method="post">
                             @Html.AntiForgeryToken()
-                            <input type="hidden" name="adminNote" value="" />
                             <button type="submit" class="btn btn-sm btn-outline-success">
                                 <i class="bi bi-check-lg"></i> Approve
                             </button>
                         </form>
-                        <form asp-area="Admin" asp-controller="Return" asp-action="Reject" asp-route-id="@Model.Id" method="post" class="d-inline">
+
+                        <form asp-area="Admin"
+                              asp-controller="Return"
+                              asp-action="Reject"
+                              asp-route-id="@Model.Id"
+                              method="post">
                             @Html.AntiForgeryToken()
-                            <input type="hidden" name="adminNote" value="" />
                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-x-lg"></i> Reject
                             </button>
                         </form>
+
                     </div>
                 }
-                else if (Model.Status == SD.ReturnStatusApproved)
+                else if (string.Equals(Model.Status, SD.ReturnStatusApproved, StringComparison.OrdinalIgnoreCase))
                 {
-                    <form asp-area="Admin" asp-controller="Return" asp-action="Refund" asp-route-id="@Model.Id" method="post"
-                          class="btn-swal-confirm-form" data-swal-title="Process refund of @refundAmount.ToString("C", culture)?"
+                    <form asp-area="Admin"
+                          asp-controller="Return"
+                          asp-action="Refund"
+                          asp-route-id="@Model.Id"
+                          method="post"
+                          class="btn-swal-confirm-form"
+                          data-swal-title="Process refund of @refundAmount.ToString("C", culture)?"
                           data-swal-text="This will issue a Stripe refund to the customer.">
+
                         @Html.AntiForgeryToken()
+
                         <button type="submit" class="btn btn-sm btn-success">
                             <i class="bi bi-credit-card"></i> Process Refund
                         </button>
@@ -82,19 +124,28 @@
                 }
                 else
                 {
-                    @if (!string.IsNullOrEmpty(Model.AdminNote))
+                    if (!string.IsNullOrEmpty(Model.AdminNote))
                     {
-                        <small class="text-muted d-block"><i class="bi bi-chat-dots"></i> @Model.AdminNote</small>
+                        <small class="text-muted d-block">
+                            <i class="bi bi-chat-dots"></i> @Model.AdminNote
+                        </small>
                     }
-                    @if (Model.RefundDate.HasValue)
+
+                    if (Model.RefundDate.HasValue)
                     {
-                        <small class="text-muted d-block">Refunded @Model.RefundDate.Value.ToString("dd MMM yyyy")</small>
+                        <small class="text-muted d-block">
+                            Refunded @Model.RefundDate.Value.ToString("dd MMM yyyy")
+                        </small>
                     }
-                    @if (!string.IsNullOrEmpty(Model.RefundId))
+
+                    if (!string.IsNullOrEmpty(Model.RefundId))
                     {
-                        <small class="text-muted d-block">Stripe: @Model.RefundId</small>
+                        <small class="text-muted d-block">
+                            Stripe: @Model.RefundId
+                        </small>
                     }
                 }
+
             </div>
         </div>
     </div>

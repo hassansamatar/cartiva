@@ -13,15 +13,15 @@ public class ProductVariant
     // Nullable for products without sizes (accessories)
     public int? SizeValueId { get; set; }
 
-    [ForeignKey("SizeValueId")]
+    [ForeignKey(nameof(SizeValueId))]
     public SizeValue? SizeValue { get; set; }
 
     // =========================
-    // PRICING WITH VAT BREAKDOWN
+    // PRICING (SOURCE OF TRUTH)
     // =========================
 
     /// <summary>
-    /// Base price excluding VAT
+    /// Base price excluding VAT (stored in DB)
     /// </summary>
     [Column(TypeName = "decimal(18,2)")]
     [Range(0, 100000)]
@@ -34,64 +34,74 @@ public class ProductVariant
     public decimal VatRate { get; set; } = 25.00m;
 
     /// <summary>
-    /// Calculated VAT amount: PriceExVat * (VatRate / 100)
+    /// VAT amount
     /// </summary>
     [NotMapped]
-    public decimal VatAmount => PriceExVat * (VatRate / 100m);
+    public decimal VatAmount =>
+        Math.Round(PriceExVat * (VatRate / 100m), 2);
 
     /// <summary>
-    /// Price including VAT (what customer pays): PriceExVat + VatAmount
+    /// Price including VAT
     /// </summary>
     [NotMapped]
-    public decimal PriceIncVat => PriceExVat + VatAmount;
+    public decimal PriceIncVat =>
+        Math.Round(PriceExVat + VatAmount, 2);
 
     /// <summary>
-    /// Legacy Price field - now maps to PriceIncVat for backward compatibility
+    /// Backward-compatible price (used across the app)
+    /// NOT stored in DB
     /// </summary>
-    [Column(TypeName = "decimal(18,2)")]
-    [Range(1, 100000)]
-    public decimal Price { get; set; }
+    [NotMapped]
+    public decimal Price => PriceIncVat;
 
     // =========================
-    // DISCOUNT FIELDS
+    // DISCOUNTS
     // =========================
 
     /// <summary>
-    /// Discount percentage (e.g., 10.00 for 10% off)
+    /// Discount percentage (0–100)
     /// </summary>
     [Column(TypeName = "decimal(5,2)")]
     [Range(0, 100)]
     public decimal DiscountPercent { get; set; } = 0;
 
     /// <summary>
-    /// Calculated discount amount based on PriceIncVat
+    /// Discount amount (based on VAT-inclusive price)
     /// </summary>
     [NotMapped]
-    public decimal DiscountAmount => PriceIncVat * (DiscountPercent / 100m);
+    public decimal DiscountAmount =>
+        Math.Round(PriceIncVat * (DiscountPercent / 100m), 2);
 
     /// <summary>
-    /// Final price after discount (including VAT)
+    /// Final price including VAT after discount
     /// </summary>
     [NotMapped]
-    public decimal FinalPrice => PriceIncVat - DiscountAmount;
+    public decimal FinalPrice =>
+        Math.Round(PriceIncVat - DiscountAmount, 2);
 
     /// <summary>
-    /// Final price excluding VAT (after discount)
+    /// Final price excluding VAT after discount
     /// </summary>
     [NotMapped]
-    public decimal FinalPriceExVat => FinalPrice / (1 + VatRate / 100m);
+    public decimal FinalPriceExVat =>
+        Math.Round(FinalPrice / (1 + VatRate / 100m), 2);
 
     /// <summary>
     /// VAT amount on final price
     /// </summary>
     [NotMapped]
-    public decimal FinalVatAmount => FinalPrice - FinalPriceExVat;
+    public decimal FinalVatAmount =>
+        Math.Round(FinalPrice - FinalPriceExVat, 2);
 
     /// <summary>
-    /// Whether this variant has an active discount
+    /// Whether discount is active
     /// </summary>
     [NotMapped]
     public bool HasDiscount => DiscountPercent > 0;
+
+    // =========================
+    // INVENTORY & RELATIONS
+    // =========================
 
     [Range(0, 1000)]
     public int Stock { get; set; }
@@ -99,7 +109,7 @@ public class ProductVariant
     [Required]
     public int ProductId { get; set; }
 
-    [ForeignKey("ProductId")]
+    [ForeignKey(nameof(ProductId))]
     public Product Product { get; set; }
 
     public ICollection<Review>? Reviews { get; set; }
@@ -109,22 +119,20 @@ public class ProductVariant
     // =========================
 
     /// <summary>
-    /// Sets price from an inclusive VAT amount (calculates PriceExVat automatically)
+    /// Set price from VAT-inclusive value
     /// </summary>
     public void SetPriceIncVat(decimal priceIncVat, decimal vatRate = 25.00m)
     {
         VatRate = vatRate;
-        PriceExVat = priceIncVat / (1 + vatRate / 100m);
-        Price = priceIncVat; // Keep legacy field in sync
+        PriceExVat = Math.Round(priceIncVat / (1 + vatRate / 100m), 2);
     }
 
     /// <summary>
-    /// Sets price from an exclusive VAT amount
+    /// Set price from VAT-exclusive value
     /// </summary>
     public void SetPriceExVat(decimal priceExVat, decimal vatRate = 25.00m)
     {
         VatRate = vatRate;
-        PriceExVat = priceExVat;
-        Price = PriceIncVat; // Keep legacy field in sync
+        PriceExVat = Math.Round(priceExVat, 2);
     }
 }

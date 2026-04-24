@@ -1,11 +1,14 @@
 using Cartiva.Infrastructure.AddressService;
-using Cartiva.Infrastructure.EmailServices;
 using Cartiva.Infrastructure.ImageServices;
+using Cartiva.Infrastructure.Notifications;
+using Cartiva.Infrastructure.Notifications.Channels;
+using Cartiva.Infrastructure.Notifications.Interfaces;
+using Cartiva.Infrastructure.Notifications.Queue;
+using Cartiva.Infrastructure.Notifications.Templates;
 using Cartiva.Infrastructure.PaymentService;
 using Cartiva.Infrastructure.Promotions;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Infrastructure.ShippingServices;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,11 +21,6 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Email services
-        services.AddScoped<IEmailSender, EmailSender>();
-        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
-        services.AddScoped<EmailSender>(); // For direct injection when needed
-
         // Image services
         services.AddScoped<IImageService, ImageService>();
 
@@ -53,6 +51,29 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(baseUrl);
             client.DefaultRequestHeaders.Add("Accept", "application/xml");
         });
+
+        // ===========================================
+        // Notification System
+        // ===========================================
+
+        // Queue (Singleton for shared queue across app)
+        services.AddSingleton<INotificationQueue, NotificationQueue>();
+
+        // Template renderer
+        services.AddSingleton<ITemplateRenderer, RazorLightTemplateRenderer>();
+
+        // SMTP sender
+        services.AddScoped<ISmtpEmailSender, SmtpEmailSender>();
+
+        // Notification channels
+        services.AddScoped<INotificationChannel, EmailNotificationChannel>();
+        services.AddScoped<INotificationChannel, SmsNotificationChannel>();
+
+        // Channel resolver (must be scoped due to channel dependencies)
+        services.AddScoped<ChannelResolver>();
+
+        // Background worker
+        services.AddHostedService<NotificationWorker>();
 
         return services;
     }

@@ -1,0 +1,86 @@
+@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Delivered</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .delivery-box {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 Order Delivered!</h1>
+    </div>
+
+    <div class="content">
+        <p>Good news! Your order has been successfully delivered.</p>
+
+        <div class="delivery-box">
+            <h3>Delivery Confirmation</h3>
+            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
+            <p><strong>Delivered On:</strong> @Model.Data["deliveryDate"]</p>
+            <p><strong>Recipient:</strong> @Model.Data["name"]</p>
+        </div>
+
+        <p>We hope you're satisfied with your purchase! If you have any questions or concerns, please don't hesitate to reach out.</p>
+
+        <p>
+            <a href="https://cartiva.no/orders/@Model.Data["orderId"]" class="button">View Order Details</a>
+        </p>
+
+        <p><strong>Need to return something?</strong> You have 30 days from delivery to initiate a return.</p>
+
+        <p>Thank you for shopping with us!</p>
+
+        <p>Best regards,<br/>The Cartiva Team</p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; @DateTime.UtcNow.Year Cartiva AS. All rights reserved.</p>
+        <p>Exampleveien 1, 0655 Oslo | <a href="mailto:post@cartiva.no">post@cartiva.no</a></p>
+    </div>
+</body>
+</html>

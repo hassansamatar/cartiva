@@ -1,0 +1,77 @@
+@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Return Request Received</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2196F3;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .return-box {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Return Request Received</h1>
+    </div>
+
+    <div class="content">
+        <p>We've received your return request and will review it shortly.</p>
+
+        <div class="return-box">
+            <h3>Return Details</h3>
+            <p><strong>Order Number:</strong> @Model.Data["orderNumber"]</p>
+            <p><strong>Product:</strong> @Model.Data["productName"]</p>
+            <p><strong>Quantity:</strong> @Model.Data["quantity"]</p>
+            <p><strong>Refund Amount:</strong> @Model.Data["refundAmount"]</p>
+        </div>
+
+        <h3>What Happens Next?</h3>
+        <ul>
+            <li>Our team will review your return request within 1-2 business days</li>
+            <li>You'll receive an email with approval or further instructions</li>
+            <li>Once approved, we'll provide return shipping instructions</li>
+            <li>Refunds are processed within 5-10 business days after we receive the item</li>
+        </ul>
+
+        <p>If you have any questions about your return, please don't hesitate to contact us.</p>
+
+        <p>Best regards,<br/>The Cartiva Team</p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; @DateTime.UtcNow.Year Cartiva AS. All rights reserved.</p>
+        <p>Exampleveien 1, 0655 Oslo | <a href="mailto:post@cartiva.no">post@cartiva.no</a></p>
+    </div>
+</body>
+</html>

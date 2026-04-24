@@ -3,9 +3,10 @@
 #nullable disable
 
 using Cartiva.Persistence;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -17,10 +18,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
-using Cartiva.Persistence;
 
 namespace CartivaWeb.Areas.Identity.Pages.Account
 {
@@ -31,9 +30,9 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
         private readonly IUserStore<ApplicationUser> _userStore;
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
-        private readonly IEmailSender _emailSender;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _db;
+        private readonly INotificationService _notificationService;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
@@ -41,17 +40,17 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
             SignInManager<ApplicationUser> signInManager,
             ILogger<RegisterModel> logger,
             RoleManager<IdentityRole> roleManager,
-            IEmailSender emailSender,
-            ApplicationDbContext db)
+            ApplicationDbContext db,
+            INotificationService notificationService)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
-            _emailSender = emailSender;
             _roleManager = roleManager;
             _db = db;
+            _notificationService = notificationService;
         }
 
         [BindProperty]
@@ -162,8 +161,18 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
                         values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    // Send welcome email notification using new notification system
+                    await _notificationService.SendAsync(new NotificationRequest(
+                        Recipient: Input.Email,
+                        Type: NotificationType.WelcomeEmail,
+                        TemplateData: new Dictionary<string, object>
+                        {
+                            ["name"] = Input.Name,
+                            ["verificationLink"] = callbackUrl
+                        },
+                        UserId: userId,
+                        Subject: "Welcome to Cartiva!"
+                    ));
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

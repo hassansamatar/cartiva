@@ -1,0 +1,72 @@
+@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Cancelled</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f44336;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .cancel-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Order Cancelled</h1>
+    </div>
+
+    <div class="content">
+        <p>Hello @Model.Data["name"],</p>
+
+        <p>We're writing to confirm that your order has been cancelled as requested.</p>
+
+        <div class="cancel-box">
+            <h3>Cancellation Details</h3>
+            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
+            <p><strong>Reason:</strong> @Model.Data["reason"]</p>
+        </div>
+
+        <p>If payment was already processed, you will receive a full refund within 5-10 business days to your original payment method.</p>
+
+        <p>If you cancelled by mistake or have any questions, please contact our customer service team immediately.</p>
+
+        <p>We hope to serve you again in the future.</p>
+
+        <p>Best regards,<br/>The Cartiva Team</p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; @DateTime.UtcNow.Year Cartiva AS. All rights reserved.</p>
+        <p>Exampleveien 1, 0655 Oslo | <a href="mailto:post@cartiva.no">post@cartiva.no</a></p>
+    </div>
+</body>
+</html>

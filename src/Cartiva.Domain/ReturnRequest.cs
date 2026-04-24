@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cartiva.Shared;
 
 namespace Cartiva.Domain
 {
@@ -12,20 +13,20 @@ namespace Cartiva.Domain
         [Required]
         public int OrderDetailId { get; set; }
 
-        [ForeignKey("OrderDetailId")]
+        [ForeignKey(nameof(OrderDetailId))]
         [ValidateNever]
-        public OrderDetail OrderDetail { get; set; }
+        public OrderDetail OrderDetail { get; set; } = null!;
 
         [Required]
-        public string ApplicationUserId { get; set; }
+        public string ApplicationUserId { get; set; } = null!;
 
-        [ForeignKey("ApplicationUserId")]
+        [ForeignKey(nameof(ApplicationUserId))]
         [ValidateNever]
-        public ApplicationUser ApplicationUser { get; set; }
+        public ApplicationUser ApplicationUser { get; set; } = null!;
 
         [Required]
-        [StringLength(50)]
-        public string Reason { get; set; }
+        [StringLength(100)]
+        public string Reason { get; set; } = null!;
 
         [StringLength(500)]
         public string? Description { get; set; }
@@ -36,7 +37,7 @@ namespace Cartiva.Domain
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;
 
         [StringLength(30)]
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = SD.ReturnStatusPending;
 
         // Admin response
         public string? AdminNote { get; set; }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cartiva.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260420002252_UpdateExistingOrdersVatData")]
-    partial class UpdateExistingOrdersVatData
+    [Migration("20260423004420_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1208,9 +1208,6 @@ namespace Cartiva.Persistence.Migrations
 
                     b.Property<decimal>("DiscountPercent")
                         .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PriceExVat")
                         .HasColumnType("decimal(18,2)");

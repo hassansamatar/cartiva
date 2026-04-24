@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Cartiva.Shared.Configuration;
@@ -15,17 +17,20 @@ namespace Cartiva.Application.Services
         private readonly ILogger<InvoiceService> _logger;
         private readonly CartivaContact _cartivaContact;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
 
         public InvoiceService(
             ApplicationDbContext db,
             ILogger<InvoiceService> logger,
             CartivaContact cartivaContact,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            INotificationService notificationService)
         {
             _db = db;
             _logger = logger;
             _cartivaContact = cartivaContact;
             _configuration = configuration;
+            _notificationService = notificationService;
         }
 
         public async Task<Invoice> GenerateInvoiceFromOrderAsync(int orderId, CancellationToken ct = default)
@@ -123,6 +128,39 @@ namespace Cartiva.Application.Services
             await _db.SaveChangesAsync(ct);
 
             _logger.LogInformation("Generated invoice {InvoiceNumber} for Order {OrderId}", invoiceNumber, orderId);
+
+            // Send invoice generated notification
+            if (order.ApplicationUser?.Email != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.SendAsync(new NotificationRequest(
+                            Recipient: order.ApplicationUser.Email,
+                            Type: NotificationType.InvoiceGenerated,
+                            TemplateData: new Dictionary<string, object>
+                            {
+                                ["invoiceNumber"] = invoiceNumber,
+                                ["orderId"] = orderId.ToString(),
+                                ["totalAmount"] = invoice.TotalAmount.ToString("C"),
+                                ["dueDate"] = invoice.DueDate.ToString("yyyy-MM-dd"),
+                                ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name)
+                                    ? (invoice.CustomerName ?? order.Name)
+                                    : order.ApplicationUser.Name
+                            },
+                            UserId: order.ApplicationUserId,
+                            ReferenceId: invoice.Id.ToString(),
+                            ReferenceType: "Invoice",
+                            Subject: $"Invoice {invoiceNumber} - Order #{orderId}"
+                        ));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send invoice notification for invoice {InvoiceNumber}", invoiceNumber);
+                    }
+                });
+            }
 
             return invoice;
         }
