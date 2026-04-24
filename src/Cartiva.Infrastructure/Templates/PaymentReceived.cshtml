@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.PaymentReceivedModel
 
 <!DOCTYPE html>
 <html>
@@ -55,9 +55,9 @@
 
         <div class="payment-box">
             <h3>Payment Details</h3>
-            <p><strong>Order Number:</strong> @Model.Data["orderNumber"]</p>
-            <p><strong>Amount Paid:</strong> @Model.Data["amount"]</p>
-            <p><strong>Payment Date:</strong> @Model.Data["paymentDate"]</p>
+            <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
+            <p><strong>Amount Paid:</strong> @Model.Amount</p>
+            <p><strong>Payment Date:</strong> @Model.PaymentDate</p>
         </div>
 
         <p>Your order is now being processed and will be shipped soon. You'll receive a tracking number once your order ships.</p>

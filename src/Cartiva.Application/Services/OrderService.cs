@@ -382,9 +382,17 @@ public class OrderService : IOrderService
                         Type: NotificationType.PaymentReceived,
                         TemplateData: new Dictionary<string, object>
                         {
+                            ["paymentId"] = "0",
+                            ["invoiceId"] = "0",
                             ["orderId"] = orderId.ToString(),
-                            ["amount"] = order.OrderTotal.ToString("C"),
-                            ["paymentDate"] = order.PaymentDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd")
+                            ["amount"] = order.OrderTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            ["paymentDate"] = order.PaymentDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                            ["paymentReference"] = order.PaymentIntentId ?? string.Empty,
+                            ["paymentMethod"] = "Card",
+                            ["transactionId"] = paymentIntentId,
+                            ["invoiceNumber"] = string.Empty,
+                            ["customerName"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name) ? order.Name : order.ApplicationUser.Name,
+                            ["currency"] = order.Currency
                         },
                         UserId: order.ApplicationUserId,
                         ReferenceId: orderId.ToString(),
@@ -440,8 +448,13 @@ public class OrderService : IOrderService
                         TemplateData: new Dictionary<string, object>
                         {
                             ["orderId"] = orderId.ToString(),
-                            ["reason"] = reason ?? "Not specified",
-                            ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name) ? order.Name : order.ApplicationUser.Name
+                            ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name) ? order.Name : order.ApplicationUser.Name,
+                            ["orderDate"] = order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                            ["orderTotal"] = order.OrderTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            ["currency"] = order.Currency,
+                            ["orderStatus"] = order.OrderStatus ?? string.Empty,
+                            ["paymentStatus"] = order.PaymentStatus ?? string.Empty,
+                            ["cancellationReason"] = reason ?? "Not specified"
                         },
                         UserId: order.ApplicationUserId,
                         ReferenceId: orderId.ToString(),

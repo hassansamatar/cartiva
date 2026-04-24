@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.OrderCancelledModel
 
 <!DOCTYPE html>
 <html>
@@ -45,14 +45,14 @@
     </div>
 
     <div class="content">
-        <p>Hello @Model.Data["name"],</p>
+        <p>Hello @Model.Name,</p>
 
         <p>We're writing to confirm that your order has been cancelled as requested.</p>
 
         <div class="cancel-box">
             <h3>Cancellation Details</h3>
-            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
-            <p><strong>Reason:</strong> @Model.Data["reason"]</p>
+            <p><strong>Order Number:</strong> @Model.Id</p>
+            <p><strong>Reason:</strong> @Model.CancellationReason</p>
         </div>
 
         <p>If payment was already processed, you will receive a full refund within 5-10 business days to your original payment method.</p>

@@ -155,10 +155,19 @@ public class ReturnService : IReturnService
                         Type: NotificationType.ReturnRequestReceived,
                         TemplateData: new Dictionary<string, object>
                         {
+                            ["returnRequestId"] = rr.Id.ToString(),
+                            ["orderDetailId"] = od.Id.ToString(),
+                            ["applicationUserId"] = rr.ApplicationUserId,
+                            ["customerName"] = string.IsNullOrWhiteSpace(user.Name) ? (user.UserName ?? user.Email ?? string.Empty) : user.Name,
+                            ["reason"] = rr.Reason,
+                            ["description"] = rr.Description ?? string.Empty,
                             ["orderNumber"] = od.OrderHeaderId.ToString(),
                             ["productName"] = od.ProductVariant?.Product?.Name ?? "Product",
                             ["quantity"] = quantity.ToString(),
-                            ["refundAmount"] = rr.RefundAmount.Value.ToString("C")
+                            ["requestDate"] = rr.RequestDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                            ["status"] = rr.Status,
+                            ["adminNote"] = rr.AdminNote ?? string.Empty,
+                            ["refundAmount"] = rr.RefundAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
                         },
                         UserId: userId,
                         ReferenceId: rr.Id.ToString(),
@@ -216,10 +225,24 @@ public class ReturnService : IReturnService
                         Type: NotificationType.ReturnRequestApproved,
                         TemplateData: new Dictionary<string, object>
                         {
+                            ["returnRequestId"] = rr.Id.ToString(),
+                            ["orderDetailId"] = rr.OrderDetailId.ToString(),
+                            ["applicationUserId"] = rr.ApplicationUserId,
+                            ["customerName"] = string.IsNullOrWhiteSpace(rr.OrderDetail.OrderHeader.ApplicationUser.Name)
+                                ? rr.OrderDetail.OrderHeader.Name
+                                : rr.OrderDetail.OrderHeader.ApplicationUser.Name,
+                            ["reason"] = rr.Reason,
+                            ["description"] = rr.Description ?? string.Empty,
+                            ["quantity"] = rr.Quantity.ToString(),
+                            ["requestDate"] = rr.RequestDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                            ["status"] = rr.Status,
+                            ["resolvedDate"] = rr.ResolvedDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
                             ["orderNumber"] = rr.OrderDetail.OrderHeaderId.ToString(),
                             ["productName"] = rr.OrderDetail.ProductVariant?.Product?.Name ?? "Product",
-                            ["refundAmount"] = rr.RefundAmount.Value.ToString("C"),
-                            ["note"] = note ?? ""
+                            ["refundAmount"] = rr.RefundAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                            ["refundId"] = rr.RefundId ?? string.Empty,
+                            ["refundDate"] = rr.RefundDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                            ["adminNote"] = note ?? ""
                         },
                         UserId: rr.ApplicationUserId,
                         ReferenceId: rr.Id.ToString(),
@@ -269,6 +292,19 @@ public class ReturnService : IReturnService
                         Type: NotificationType.ReturnRequestRejected,
                         TemplateData: new Dictionary<string, object>
                         {
+                            ["returnRequestId"] = rr.Id.ToString(),
+                            ["orderDetailId"] = rr.OrderDetailId.ToString(),
+                            ["applicationUserId"] = rr.ApplicationUserId,
+                            ["customerName"] = string.IsNullOrWhiteSpace(rr.ApplicationUser.Name)
+                                ? (rr.ApplicationUser.UserName ?? rr.ApplicationUser.Email ?? string.Empty)
+                                : rr.ApplicationUser.Name,
+                            ["description"] = rr.Description ?? string.Empty,
+                            ["quantity"] = rr.Quantity.ToString(),
+                            ["requestDate"] = rr.RequestDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                            ["status"] = rr.Status,
+                            ["adminNote"] = rr.AdminNote ?? string.Empty,
+                            ["resolvedDate"] = rr.ResolvedDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                            ["refundAmount"] = rr.RefundAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
                             ["orderNumber"] = rr.OrderDetail?.OrderHeaderId.ToString() ?? string.Empty,
                             ["productName"] = rr.OrderDetail?.ProductVariant?.Product?.Name ?? "Product",
                             ["reason"] = note ?? "Does not meet return policy requirements"

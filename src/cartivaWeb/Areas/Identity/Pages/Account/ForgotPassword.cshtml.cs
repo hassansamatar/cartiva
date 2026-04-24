@@ -80,7 +80,10 @@ namespace CartivaWeb.Areas.Identity.Pages.Account
                     Type: NotificationType.PasswordReset,
                     TemplateData: new Dictionary<string, object>
                     {
+                        ["userId"] = user.Id,
                         ["name"] = string.IsNullOrWhiteSpace(user.Name) ? (user.UserName ?? Input.Email) : user.Name,
+                        ["email"] = user.Email ?? Input.Email,
+                        ["isActive"] = user.IsActive.ToString(),
                         ["resetLink"] = callbackUrl,
                         ["expirationTime"] = "24 hours"
                     },

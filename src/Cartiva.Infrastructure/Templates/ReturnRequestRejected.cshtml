@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.ReturnRequestRejectedModel
 
 <!DOCTYPE html>
 <html>
@@ -45,13 +45,13 @@
     </div>
 
     <div class="content">
-        <p>We've reviewed your return request for order <strong>#@Model.Data["orderNumber"]</strong>.</p>
+        <p>We've reviewed your return request for order <strong>#@Model.OrderHeaderId</strong>.</p>
 
         <div class="rejection-box">
             <h3>Return Request Details</h3>
-            <p><strong>Product:</strong> @Model.Data["productName"]</p>
+            <p><strong>Product:</strong> @Model.ProductName</p>
             <p><strong>Status:</strong> Unable to approve at this time</p>
-            <p><strong>Reason:</strong> @Model.Data["reason"]</p>
+            <p><strong>Reason:</strong> @Model.Reason</p>
         </div>
 
         <p>Unfortunately, we're unable to approve this return request based on our return policy guidelines.</p>

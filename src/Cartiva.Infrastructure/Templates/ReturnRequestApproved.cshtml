@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.ReturnRequestApprovedModel
 
 <!DOCTYPE html>
 <html>
@@ -49,12 +49,12 @@
 
         <div class="approval-box">
             <h3>Return Details</h3>
-            <p><strong>Order Number:</strong> @Model.Data["orderNumber"]</p>
-            <p><strong>Product:</strong> @Model.Data["productName"]</p>
-            <p><strong>Refund Amount:</strong> @Model.Data["refundAmount"]</p>
-            @if (!string.IsNullOrEmpty(Model.Data["note"]?.ToString()))
+            <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
+            <p><strong>Product:</strong> @Model.ProductName</p>
+            <p><strong>Refund Amount:</strong> @Model.RefundAmount</p>
+            @if (!string.IsNullOrEmpty(Model.AdminNote))
             {
-                <p><strong>Note:</strong> @Model.Data["note"]</p>
+                <p><strong>Note:</strong> @Model.AdminNote</p>
             }
         </div>
 

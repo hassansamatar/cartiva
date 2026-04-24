@@ -206,7 +206,7 @@ if (app.Environment.IsDevelopment())
                 return Results.BadRequest(new { Success = false, Message = "Order user does not have an email address." });
             }
 
-            var model = new Cartiva.Infrastructure.Notifications.Templates.Models.OrderConfirmationModel
+            var model = new Cartiva.Infrastructure.Templates.Models.OrderConfirmationModel
             {
                 OrderId = order.Id.ToString(),
                 Name = string.IsNullOrWhiteSpace(order.ApplicationUser.Name) ? order.Name : order.ApplicationUser.Name,
@@ -256,7 +256,10 @@ if (app.Environment.IsDevelopment())
                 Type: Cartiva.Domain.Enums.NotificationType.WelcomeEmail,
                 TemplateData: new Dictionary<string, object>
                 {
+                    ["userId"] = "test-user",
                     ["name"] = "Test User",
+                    ["email"] = "hornafricanorway@gmail.com",
+                    ["isActive"] = true.ToString(),
                     ["verificationLink"] = "https://example.com"
                 },
                 Subject: "Test Notification from Cartiva"

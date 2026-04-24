@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.InvoiceGeneratedModel
 
 <!DOCTYPE html>
 <html>
@@ -62,20 +62,20 @@
     </div>
 
     <div class="content">
-        <p>Hello @Model.Data["name"],</p>
+        <p>Hello @Model.CustomerName,</p>
 
-        <p>Your invoice is now ready for order <strong>#@Model.Data["orderId"]</strong>.</p>
+        <p>Your invoice is now ready for order <strong>#@Model.OrderHeaderId</strong>.</p>
 
         <div class="invoice-box">
             <h3>Invoice Details</h3>
-            <p><strong>Invoice Number:</strong> @Model.Data["invoiceNumber"]</p>
-            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
-            <p><strong>Total Amount:</strong> @Model.Data["totalAmount"]</p>
-            <p><strong>Due Date:</strong> @Model.Data["dueDate"]</p>
+            <p><strong>Invoice Number:</strong> @Model.InvoiceNumber</p>
+            <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
+            <p><strong>Total Amount:</strong> @Model.TotalAmount</p>
+            <p><strong>Due Date:</strong> @Model.DueDate</p>
         </div>
 
         <div class="important">
-            <strong>⏰ Payment Due:</strong> Please ensure payment is received by <strong>@Model.Data["dueDate"]</strong> to avoid late fees.
+            <strong>⏰ Payment Due:</strong> Please ensure payment is received by <strong>@Model.DueDate</strong> to avoid late fees.
         </div>
 
         <h3>Payment Methods:</h3>
@@ -85,7 +85,7 @@
         </ul>
 
         <p>
-            <a href="https://cartiva.no/invoices/@Model.Data["invoiceNumber"]" class="button">View & Download Invoice</a>
+            <a href="https://cartiva.no/invoices/@Model.InvoiceNumber" class="button">View & Download Invoice</a>
         </p>
 
         <p>If you have any questions about this invoice, please contact our billing department.</p>

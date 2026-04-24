@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.OrderDeliveredModel
 
 <!DOCTYPE html>
 <html>
@@ -60,15 +60,15 @@
 
         <div class="delivery-box">
             <h3>Delivery Confirmation</h3>
-            <p><strong>Order Number:</strong> @Model.Data["orderId"]</p>
-            <p><strong>Delivered On:</strong> @Model.Data["deliveryDate"]</p>
-            <p><strong>Recipient:</strong> @Model.Data["name"]</p>
+            <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
+            <p><strong>Delivered On:</strong> @Model.DeliveredDate</p>
+            <p><strong>Recipient:</strong> @Model.CustomerName</p>
         </div>
 
         <p>We hope you're satisfied with your purchase! If you have any questions or concerns, please don't hesitate to reach out.</p>
 
         <p>
-            <a href="https://cartiva.no/orders/@Model.Data["orderId"]" class="button">View Order Details</a>
+            <a href="https://cartiva.no/orders/@Model.OrderHeaderId" class="button">View Order Details</a>
         </p>
 
         <p><strong>Need to return something?</strong> You have 30 days from delivery to initiate a return.</p>

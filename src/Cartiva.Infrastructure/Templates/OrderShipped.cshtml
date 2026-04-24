@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.OrderShippedModel
+@model Cartiva.Infrastructure.Templates.Models.OrderShippedModel
 
 <!DOCTYPE html>
 <html>
@@ -58,10 +58,10 @@
 
         <div class="shipping-details">
             <h3>Shipping Information</h3>
-            <p><strong>Order Number:</strong> @Model.OrderId</p>
+            <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
             <p><strong>Tracking Number:</strong> @Model.TrackingNumber</p>
             <p><strong>Carrier:</strong> @Model.Carrier</p>
-            <p><strong>Estimated Delivery:</strong> @Model.EstimatedDeliveryDate</p>
+            <p><strong>Estimated Delivery:</strong> @Model.DeliveredDate</p>
         </div>
 
         <p>You can track your shipment using the tracking number above.</p>

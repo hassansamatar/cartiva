@@ -1,4 +1,4 @@
-@model Cartiva.Infrastructure.Notifications.Templates.Models.GenericEmailModel
+@model Cartiva.Infrastructure.Templates.Models.ReturnRequestReceivedModel
 
 <!DOCTYPE html>
 <html>
@@ -50,10 +50,10 @@
 
         <div class="return-box">
             <h3>Return Details</h3>
-            <p><strong>Order Number:</strong> @Model.Data["orderNumber"]</p>
-            <p><strong>Product:</strong> @Model.Data["productName"]</p>
-            <p><strong>Quantity:</strong> @Model.Data["quantity"]</p>
-            <p><strong>Refund Amount:</strong> @Model.Data["refundAmount"]</p>
+            <p><strong>Order Number:</strong> @Model.OrderHeaderId</p>
+            <p><strong>Product:</strong> @Model.ProductName</p>
+            <p><strong>Quantity:</strong> @Model.Quantity</p>
+            <p><strong>Refund Amount:</strong> @Model.RefundAmount</p>
         </div>
 
         <h3>What Happens Next?</h3>

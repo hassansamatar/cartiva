@@ -141,13 +141,34 @@ namespace Cartiva.Application.Services
                             Type: NotificationType.InvoiceGenerated,
                             TemplateData: new Dictionary<string, object>
                             {
+                                ["invoiceId"] = invoice.Id.ToString(),
                                 ["invoiceNumber"] = invoiceNumber,
                                 ["orderId"] = orderId.ToString(),
-                                ["totalAmount"] = invoice.TotalAmount.ToString("C"),
+                                ["kid"] = invoice.KID,
+                                ["issueDate"] = invoice.IssueDate.ToString("yyyy-MM-dd"),
                                 ["dueDate"] = invoice.DueDate.ToString("yyyy-MM-dd"),
-                                ["name"] = string.IsNullOrWhiteSpace(order.ApplicationUser?.Name)
-                                    ? (invoice.CustomerName ?? order.Name)
-                                    : order.ApplicationUser.Name
+                                ["netAmount"] = invoice.NetAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                ["vatAmount"] = invoice.VatAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                ["totalAmount"] = invoice.TotalAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                ["currency"] = invoice.Currency,
+                                ["status"] = invoice.Status.ToString(),
+                                ["sellerName"] = invoice.SellerName,
+                                ["sellerOrgNumber"] = invoice.SellerOrgNumber,
+                                ["sellerAddress"] = invoice.SellerAddress ?? string.Empty,
+                                ["sellerEmail"] = invoice.SellerEmail ?? string.Empty,
+                                ["sellerPhone"] = invoice.SellerPhone ?? string.Empty,
+                                ["customerName"] = invoice.CustomerName,
+                                ["customerOrgNumber"] = invoice.CustomerOrgNumber ?? string.Empty,
+                                ["customerAddress"] = invoice.CustomerAddress ?? string.Empty,
+                                ["customerEmail"] = invoice.CustomerEmail ?? string.Empty,
+                                ["bankAccountNumber"] = invoice.BankAccountNumber ?? string.Empty,
+                                ["iban"] = invoice.IBAN ?? string.Empty,
+                                ["bic"] = invoice.BIC ?? string.Empty,
+                                ["sentDate"] = invoice.SentDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                                ["pdfUrl"] = invoice.PdfUrl ?? string.Empty,
+                                ["paidDate"] = invoice.PaidDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                                ["totalPaid"] = invoice.TotalPaid.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                ["remainingAmount"] = invoice.RemainingAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)
                             },
                             UserId: order.ApplicationUserId,
                             ReferenceId: invoice.Id.ToString(),
