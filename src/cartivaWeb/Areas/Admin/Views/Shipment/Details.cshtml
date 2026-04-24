@@ -111,6 +111,13 @@
         {
             <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.OrderHeader.Id" asp-route-type="cancellation" class="btn btn-outline-primary">View Credit Note</a>
         }
+        @if (Model.ShipmentStatus == SD.ShipmentStatusShipped || Model.ShipmentStatus == SD.ShipmentStatusDelivered)
+        {
+            <form asp-action="SendEmail" asp-route-id="@Model.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">Send Shipment Email</button>
+            </form>
+        }
         @if (Model.ShipmentStatus == SD.ShipmentStatusPendingApproval)
         {
             <a asp-action="Approve" asp-route-id="@Model.Id" class="btn btn-success">Approve</a>

@@ -211,7 +211,7 @@ if (app.Environment.IsDevelopment())
                 OrderId = order.Id.ToString(),
                 Name = string.IsNullOrWhiteSpace(order.ApplicationUser.Name) ? order.Name : order.ApplicationUser.Name,
                 OrderDate = order.OrderDate.ToString("yyyy-MM-dd"),
-                TotalAmount = order.OrderTotal.ToString("C")
+                TotalAmount = $"{order.OrderTotal:N2} {Cartiva.Shared.SD.DefaultCurrency}"
             };
 
             var html = await templateRenderer.RenderAsync("OrderConfirmation", model);

@@ -19,17 +19,23 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
     private readonly ILogger<CompanyShipmentProcessingService> _logger;
     private readonly IConfiguration _configuration;
     private readonly IQrCodeService _qrCodeService;
+    private readonly IShipmentService _shipmentService;
+    private readonly IInvoiceService _invoiceService;
 
     public CompanyShipmentProcessingService(
         ApplicationDbContext db,
         ILogger<CompanyShipmentProcessingService> logger,
         IConfiguration configuration,
-        IQrCodeService qrCodeService)
+        IQrCodeService qrCodeService,
+        IShipmentService shipmentService,
+        IInvoiceService invoiceService)
     {
         _db = db;
         _logger = logger;
         _configuration = configuration;
         _qrCodeService = qrCodeService;
+        _shipmentService = shipmentService;
+        _invoiceService = invoiceService;
     }
 
     public async Task<int> ProcessApprovedShipmentsAsync(CancellationToken ct)
@@ -37,8 +43,12 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
         var shipments = await _db.Shipments
             .Include(s => s.OrderHeader)
                 .ThenInclude(o => o.ApplicationUser)
+                    .ThenInclude(u => u.Company)
             .Where(s => s.ShipmentStatus == SD.ShipmentStatusApproved &&
-                        s.OrderHeader.OrderStatus != SD.StatusShipped)
+                        s.OrderHeader.OrderStatus != SD.StatusShipped &&
+                        s.OrderHeader.ApplicationUser.CompanyId != null &&
+                        s.OrderHeader.ApplicationUser.Company != null &&
+                        s.OrderHeader.ApplicationUser.Company.IsActive)
             .Take(50)
             .ToListAsync(ct);
 
@@ -51,6 +61,10 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
         foreach (var shipment in shipments)
         {
             shipment.TrackingNumber = GenerateTrackingNumber();
+            shipment.Carrier ??= SD.CarrierBring;
+            shipment.TrackingUrl = SD.GetTrackingUrl(shipment.Carrier, shipment.TrackingNumber);
+            shipment.ShippingDate = DateTime.UtcNow;
+            shipment.ShippedDate = DateTime.UtcNow;
             shipment.ShipmentStatus = SD.ShipmentStatusShipped;
             shipment.OrderHeader.OrderStatus = SD.StatusShipped;
             _logger.LogInformation("Shipped OrderHeaderId {OrderId} with tracking {Tracking}",
@@ -61,34 +75,24 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
 
         foreach (var shipment in shipments)
         {
-            await SendShipmentEmailAsync(shipment);
-        }
-
-        _logger.LogInformation("Processed {Count} shipments as shipped and sent emails.", shipments.Count);
-        return shipments.Count;
-    }
-
-    private async Task SendShipmentEmailAsync(Shipment shipment)
-    {
-        try
-        {
-            var user = shipment.OrderHeader?.ApplicationUser;
-            if (user == null || string.IsNullOrEmpty(user.Email))
+            var shipmentEmailResult = await _shipmentService.SendShipmentEmailAsync(shipment.Id);
+            if (!shipmentEmailResult.Success)
             {
-                _logger.LogWarning("No user email for Order {OrderId}", shipment.OrderHeaderId);
-                return;
+                _logger.LogWarning("Automatic shipment email failed for shipment {ShipmentId}: {Message}", shipment.Id, shipmentEmailResult.Message);
             }
 
-            // NOTE: Email notifications are now handled by ShipmentService via the notification system
-            // This legacy email sending code has been removed to avoid duplicate notifications
+            var invoice = await _invoiceService.GetInvoiceByOrderIdAsync(shipment.OrderHeaderId)
+                ?? await _invoiceService.GenerateInvoiceFromOrderAsync(shipment.OrderHeaderId, ct);
 
-            _logger.LogInformation("Shipment processed for Order {OrderId}. Email notification handled by ShipmentService.", 
-                shipment.OrderHeaderId);
+            var invoiceSendResult = await _invoiceService.SendInvoiceAsync(invoice.Id, ct);
+            if (!invoiceSendResult)
+            {
+                _logger.LogWarning("Automatic invoice send failed for invoice {InvoiceId} linked to order {OrderId}", invoice.Id, shipment.OrderHeaderId);
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to process shipment for Order {OrderId}", shipment.OrderHeaderId);
-        }
+
+        _logger.LogInformation("Processed {Count} active-company shipments with shipment and invoice emails.", shipments.Count);
+        return shipments.Count;
     }
 
     private string GenerateTrackingNumber()

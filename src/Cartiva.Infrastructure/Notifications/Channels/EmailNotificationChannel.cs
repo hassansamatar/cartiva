@@ -207,7 +207,7 @@ public class EmailNotificationChannel : INotificationChannel
         var name = string.IsNullOrWhiteSpace(model.Name) ? "Customer" : model.Name;
         var orderId = string.IsNullOrWhiteSpace(model.OrderId) ? "N/A" : model.OrderId;
         var orderDate = string.IsNullOrWhiteSpace(model.OrderDate) ? "N/A" : model.OrderDate;
-        var totalAmount = string.IsNullOrWhiteSpace(model.TotalAmount) ? "N/A" : model.TotalAmount;
+        var totalAmount = string.IsNullOrWhiteSpace(model.TotalAmount) ? "0.00 NOK" : model.TotalAmount;
 
         return $@"
 <!DOCTYPE html>
@@ -218,12 +218,15 @@ public class EmailNotificationChannel : INotificationChannel
     <title>Order Confirmation</title>
 </head>
 <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>
-    <h1>Order Confirmation</h1>
+    <h1 style='color: #2c3e50;'>Order Confirmation</h1>
     <p>Hello {name},</p>
-    <p>Thank you for your order.</p>
-    <p><strong>Order Number:</strong> {orderId}</p>
-    <p><strong>Order Date:</strong> {orderDate}</p>
-    <p><strong>Total Amount:</strong> {totalAmount}</p>
+    <p>Thank you for your order. We are preparing it now and will keep you updated.</p>
+    <div style='background-color: #f8f9fa; border-left: 4px solid #2c3e50; padding: 16px; margin: 20px 0; border-radius: 6px;'>
+        <p style='margin: 0 0 8px 0;'><strong>Order Number:</strong> {orderId}</p>
+        <p style='margin: 0 0 8px 0;'><strong>Order Date:</strong> {orderDate}</p>
+        <p style='margin: 0;'><strong>Total Amount:</strong> {totalAmount}</p>
+    </div>
+    <p>Currency: NOK</p>
     <p>We appreciate your business.</p>
     <p>Best regards,<br />The Cartiva Team</p>
 </body>

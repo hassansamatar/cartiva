@@ -130,5 +130,19 @@ namespace CartivaWeb.Areas.Admin.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendEmail(int id)
+        {
+            var result = await _shipmentService.SendShipmentEmailAsync(id);
+
+            if (result.Success)
+                TempData["Success"] = result.Message;
+            else
+                TempData["Error"] = result.Message;
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
     }
 }
