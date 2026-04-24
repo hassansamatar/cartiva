@@ -415,6 +415,7 @@ For notification system to work:
 
 ## 🚀 Technology Stack Summary
 
+
 | Layer | Technologies |
 |-------|-------------|
 | **Frontend** | Razor Pages, Bootstrap 5, jQuery |
