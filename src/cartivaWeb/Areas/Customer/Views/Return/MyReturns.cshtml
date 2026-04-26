@@ -2,6 +2,7 @@
 
 @using Cartiva.Application.Extensions
 @using Cartiva.Domain.Extensions
+@using Cartiva.Domain.Enums
 @using Cartiva.Shared
 @using System.Globalization
 
@@ -37,6 +38,12 @@
                 var color = r.OrderDetail?.ProductVariant?.Color;
                 var orderId = r.OrderDetail?.OrderHeaderId;
 
+                // Determine if this is a company with deferred payment (AR Adjustment)
+                var isCompanyDeferred = r.OrderDetail?.OrderHeader?.ApplicationUser?.CompanyId != null &&
+                                       r.OrderDetail?.OrderHeader?.ApplicationUser?.Company?.IsActive == true &&
+                                       (r.OrderDetail?.OrderHeader?.PaymentStatus == PaymentStatus.Deferred ||
+                                        r.OrderDetail?.OrderHeader?.PaymentStatus == PaymentStatus.Pending);
+
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-body">
@@ -66,7 +73,14 @@
                                     }
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge @r.Status.GetBadgeClass()">@r.Status</span>
+                                    @if (r.Status == Cartiva.Domain.Enums.ReturnStatus.Refunded && isCompanyDeferred)
+                                    {
+                                        <span class="badge bg-success">Balance Adjusted</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge @r.Status.GetBadgeClass()">@r.Status</span>
+                                    }
                                     @if (r.RefundAmount.HasValue)
                                     {
                                         <div class="mt-1">
@@ -75,7 +89,14 @@
                                     }
                                     @if (r.RefundDate.HasValue)
                                     {
-                                        <small class="text-muted d-block">Refunded @r.RefundDate.Value.ToString("dd MMM yyyy")</small>
+                                        @if (isCompanyDeferred)
+                                        {
+                                            <small class="text-muted d-block">Balance adjusted @r.RefundDate.Value.ToString("dd MMM yyyy")</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted d-block">Refunded @r.RefundDate.Value.ToString("dd MMM yyyy")</small>
+                                        }
                                     }
                                 </div>
                             </div>

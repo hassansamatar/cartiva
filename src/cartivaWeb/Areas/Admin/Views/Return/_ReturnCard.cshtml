@@ -33,6 +33,16 @@
 
             <!-- ITEM INFO -->
             <div class="col-md-4">
+                @* Order ID - Prominent for easy identification *@
+                <div class="mb-2">
+                    <span class="badge bg-primary fs-6">
+                        <i class="bi bi-bag"></i> Order #@orderId
+                    </span>
+                    <span class="badge bg-dark ms-1">
+                        Return #@Model.Id
+                    </span>
+                </div>
+
                 <h6 class="mb-1">@productName</h6>
 
                 <span class="badge bg-secondary">@color</span>
@@ -47,13 +57,13 @@
                         </span>
                         @if (useARAdjustment)
                         {
-                            <span class="badge bg-warning text-dark" title="Deferred payment - Will create AR Adjustment automatically on approval">
+                            <span class="badge bg-warning text-dark" title="Deferred payment - Will create AR Adjustment on approval">
                                 <i class="bi bi-calculator"></i> AR Adjustment
                             </span>
                         }
                         else
                         {
-                            <span class="badge bg-success" title="Paid upfront - Will use Credit Note + Refund flow">
+                            <span class="badge bg-success" title="Paid upfront - Will use Credit Note + Refund">
                                 <i class="bi bi-file-earmark-text"></i> Credit Note
                             </span>
                         }
@@ -84,15 +94,15 @@
                         </a>
                     }
 
-                    @* Show Credit Note link ONLY if paid upfront (company or individual) *@
-                    @if (useCreditNote && returnStatus == ReturnStatus.Approved)
+                    @* Show Credit Note link ONLY if paid upfront *@
+                    @if (useCreditNote && (returnStatus == ReturnStatus.Approved || returnStatus == ReturnStatus.Refunded))
                     {
                         <a asp-area="Admin"
                            asp-controller="CreditNote"
                            asp-action="Index"
                            asp-route-search="@Model.Id"
                            class="btn btn-sm btn-outline-primary"
-                           title="Create or view Credit Note">
+                           title="View Credit Note">
                             <i class="bi bi-file-earmark-text"></i> Credit Note
                         </a>
                     }
@@ -122,24 +132,24 @@
                     @Model.RequestDate.ToString("dd MMM yyyy HH:mm")
                 </small>
 
-                @* Show workflow instruction after approval *@
+                @* Show workflow instruction ONLY in Approved stage *@
                 @if (returnStatus == ReturnStatus.Approved)
                 {
-                    <div class="alert alert-info alert-sm mt-2 mb-0 py-1 px-2">
+                    <div class="alert alert-warning alert-sm mt-2 mb-0 py-1 px-2">
                         @if (useARAdjustment)
                         {
                             <small>
-                                <i class="bi bi-check-circle"></i>
-                                <strong>AR Adjustment created.</strong> 
-                                No further action needed.
+                                <i class="bi bi-arrow-right"></i>
+                                <strong>Action Required:</strong> 
+                                Apply AR Adjustment to complete.
                             </small>
                         }
                         else
                         {
                             <small>
                                 <i class="bi bi-arrow-right"></i>
-                                <strong>Credit Note created.</strong> 
-                                Process refund when ready.
+                                <strong>Action Required:</strong> 
+                                Process refund to complete.
                             </small>
                         }
                     </div>
@@ -155,7 +165,17 @@
                     </span>
 
                     <div class="fw-bold mt-1">
-                        @refundAmount.ToString("C", culture)
+                        @if (useARAdjustment && returnStatus == ReturnStatus.Refunded)
+                        {
+                            <span class="text-success">
+                                @refundAmount.ToString("C", culture)
+                                <small class="d-block text-muted fw-normal" style="font-size: 0.75rem;">Balance Adjustment</small>
+                            </span>
+                        }
+                        else
+                        {
+                            @refundAmount.ToString("C", culture)
+                        }
                     </div>
                 </div>
 
@@ -190,31 +210,48 @@
                 }
                 else if (returnStatus == ReturnStatus.Approved)
                 {
-                    @* APPROVED: Show what happened automatically *@
+                    @* APPROVED: Show action buttons based on type *@
 
                     @if (useARAdjustment)
                     {
-                        @* Company with deferred payment - AR Adjustment created automatically *@
-                        <div class="alert alert-success alert-sm mb-0 py-2">
+                        @* Company with deferred payment - AR Adjustment created, needs application *@
+                        <div class="alert alert-info alert-sm mb-2 py-2">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                                <i class="bi bi-info-circle-fill text-info fs-4 me-2"></i>
                                 <div>
                                     <small class="d-block">
                                         <strong>AR Adjustment Created</strong>
                                     </small>
                                     <small class="text-muted d-block">
-                                        Balance adjusted automatically.
+                                        Ready to apply to company balance.
                                     </small>
                                 </div>
                             </div>
                         </div>
+
+                        @* Apply AR Adjustment button *@
+                        <form asp-area="Admin"
+                              asp-controller="Return"
+                              asp-action="ApplyARAdjustment"
+                              asp-route-id="@Model.Id"
+                              method="post"
+                              class="btn-swal-confirm-form"
+                              data-swal-title="Apply AR Adjustment?"
+                              data-swal-text="This will finalize the balance adjustment for the company.">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                <i class="bi bi-calculator"></i> Apply AR Adjustment
+                            </button>
+                        </form>
                     }
                     else
                     {
-                        @* Individual or company paid upfront - Credit Note created automatically *@
-                        <div class="alert alert-success alert-sm mb-0 py-2">
+                        @* Individual or company paid upfront - Credit Note created, needs refund *@
+                        <div class="alert alert-info alert-sm mb-2 py-2">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                                <i class="bi bi-info-circle-fill text-info fs-4 me-2"></i>
                                 <div>
                                     <small class="d-block">
                                         <strong>Credit Note Created</strong>
@@ -226,13 +263,13 @@
                             </div>
                         </div>
 
-                        @* Refund button still needed for manual Stripe refund *@
+                        @* Process Refund button *@
                         <form asp-area="Admin"
                               asp-controller="Return"
                               asp-action="Refund"
                               asp-route-id="@Model.Id"
                               method="post"
-                              class="btn-swal-confirm-form mt-2"
+                              class="btn-swal-confirm-form"
                               data-swal-title="Process refund of @refundAmount.ToString("C", culture)?"
                               data-swal-text="This will issue a Stripe refund to the customer.">
 
@@ -246,10 +283,36 @@
                 }
                 else
                 {
-                    @* RESOLVED: Show completion info *@
+                    @* RESOLVED: Show completion info - Different message for AR vs Refund *@
+                    <div class="alert alert-success alert-sm mb-2 py-2">
+                        <div class="text-center">
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            <div class="mt-1">
+                                @if (useARAdjustment)
+                                {
+                                    <small class="d-block">
+                                        <strong>Balance Adjusted</strong>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        AR Adjustment Applied
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="d-block">
+                                        <strong>Refunded</strong>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        Payment Returned
+                                    </small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
                     @if (!string.IsNullOrEmpty(Model.AdminNote))
                     {
-                        <small class="text-muted d-block">
+                        <small class="text-muted d-block mt-2">
                             <i class="bi bi-chat-dots"></i> @Model.AdminNote
                         </small>
                     }
@@ -257,21 +320,21 @@
                     @if (Model.RefundDate.HasValue)
                     {
                         <small class="text-muted d-block">
-                            Refunded @Model.RefundDate.Value.ToString("dd MMM yyyy")
+                            @if (useARAdjustment)
+                            {
+                                <i class="bi bi-calculator"></i> @("Adjusted: " + Model.RefundDate.Value.ToString("dd MMM yyyy"))
+                            }
+                            else
+                            {
+                                <i class="bi bi-calendar-check"></i> @("Refunded: " + Model.RefundDate.Value.ToString("dd MMM yyyy"))
+                            }
                         </small>
                     }
 
                     @if (!string.IsNullOrEmpty(Model.RefundId))
                     {
                         <small class="text-muted d-block">
-                            Stripe: @Model.RefundId
-                        </small>
-                    }
-
-                    @if (returnStatus == ReturnStatus.Approved && useARAdjustment)
-                    {
-                        <small class="text-success d-block">
-                            <i class="bi bi-check-circle"></i> AR Adjustment applied
+                            <i class="bi bi-credit-card"></i> Stripe: @Model.RefundId
                         </small>
                     }
                 }

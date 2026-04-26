@@ -131,8 +131,8 @@
     <p class="subtitle">
         Models + ASP.NET Identity | .NET 10 |
         <span class="badge badge-identity">7 Identity Tables</span>
-        <span class="badge badge-app">19 Application Tables</span>
-        | 26 Tables Total | 31 Relationships
+        <span class="badge badge-app">22 Application Tables</span>
+        | 29 Tables Total | 37 Relationships
     </p>
 
     <button class="btn-print no-print" onclick="window.print()">Print / Save as PDF</button>
@@ -157,7 +157,7 @@
             Back  Home &rarr;
         </a>
     </div>
-    
+
     <div class="mermaid">
 erDiagram
 
@@ -228,7 +228,12 @@ erDiagram
         string State
         string Country
         string PhoneNumber
+        string OrganizationNumber
         bool IsActive
+        string StripeCustomerId
+        decimal CreditLimit
+        decimal CurrentBalance
+        int PaymentTerms
     }
 
     ApplicationUser {
@@ -240,7 +245,7 @@ erDiagram
         string State
         string Country
         int CompanyId FK
-        bool IsActive
+        decimal DiscountRate
     }
 
     SizeSystem {
@@ -272,7 +277,7 @@ erDiagram
         string Name
         string Brand
         string Description
-        string ImageUrl
+        string Material
         int CategoryId FK
     }
 
@@ -281,6 +286,8 @@ erDiagram
         string Color
         decimal Price
         int Stock
+        string ImageUrl
+        string SKU
         int ProductId FK
         int SizeValueId FK
     }
@@ -306,6 +313,13 @@ erDiagram
         datetime LastUpdated
     }
 
+    Wishlist {
+        int Id PK
+        string ApplicationUserId FK
+        int ProductVariantId FK
+        datetime AddedDate
+    }
+
     OrderHeader {
         int Id PK
         string ApplicationUserId FK
@@ -316,6 +330,8 @@ erDiagram
         datetime PaymentDate
         date PaymentDueDate
         string PaymentIntentId
+        string SessionId
+        string PaymentMethod
         string Name
         string PhoneNumber
         string StreetAddress
@@ -331,6 +347,9 @@ erDiagram
         int ProductVariantId FK
         int Count
         decimal Price
+        string ProductName
+        string VariantDescription
+        decimal LineTotalIncVat
     }
 
     Shipment {
@@ -350,14 +369,17 @@ erDiagram
         string PackageType
     }
 
-    Review {
+    ProductReview {
         int Id PK
         string ApplicationUserId FK
-        int ProductVariantId FK
+        int ProductId FK
+        int OrderDetailId FK
         int Rating
+        string Title
         string Comment
         datetime ReviewDate
-        bool IsApproved
+        bool IsVerifiedPurchase
+        int HelpfulCount
     }
 
     ReturnRequest {
@@ -379,46 +401,38 @@ erDiagram
     Invoice {
         int Id PK
         int OrderHeaderId FK
+        int CompanyId FK
         string InvoiceNumber
         string KID
-        date IssueDate
+        date InvoiceDate
         date DueDate
-        decimal NetAmount
-        decimal VatAmount
         decimal TotalAmount
         string Currency
         string Status
-        string SellerName
-        string SellerOrgNumber
-        string CustomerName
+        bool IsPaid
         datetime PaidDate
-        bool IsBooked
+        string Notes
     }
 
     InvoiceLine {
         int Id PK
         int InvoiceId FK
-        int ProductVariantId FK
-        string ProductName
-        string ProductSku
+        int OrderDetailId FK
+        string Description
         int Quantity
         decimal UnitPrice
-        decimal DiscountAmount
-        decimal VatPercent
-        decimal LineNetAmount
-        decimal LineVatAmount
-        decimal LineTotalAmount
+        decimal VatRate
+        decimal LineTotal
     }
 
     CreditNote {
         int Id PK
-        int OriginalInvoiceId FK
+        int OrderHeaderId FK
         int ReturnRequestId FK
         string CreditNoteNumber
         date IssueDate
         string Status
-        decimal NetAmount
-        decimal VatAmount
+        string Type
         decimal TotalAmount
         string Currency
         string Reason
@@ -429,9 +443,8 @@ erDiagram
     CreditNoteLine {
         int Id PK
         int CreditNoteId FK
-        int OriginalInvoiceLineId FK
-        string Description
-        string ProductSku
+        int OrderDetailId FK
+        string ProductName
         int Quantity
         decimal UnitPrice
         decimal VatPercent
@@ -440,9 +453,44 @@ erDiagram
         decimal LineTotalAmount
     }
 
+    AccountsReceivableAdjustment {
+        int Id PK
+        int CompanyId FK
+        int InvoiceId FK
+        int ReturnRequestId FK
+        decimal Amount
+        string Currency
+        string Reason
+        string Status
+        datetime CreatedAt
+        datetime AppliedAt
+        string CreatedByUserId
+        string Notes
+        bool StripeCreditBalanceApplied
+        string StripeCustomerBalanceReference
+    }
+
     ProcessedStripeEvent {
         string EventId PK
         datetime ProcessedAt
+    }
+
+    Notification {
+        int Id PK
+        string Type
+        string Channel
+        string Status
+        string Recipient
+        string Subject
+        string TemplateData
+        string ErrorMessage
+        int RetryCount
+        datetime CreatedAt
+        datetime ProcessedAt
+        datetime SentAt
+        string UserId FK
+        string ReferenceId
+        string ReferenceType
     }
 
     AspNetUsers_IdentityBase ||--|| ApplicationUser : "extends"
@@ -454,9 +502,15 @@ erDiagram
     AspNetUsers_IdentityBase ||--o{ AspNetUserTokens : "has tokens"
 
     Company ||--o{ ApplicationUser : "has employees"
+    Company ||--o{ Invoice : "receives invoices"
+    Company ||--o{ AccountsReceivableAdjustment : "has AR adjustments"
+
     ApplicationUser ||--o{ ShoppingCart : "has cart items"
+    ApplicationUser ||--o{ Wishlist : "has wishlist items"
     ApplicationUser ||--o{ OrderHeader : "places orders"
-    ApplicationUser ||--o{ Review : "writes reviews"
+    ApplicationUser ||--o{ ProductReview : "writes reviews"
+    ApplicationUser ||--o{ ReturnRequest : "requests returns"
+    ApplicationUser ||--o{ Notification : "receives notifications"
 
     SizeSystem ||--o{ SizeValue : "defines sizes"
     SizeSystem ||--o{ Category : "default for"
@@ -465,26 +519,31 @@ erDiagram
     Category ||--o{ Promotion : "has promotions"
 
     Product ||--o{ ProductVariant : "has variants"
+    Product ||--o{ ProductReview : "reviewed on"
     SizeValue ||--o{ ProductVariant : "sizes variant"
 
     ProductVariant ||--o{ ShoppingCart : "added to cart"
+    ProductVariant ||--o{ Wishlist : "added to wishlist"
     ProductVariant ||--o{ OrderDetail : "ordered as"
-    ProductVariant ||--o{ Review : "reviewed on"
 
     OrderHeader ||--o{ OrderDetail : "contains items"
     OrderHeader ||--o{ Shipment : "shipped via"
-    OrderHeader ||--o{ Invoice : "invoiced via"
+    OrderHeader ||--|| Invoice : "invoiced via"
+    OrderHeader ||--o{ CreditNote : "credited via"
 
     OrderDetail ||--o{ ReturnRequest : "returned via"
-    ApplicationUser ||--o{ ReturnRequest : "requests returns"
+    OrderDetail ||--o{ ProductReview : "reviewed via"
+    OrderDetail ||--o{ InvoiceLine : "invoiced as"
+    OrderDetail ||--o{ CreditNoteLine : "credited as"
+
+    ReturnRequest ||--o| CreditNote : "generates credit"
+    ReturnRequest ||--o| AccountsReceivableAdjustment : "generates AR adjustment"
 
     Invoice ||--o{ InvoiceLine : "contains lines"
     Invoice ||--o{ CreditNote : "credited by"
-    ProductVariant ||--o{ InvoiceLine : "invoiced as"
+    Invoice ||--o{ AccountsReceivableAdjustment : "adjusted by"
 
     CreditNote ||--o{ CreditNoteLine : "contains lines"
-    ReturnRequest ||--o{ CreditNote : "generates credit"
-    InvoiceLine ||--o{ CreditNoteLine : "credited via"
 
     </div>
 
@@ -544,7 +603,7 @@ erDiagram
             </p>
         </div>
 
-        <h2>Application Relationships (24)</h2>
+        <h2>Application Relationships (30)</h2>
         <table>
             <thead>
                 <tr>
@@ -559,31 +618,40 @@ erDiagram
                 <tr><td>ApplicationUser</td><td>Company</td><td>N : 1</td><td><span class="badge badge-fk">CompanyId?</span></td><td><span class="badge badge-opt">Optional</span> — only company users</td></tr>
                 <tr><td>ApplicationUser</td><td>OrderHeader</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User places many orders</td></tr>
                 <tr><td>ApplicationUser</td><td>ShoppingCart</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User has many cart items</td></tr>
-                <tr><td>ApplicationUser</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User writes many reviews</td></tr>
+                <tr><td>ApplicationUser</td><td>Wishlist</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User has many wishlist items</td></tr>
+                <tr><td>ApplicationUser</td><td>ProductReview</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User writes many reviews</td></tr>
+                <tr><td>ApplicationUser</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>User requests returns</td></tr>
+                <tr><td>ApplicationUser</td><td>Notification</td><td>1 : N</td><td><span class="badge badge-fk">UserId?</span></td><td><span class="badge badge-opt">Optional</span> — user receives notifications</td></tr>
+                <tr><td>Company</td><td>Invoice</td><td>1 : N</td><td><span class="badge badge-fk">CompanyId?</span></td><td><span class="badge badge-opt">Optional</span> — only for B2B orders</td></tr>
+                <tr><td>Company</td><td>AccountsReceivableAdjustment</td><td>1 : N</td><td><span class="badge badge-fk">CompanyId</span></td><td>AR adjustments for company</td></tr>
                 <tr><td>Category</td><td>Product</td><td>1 : N</td><td><span class="badge badge-fk">CategoryId</span></td><td></td></tr>
                 <tr><td>Category</td><td>Promotion</td><td>1 : N</td><td><span class="badge badge-fk">CategoryId</span></td><td>Buy X Get Y offers</td></tr>
                 <tr><td>SizeSystem</td><td>Category</td><td>1 : N</td><td><span class="badge badge-fk">SizeSystemId?</span></td><td><span class="badge badge-opt">Optional</span> — accessories have no sizes</td></tr>
                 <tr><td>SizeSystem</td><td>SizeValue</td><td>1 : N</td><td><span class="badge badge-fk">SizeSystemId</span></td><td></td></tr>
                 <tr><td>Product</td><td>ProductVariant</td><td>1 : N</td><td><span class="badge badge-fk">ProductId</span></td><td></td></tr>
+                <tr><td>Product</td><td>ProductReview</td><td>1 : N</td><td><span class="badge badge-fk">ProductId</span></td><td>Product reviewed</td></tr>
                 <tr><td>SizeValue</td><td>ProductVariant</td><td>1 : N</td><td><span class="badge badge-fk">SizeValueId?</span></td><td><span class="badge badge-opt">Optional</span> — accessories</td></tr>
                 <tr><td>ProductVariant</td><td>ShoppingCart</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
+                <tr><td>ProductVariant</td><td>Wishlist</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
                 <tr><td>ProductVariant</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
-                <tr><td>ProductVariant</td><td>Review</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>OrderDetail</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
                 <tr><td>OrderHeader</td><td>Shipment</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td></td></tr>
-                <tr><td>OrderHeader</td><td>Invoice</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId?</span></td><td><span class="badge badge-opt">Optional</span> — invoice can exist without order</td></tr>
+                <tr><td>OrderHeader</td><td>Invoice</td><td>1 : 1</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td>Every order has one invoice</td></tr>
+                <tr><td>OrderHeader</td><td>CreditNote</td><td>1 : N</td><td><span class="badge badge-fk">OrderHeaderId</span></td><td>Order can have credit notes</td></tr>
                 <tr><td>OrderDetail</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Restrict delete</td></tr>
-                <tr><td>ApplicationUser</td><td>ReturnRequest</td><td>1 : N</td><td><span class="badge badge-fk">ApplicationUserId</span></td><td>Restrict delete</td></tr>
+                <tr><td>OrderDetail</td><td>ProductReview</td><td>1 : 0..1</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Verified purchase review</td></tr>
+                <tr><td>OrderDetail</td><td>InvoiceLine</td><td>1 : 1</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Each order line invoiced</td></tr>
+                <tr><td>OrderDetail</td><td>CreditNoteLine</td><td>1 : N</td><td><span class="badge badge-fk">OrderDetailId</span></td><td>Credit note line references order detail</td></tr>
                 <tr><td>Invoice</td><td>InvoiceLine</td><td>1 : N</td><td><span class="badge badge-fk">InvoiceId</span></td><td>Invoice line items</td></tr>
-                <tr><td>Invoice</td><td>CreditNote</td><td>1 : N</td><td><span class="badge badge-fk">OriginalInvoiceId</span></td><td>Credit notes reference original invoice</td></tr>
-                <tr><td>ProductVariant</td><td>InvoiceLine</td><td>1 : N</td><td><span class="badge badge-fk">ProductVariantId?</span></td><td><span class="badge badge-opt">Optional</span> — snapshot at invoice time</td></tr>
-                <tr><td>ReturnRequest</td><td>CreditNote</td><td>1 : N</td><td><span class="badge badge-fk">ReturnRequestId?</span></td><td><span class="badge badge-opt">Optional</span> — credit from return</td></tr>
+                <tr><td>Invoice</td><td>CreditNote</td><td>1 : N</td><td><span class="badge badge-fk">OriginalInvoiceId</span></td><td>Credit notes reference invoice (optional)</td></tr>
+                <tr><td>Invoice</td><td>AccountsReceivableAdjustment</td><td>1 : N</td><td><span class="badge badge-fk">InvoiceId</span></td><td>AR adjustments adjust invoice</td></tr>
+                <tr><td>ReturnRequest</td><td>CreditNote</td><td>1 : 0..1</td><td><span class="badge badge-fk">ReturnRequestId?</span></td><td><span class="badge badge-opt">Optional</span> — credit from return (individual/upfront)</td></tr>
+                <tr><td>ReturnRequest</td><td>AccountsReceivableAdjustment</td><td>1 : 0..1</td><td><span class="badge badge-fk">ReturnRequestId?</span></td><td><span class="badge badge-opt">Optional</span> — AR adjustment from return (company deferred)</td></tr>
                 <tr><td>CreditNote</td><td>CreditNoteLine</td><td>1 : N</td><td><span class="badge badge-fk">CreditNoteId</span></td><td>Credit note line items</td></tr>
-                <tr><td>InvoiceLine</td><td>CreditNoteLine</td><td>1 : N</td><td><span class="badge badge-fk">OriginalInvoiceLineId?</span></td><td><span class="badge badge-opt">Optional</span> — links to credited line</td></tr>
             </tbody>
         </table>
 
-        <h2>All Tables Summary (26)</h2>
+        <h2>All Tables Summary (29)</h2>
         <table>
             <thead>
                 <tr>
@@ -605,7 +673,7 @@ erDiagram
                 <tr><td>AspNetUserTokens</td><td><span class="badge badge-identity">Identity</span></td><td>Composite</td><td>UserId</td><td>Auth tokens</td></tr>
                 <tr class="section-app"><td colspan="5" class="section-label">Application Models (your code)</td></tr>
                 <tr><td><strong>ApplicationUser</strong></td><td><span class="badge badge-app">App</span></td><td>Id (string)</td><td>CompanyId?</td><td>Extends IdentityUser with address, company</td></tr>
-                <tr><td><strong>Company</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>--</td><td>B2B company accounts</td></tr>
+                <tr><td><strong>Company</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>--</td><td>B2B company accounts with credit terms</td></tr>
                 <tr><td><strong>Category</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>SizeSystemId?</td><td>Product categories</td></tr>
                 <tr><td><strong>Product</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CategoryId</td><td>Product catalog</td></tr>
                 <tr><td><strong>ProductVariant</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ProductId, SizeValueId?</td><td>Color/size/price/stock</td></tr>
@@ -613,22 +681,61 @@ erDiagram
                 <tr><td><strong>SizeValue</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>SizeSystemId</td><td>S, M, L, 42, 104cm</td></tr>
                 <tr><td><strong>Promotion</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CategoryId</td><td>Buy X Get Y Free per category</td></tr>
                 <tr><td><strong>ShoppingCart</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Cart items before checkout</td></tr>
+                <tr><td><strong>Wishlist</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Saved items for later</td></tr>
                 <tr><td><strong>OrderHeader</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId</td><td>Order with shipping/payment</td></tr>
                 <tr><td><strong>OrderDetail</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId, ProductVariantId</td><td>Line items in an order</td></tr>
                 <tr><td><strong>Shipment</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId</td><td>Tracking and delivery</td></tr>
-                <tr><td><strong>Review</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductVariantId</td><td>Ratings and comments</td></tr>
-                <tr><td><strong>ReturnRequest</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderDetailId, ApplicationUserId</td><td>Product returns and refunds</td></tr>
-                <tr><td><strong>Invoice</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId?</td><td>Billing document with KID, VAT, EHF support</td></tr>
-                <tr><td><strong>InvoiceLine</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>InvoiceId, ProductVariantId?</td><td>Invoice line items with pricing snapshot</td></tr>
-                <tr><td><strong>CreditNote</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OriginalInvoiceId, ReturnRequestId?</td><td>Credit/refund document linked to invoice</td></tr>
-                <tr><td><strong>CreditNoteLine</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CreditNoteId, OriginalInvoiceLineId?</td><td>Credit note line items</td></tr>
+                <tr><td><strong>ProductReview</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>ApplicationUserId, ProductId, OrderDetailId?</td><td>Ratings and comments</td></tr>
+                <tr><td><strong>ReturnRequest</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderDetailId, ApplicationUserId</td><td>Product returns and refunds (3-stage flow)</td></tr>
+                <tr><td><strong>Invoice</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId, CompanyId?</td><td>Billing document with KID, VAT, EHF support</td></tr>
+                <tr><td><strong>InvoiceLine</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>InvoiceId, OrderDetailId</td><td>Invoice line items with pricing snapshot</td></tr>
+                <tr><td><strong>CreditNote</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>OrderHeaderId, ReturnRequestId?</td><td>Credit/refund document for individual/company upfront</td></tr>
+                <tr><td><strong>CreditNoteLine</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CreditNoteId, OrderDetailId</td><td>Credit note line items</td></tr>
+                <tr><td><strong>AccountsReceivableAdjustment</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>CompanyId, InvoiceId, ReturnRequestId?</td><td>AR balance adjustments for company deferred payments (Stripe Customer Balance API)</td></tr>
+                <tr><td><strong>Notification</strong></td><td><span class="badge badge-app">App</span></td><td>Id (int)</td><td>UserId?</td><td>Email/SMS notifications (order, return, invoice) with retry logic</td></tr>
                 <tr><td><strong>ProcessedStripeEvent</strong></td><td><span class="badge badge-app">App</span></td><td>EventId (string)</td><td>--</td><td>Idempotency for Stripe webhooks</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Return Flow: Credit Note vs AR Adjustment</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer Type</th>
+                    <th>Payment Method</th>
+                    <th>Return Action</th>
+                    <th>Created Entity</th>
+                    <th>Stripe API</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Individual</strong></td>
+                    <td>Any</td>
+                    <td>Process Refund</td>
+                    <td>CreditNote</td>
+                    <td>Refund API</td>
+                </tr>
+                <tr>
+                    <td><strong>Company</strong></td>
+                    <td>Upfront (Paid)</td>
+                    <td>Process Refund</td>
+                    <td>CreditNote</td>
+                    <td>Refund API</td>
+                </tr>
+                <tr>
+                    <td><strong>Company</strong></td>
+                    <td>Deferred (Invoice)</td>
+                    <td>Apply AR Adjustment</td>
+                    <td>AccountsReceivableAdjustment</td>
+                    <td>Customer Balance Transaction API</td>
+                </tr>
             </tbody>
         </table>
     </div>
 
     <div class="footer">
-        Cartiva E-Commerce | github.com/hassansamatar/cartiva | .NET 10 | IdentityDbContext&lt;ApplicationUser, IdentityRole, string&gt;
+        Cartiva E-Commerce | github.com/hassansamatar/cartiva | .NET 10 | IdentityDbContext&lt;ApplicationUser, IdentityRole, string&gt; | Updated with AR Adjustments
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>

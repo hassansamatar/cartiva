@@ -361,14 +361,14 @@ h1 span { color: #198754; }
     <div class="cards">
         <a href="ER-diagram/Entity-Relationship-Diagram.html" class="card">
             <h3>📊 Complete ER Diagram</h3>
-            <p>Full entity-relationship model covering all 26 tables, including Identity, application models, <strong>Invoice/CreditNote</strong> for billing, and <strong>ProcessedStripeEvent</strong> for idempotent webhook handling.</p>
-            <span class="badge badge-main">26 Tables · 31 Relationships</span>
+            <p>Full entity-relationship model covering all 29 tables, including 7 Identity tables, 22 application models: <strong>Invoice/CreditNote</strong> for billing, <strong>AccountsReceivableAdjustment</strong> for B2B AR management, <strong>Notification</strong> for email/SMS, and <strong>ProcessedStripeEvent</strong> for idempotent webhooks.</p>
+            <span class="badge badge-main">29 Tables · 37 Relationships</span>
         </a>
 
         <a href="ER-diagram/er-diagram-application.html" class="card">
             <h3>🏗️ Application Tables</h3>
-            <p>Core domain models: Products, Orders, Shipments, Reviews, Returns, Promotions, Shopping Cart, <strong>Invoice, InvoiceLine, CreditNote, CreditNoteLine</strong>, plus ProcessedStripeEvent.</p>
-            <span class="badge badge-app">19 Entities · 24 Relationships</span>
+            <p>Core domain models: Products, Orders, Shipments, Reviews, Returns, Promotions, Shopping Cart, Wishlist, <strong>Invoice, InvoiceLine, CreditNote, CreditNoteLine</strong>, <strong>AccountsReceivableAdjustment</strong> for B2B deferred payments, <strong>Notification</strong> system, plus ProcessedStripeEvent.</p>
+            <span class="badge badge-app">22 Entities · 30 Relationships</span>
         </a>
 
         <a href="ER-diagram/er-diagram-identity.html" class="card">

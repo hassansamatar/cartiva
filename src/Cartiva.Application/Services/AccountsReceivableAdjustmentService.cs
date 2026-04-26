@@ -90,37 +90,12 @@ namespace Cartiva.Application.Services
             await _db.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Created AR adjustment {AdjustmentId} for return {ReturnRequestId}, amount {Amount}",
+                "Created AR adjustment {AdjustmentId} for return {ReturnRequestId}, amount {Amount}. Status: Approved (awaiting manual application).",
                 adjustment.Id, returnRequestId, adjustmentAmount);
 
-            // Attempt to apply Stripe credit balance if company has Stripe customer ID
-            if (!string.IsNullOrWhiteSpace(company.StripeCustomerId))
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ApplyStripeCreditBalanceAsync(adjustment.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex,
-                            "Failed to apply Stripe credit balance for adjustment {AdjustmentId}",
-                            adjustment.Id);
-                    }
-                });
-            }
-            else
-            {
-                _logger.LogInformation(
-                    "Company {CompanyId} does not have Stripe customer ID, skipping Stripe credit balance application",
-                    companyId);
-
-                // Mark as applied even without Stripe
-                adjustment.Status = ARAdjustmentStatus.Applied;
-                adjustment.AppliedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-            }
+            // NOTE: Stripe credit balance is NOT applied here
+            // Admin must manually click "Apply AR Adjustment" to apply to Stripe
+            // This allows for proper 3-stage workflow: Pending → Approved → Resolved
 
             return adjustment;
         }

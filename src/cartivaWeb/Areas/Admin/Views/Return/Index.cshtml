@@ -21,11 +21,15 @@
             <div>
                 @if (pendingCount > 0)
                 {
-                    <span class="badge bg-warning text-dark">@pendingCount pending</span>
+                    <span class="badge bg-warning text-dark" title="Returns awaiting approval">
+                        @pendingCount pending approval
+                    </span>
                 }
                 @if (approvedCount > 0)
                 {
-                    <span class="badge bg-info">@approvedCount awaiting refund</span>
+                    <span class="badge bg-info" title="Returns awaiting action (refund or AR adjustment)">
+                        @approvedCount awaiting action
+                    </span>
                 }
             </div>
         </div>

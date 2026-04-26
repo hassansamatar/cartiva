@@ -62,6 +62,11 @@ public interface IReturnService
     /// </summary>
     Task<ReturnOperationResult> ProcessRefundAsync(int id);
 
+    /// <summary>
+    /// Finalize AR adjustment return (mark as complete)
+    /// </summary>
+    Task<ReturnOperationResult> FinalizeARAdjustmentReturnAsync(int id);
+
     #endregion
 
     #region Helpers

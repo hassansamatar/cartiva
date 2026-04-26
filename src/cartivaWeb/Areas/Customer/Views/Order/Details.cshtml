@@ -407,9 +407,25 @@
                                     @if (existingReturns.ContainsKey(item.Id))
                                     {
                                         var ret = existingReturns[item.Id];
-                                        <span class="badge @ret.Status.GetBadgeClass()">
-                                            @ret.Status
-                                        </span>
+
+                                        @* Check if this is a company with deferred payment *@
+                                        var isCompanyDeferred = Model.ApplicationUser?.CompanyId != null &&
+                                                               Model.ApplicationUser?.Company?.IsActive == true &&
+                                                               (paymentStatus == PaymentStatus.Deferred || 
+                                                                paymentStatus == PaymentStatus.Pending);
+
+                                        @if (ret.Status == ReturnStatus.Refunded && isCompanyDeferred)
+                                        {
+                                            <span class="badge bg-success">
+                                                Balance Adjusted
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge @ret.Status.GetBadgeClass()">
+                                                @ret.Status
+                                            </span>
+                                        }
                                     }
                                     else
                                     {

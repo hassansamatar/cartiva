@@ -55,6 +55,8 @@ public class ReturnService : IReturnService
                     .ThenInclude(pv => pv.Product)
             .Include(r => r.OrderDetail)
                 .ThenInclude(od => od.OrderHeader)
+                    .ThenInclude(oh => oh.ApplicationUser)
+                        .ThenInclude(u => u.Company)
             .Where(r => r.ApplicationUserId == userId)
             .OrderByDescending(r => r.RequestDate)
             .ToListAsync();
@@ -238,6 +240,7 @@ public class ReturnService : IReturnService
             // =========================
             // B2B COMPANY RETURN FLOW: Create AR Adjustment (NOT Credit Note)
             // Company with DEFERRED payment - use AR adjustment
+            // Status stays "Approved" - admin must manually apply AR adjustment
             // =========================
             _logger.LogInformation(
                 "Return {ReturnId} is for company {CompanyId} with deferred payment, creating AR adjustment",
@@ -259,8 +262,10 @@ public class ReturnService : IReturnService
                         createdByUserId: null); // Could pass admin user ID if available
 
                     _logger.LogInformation(
-                        "AR adjustment created for company return {ReturnId}",
+                        "AR adjustment created for company return {ReturnId}. Status remains Approved - awaiting manual application.",
                         id);
+
+                    // Status remains "Approved" - admin must click "Apply AR Adjustment" to complete
                 }
                 else
                 {
@@ -282,6 +287,7 @@ public class ReturnService : IReturnService
             // =========================
             // B2C OR COMPANY UPFRONT PAYMENT FLOW: Auto-create Credit Note
             // Individual customers OR company orders paid upfront
+            // Status remains "Approved" - admin must manually process refund
             // =========================
             if (user?.CompanyId.HasValue == true)
             {
@@ -548,6 +554,93 @@ public class ReturnService : IReturnService
 
         _logger.LogInformation("Refund process completed for return {ReturnId}.", id);
         return ReturnOperationResult.Succeeded($"Refund for {refundAmount:C} completed.", id, refundAmount);
+    }
+
+    public async Task<ReturnOperationResult> FinalizeARAdjustmentReturnAsync(int id)
+    {
+        var returnRequest = await _db.ReturnRequests
+            .Include(r => r.OrderDetail)
+                .ThenInclude(od => od.OrderHeader)
+                    .ThenInclude(oh => oh.ApplicationUser)
+                        .ThenInclude(u => u.Company)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (returnRequest == null)
+        {
+            return ReturnOperationResult.Failed("Return request not found.");
+        }
+
+        if (returnRequest.Status != ReturnStatus.Approved)
+        {
+            return ReturnOperationResult.Failed("Only approved returns can be finalized.");
+        }
+
+        // Verify this is a company deferred payment return
+        var isCompanyDeferred = returnRequest.OrderDetail?.OrderHeader?.ApplicationUser?.CompanyId != null &&
+                               returnRequest.OrderDetail?.OrderHeader?.ApplicationUser?.Company?.IsActive == true &&
+                               (returnRequest.OrderDetail?.OrderHeader?.PaymentStatus == PaymentStatus.Deferred ||
+                                returnRequest.OrderDetail?.OrderHeader?.PaymentStatus == PaymentStatus.Pending);
+
+        if (!isCompanyDeferred)
+        {
+            return ReturnOperationResult.Failed("This action is only for company returns with AR adjustments.");
+        }
+
+        // Find the AR adjustment for this return
+        var adjustment = await _db.Set<AccountsReceivableAdjustment>()
+            .FirstOrDefaultAsync(a => a.ReturnRequestId == id);
+
+        if (adjustment == null)
+        {
+            return ReturnOperationResult.Failed("AR adjustment not found for this return.");
+        }
+
+        // Apply Stripe credit balance if company has Stripe customer ID
+        var company = returnRequest.OrderDetail.OrderHeader.ApplicationUser.Company;
+        if (!string.IsNullOrWhiteSpace(company?.StripeCustomerId))
+        {
+            try
+            {
+                bool stripeApplied = await _arAdjustmentService.ApplyStripeCreditBalanceAsync(adjustment.Id);
+                if (!stripeApplied)
+                {
+                    _logger.LogWarning("Failed to apply Stripe credit balance for adjustment {AdjustmentId}", adjustment.Id);
+                    // Continue anyway - we still mark return as complete
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error applying Stripe credit balance for adjustment {AdjustmentId}", adjustment.Id);
+                // Continue anyway - we still mark return as complete
+            }
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Company {CompanyId} does not have Stripe customer ID, skipping Stripe credit balance application",
+                company?.Id);
+
+            // Mark adjustment as applied even without Stripe
+            adjustment.Status = ARAdjustmentStatus.Applied;
+            adjustment.AppliedAt = DateTime.UtcNow;
+        }
+
+        // Mark return as completed
+        returnRequest.Status = ReturnStatus.Refunded;
+        returnRequest.RefundDate = DateTime.UtcNow;
+        returnRequest.RefundAmount = returnRequest.RefundAmount ?? 
+                                    (returnRequest.OrderDetail.Price * returnRequest.Quantity);
+
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "AR adjustment return {ReturnId} finalized and marked as completed.",
+            id);
+
+        return ReturnOperationResult.Succeeded(
+            "AR adjustment applied successfully. Return completed.",
+            id,
+            returnRequest.RefundAmount);
     }
 
     #endregion
