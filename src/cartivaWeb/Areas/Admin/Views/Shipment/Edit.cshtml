@@ -1,4 +1,6 @@
 ﻿@model Shipment
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
 @{
@@ -30,10 +32,10 @@
         <div class="mb-3">
             <label class="form-label">Status</label>
             <select name="shipmentStatus" class="form-select">
-                <option value="@SD.ShipmentStatusPendingApproval" selected="@(Model.ShipmentStatus == SD.ShipmentStatusPendingApproval)">Pending Approval</option>
-                <option value="@SD.ShipmentStatusShipped" selected="@(Model.ShipmentStatus == SD.ShipmentStatusShipped)">Shipped</option>
-                <option value="@SD.ShipmentStatusDelivered" selected="@(Model.ShipmentStatus == SD.ShipmentStatusDelivered)">Delivered</option>
-                <option value="@SD.ShipmentStatusCancelled" selected="@(Model.ShipmentStatus == SD.ShipmentStatusCancelled)">Cancelled</option>
+                <option value="@ShipmentStatus.PendingApproval" selected="@(Model.ShipmentStatus == ShipmentStatus.PendingApproval)">Pending Approval</option>
+                <option value="@ShipmentStatus.Shipped" selected="@(Model.ShipmentStatus == ShipmentStatus.Shipped)">Shipped</option>
+                <option value="@ShipmentStatus.Delivered" selected="@(Model.ShipmentStatus == ShipmentStatus.Delivered)">Delivered</option>
+                <option value="@ShipmentStatus.Cancelled" selected="@(Model.ShipmentStatus == ShipmentStatus.Cancelled)">Cancelled</option>
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Save</button>

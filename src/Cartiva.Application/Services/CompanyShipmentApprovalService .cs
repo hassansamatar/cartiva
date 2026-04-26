@@ -1,4 +1,6 @@
 ﻿using Cartiva.Application.Abstractions;
+using Cartiva.Domain.Extensions;
+using Cartiva.Domain.Enums;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -23,8 +25,8 @@ public class CompanyShipmentApprovalService : ICompanyShipmentApprovalService
             .Include(s => s.OrderHeader)
                 .ThenInclude(o => o.ApplicationUser)
                     .ThenInclude(u => u.Company)
-            .Where(s => s.ShipmentStatus == SD.ShipmentStatusPendingApproval &&
-                        s.OrderHeader.OrderStatus == SD.StatusAwaitingShipmentApproval &&
+            .Where(s => s.ShipmentStatus == ShipmentStatus.PendingApproval &&
+                        s.OrderHeader.OrderStatus == OrderStatus.AwaitingShipmentApproval &&
                         s.OrderHeader.ApplicationUser.CompanyId != null &&
                         s.OrderHeader.ApplicationUser.Company != null &&
                         s.OrderHeader.ApplicationUser.Company.IsActive)
@@ -39,7 +41,7 @@ public class CompanyShipmentApprovalService : ICompanyShipmentApprovalService
 
         foreach (var shipment in shipments)
         {
-            shipment.ShipmentStatus = SD.ShipmentStatusApproved;
+            shipment.ShipmentStatus = ShipmentStatus.Approved;
             _logger.LogInformation("Auto-approved shipment for OrderHeaderId {OrderId} (active company)", shipment.OrderHeaderId);
         }
 

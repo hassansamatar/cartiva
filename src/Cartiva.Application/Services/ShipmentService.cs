@@ -1,5 +1,6 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Extensions;
 using Cartiva.Domain.Enums;
 using Cartiva.Domain.Interfaces;
 using Cartiva.Infrastructure.QrCodeServices;
@@ -49,7 +50,8 @@ public class ShipmentService : IShipmentService
 
         if (!string.IsNullOrEmpty(statusFilter))
         {
-            query = query.Where(s => s.ShipmentStatus == statusFilter);
+            var parsedStatus = ShipmentStatusExtensions.FromValue(statusFilter);
+            query = query.Where(s => s.ShipmentStatus == parsedStatus);
         }
 
         return await query.OrderByDescending(s => s.Id).ToListAsync();
@@ -77,7 +79,7 @@ public class ShipmentService : IShipmentService
         if (shipment == null)
             return ShipmentOperationResult.Failed("Shipment not found.");
 
-        if (shipment.ShipmentStatus != SD.ShipmentStatusPendingApproval)
+        if (shipment.ShipmentStatus != Cartiva.Domain.Enums.ShipmentStatus.PendingApproval)
             return ShipmentOperationResult.Failed("This shipment is already processed.");
 
         // Prepare request to shipping service
@@ -108,12 +110,12 @@ public class ShipmentService : IShipmentService
         shipment.Carrier = bringResponse.Carrier;
         shipment.Service = bringResponse.Service;
         shipment.LabelUrl = bringResponse.LabelUrl;
-        shipment.ShipmentStatus = SD.ShipmentStatusShipped;
+        shipment.ShipmentStatus = Cartiva.Domain.Enums.ShipmentStatus.Shipped;
         shipment.ShippedDate = DateTime.Now;
         shipment.ShippingDate = DateTime.Now;
 
         // Update order status
-        shipment.OrderHeader.OrderStatus = SD.StatusShipped;
+        shipment.OrderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Shipped;
 
         await _db.SaveChangesAsync();
 
@@ -209,20 +211,21 @@ public class ShipmentService : IShipmentService
         if (request.ShipmentStatus != null)
         {
             var oldStatus = shipment.ShipmentStatus;
-            shipment.ShipmentStatus = request.ShipmentStatus;
+            var parsedShipmentStatus = Cartiva.Domain.Extensions.ShipmentStatusExtensions.FromValue(request.ShipmentStatus);
+            shipment.ShipmentStatus = parsedShipmentStatus;
 
             // Update order status and dates based on shipment status change
-            if (request.ShipmentStatus == SD.ShipmentStatusShipped && 
-                shipment.OrderHeader.OrderStatus != SD.StatusShipped)
+            if (parsedShipmentStatus == ShipmentStatus.Shipped && 
+                shipment.OrderHeader.OrderStatus != Cartiva.Domain.Enums.OrderStatus.Shipped)
             {
-                shipment.OrderHeader.OrderStatus = SD.StatusShipped;
+                shipment.OrderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Shipped;
                 shipment.ShippedDate = DateTime.Now;
                 shipment.ShippingDate = DateTime.Now;
             }
-            else if (request.ShipmentStatus == SD.ShipmentStatusDelivered && 
-                     shipment.OrderHeader.OrderStatus != SD.StatusDelivered)
+            else if (parsedShipmentStatus == ShipmentStatus.Delivered && 
+                     shipment.OrderHeader.OrderStatus != Cartiva.Domain.Enums.OrderStatus.Delivered)
             {
-                shipment.OrderHeader.OrderStatus = SD.StatusDelivered;
+                shipment.OrderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Delivered;
                 shipment.DeliveredDate = DateTime.Now;
             }
         }
@@ -244,7 +247,7 @@ public class ShipmentService : IShipmentService
         if (!await CanCancelAsync(shipmentId))
             return ShipmentOperationResult.Failed("Cannot cancel a shipment that has already been shipped.");
 
-        shipment.ShipmentStatus = SD.ShipmentStatusCancelled;
+        shipment.ShipmentStatus = Cartiva.Domain.Enums.ShipmentStatus.Cancelled;
 
         await _db.SaveChangesAsync();
 
@@ -254,7 +257,7 @@ public class ShipmentService : IShipmentService
     public async Task<bool> CanApproveAsync(int shipmentId)
     {
         var shipment = await _db.Shipments.FindAsync(shipmentId);
-        return shipment?.ShipmentStatus == SD.ShipmentStatusPendingApproval;
+        return shipment?.ShipmentStatus == Cartiva.Domain.Enums.ShipmentStatus.PendingApproval;
     }
 
     public async Task<bool> CanCancelAsync(int shipmentId)
@@ -262,8 +265,8 @@ public class ShipmentService : IShipmentService
         var shipment = await _db.Shipments.FindAsync(shipmentId);
         if (shipment == null) return false;
 
-        return shipment.ShipmentStatus != SD.ShipmentStatusShipped &&
-               shipment.ShipmentStatus != SD.ShipmentStatusDelivered;
+        return shipment.ShipmentStatus != Cartiva.Domain.Enums.ShipmentStatus.Shipped &&
+               shipment.ShipmentStatus != Cartiva.Domain.Enums.ShipmentStatus.Delivered;
     }
 
     public async Task<Shipment> CreateShipmentForOrderAsync(int orderHeaderId)
@@ -271,7 +274,7 @@ public class ShipmentService : IShipmentService
         var shipment = new Shipment
         {
             OrderHeaderId = orderHeaderId,
-            ShipmentStatus = SD.ShipmentStatusPendingApproval
+            ShipmentStatus = Cartiva.Domain.Enums.ShipmentStatus.PendingApproval
         };
 
         _db.Shipments.Add(shipment);
@@ -290,12 +293,12 @@ public class ShipmentService : IShipmentService
         if (shipment == null)
             return ShipmentOperationResult.Failed("Shipment not found.");
 
-        if (shipment.ShipmentStatus != SD.ShipmentStatusShipped)
+        if (shipment.ShipmentStatus != Cartiva.Domain.Enums.ShipmentStatus.Shipped)
             return ShipmentOperationResult.Failed("Shipment must be shipped before marking as delivered.");
 
-        shipment.ShipmentStatus = SD.ShipmentStatusDelivered;
+        shipment.ShipmentStatus = Cartiva.Domain.Enums.ShipmentStatus.Delivered;
         shipment.DeliveredDate = DateTime.Now;
-        shipment.OrderHeader.OrderStatus = SD.StatusDelivered;
+        shipment.OrderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Delivered;
 
         await _db.SaveChangesAsync();
 

@@ -1,4 +1,5 @@
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
 using Cartiva.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ namespace Cartiva.Infrastructure.EmailServices
         {
             var overdueOrders = await _db.OrderHeaders
                 .Include(o => o.ApplicationUser)
-                .Where(o => o.PaymentStatus == "Deferred" &&
+                .Where(o => o.PaymentStatus == PaymentStatus.Deferred &&
                             o.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now) &&
                             !o.InvoiceSent &&
                             o.ApplicationUser.CompanyId != null)

@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 using Cartiva.Domain.ViewModels;
 using Cartiva.Persistence;
 using Cartiva.Shared;
@@ -51,21 +53,21 @@ namespace cartivaWeb.Areas.Admin.Controllers
                 .ToListAsync();
 
             viewModel.OverdueInvoiceEntities = allInvoices
-                .Where(i => i.Status != InvoiceStatus.Paid && 
-                           i.Status != InvoiceStatus.Cancelled && 
+                .Where(i => i.Status != Cartiva.Domain.Enums.InvoiceStatus.Paid && 
+                           i.Status != Cartiva.Domain.Enums.InvoiceStatus.Cancelled && 
                            i.DueDate < today)
                 .OrderBy(i => i.DueDate)
                 .ToList();
 
             viewModel.PendingInvoiceEntities = allInvoices
-                .Where(i => i.Status != InvoiceStatus.Paid && 
-                           i.Status != InvoiceStatus.Cancelled && 
+                .Where(i => i.Status != Cartiva.Domain.Enums.InvoiceStatus.Paid && 
+                           i.Status != Cartiva.Domain.Enums.InvoiceStatus.Cancelled && 
                            i.DueDate >= today)
                 .OrderBy(i => i.DueDate)
                 .ToList();
 
             viewModel.PaidInvoiceEntities = allInvoices
-                .Where(i => i.Status == InvoiceStatus.Paid)
+                .Where(i => i.Status == Cartiva.Domain.Enums.InvoiceStatus.Paid)
                 .OrderByDescending(i => i.PaidDate)
                 .ToList();
 
@@ -78,7 +80,7 @@ namespace cartivaWeb.Areas.Admin.Controllers
             var legacyDeferredOrders = await _db.OrderHeaders
                 .Include(o => o.ApplicationUser)
                     .ThenInclude(u => u!.Company)
-                .Where(o => o.PaymentStatus == SD.PaymentStatusDeferred && 
+                .Where(o => o.PaymentStatus == PaymentStatus.Deferred && 
                            !ordersWithInvoices.Contains(o.Id))
                 .ToListAsync();
 
@@ -96,7 +98,7 @@ namespace cartivaWeb.Areas.Admin.Controllers
             viewModel.PaidInvoices = await _db.OrderHeaders
                 .Include(o => o.ApplicationUser)
                     .ThenInclude(u => u!.Company)
-                .Where(o => (o.PaymentStatus == SD.PaymentStatusPaid || o.PaymentStatus == SD.PaymentStatusApproved) &&
+                .Where(o => (o.PaymentStatus == PaymentStatus.Paid || o.PaymentStatus == PaymentStatus.Approved) &&
                            !ordersWithInvoices.Contains(o.Id))
                 .OrderByDescending(o => o.PaymentDate)
                 .ToListAsync();

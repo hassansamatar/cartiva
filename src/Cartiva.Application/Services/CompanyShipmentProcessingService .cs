@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Extensions;
+using Cartiva.Domain.Enums;
 using Cartiva.Infrastructure.QrCodeServices;
 using Cartiva.Persistence;
 using Cartiva.Shared;
@@ -44,8 +46,8 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
             .Include(s => s.OrderHeader)
                 .ThenInclude(o => o.ApplicationUser)
                     .ThenInclude(u => u.Company)
-            .Where(s => s.ShipmentStatus == SD.ShipmentStatusApproved &&
-                        s.OrderHeader.OrderStatus != SD.StatusShipped &&
+            .Where(s => s.ShipmentStatus == ShipmentStatus.Approved &&
+                        s.OrderHeader.OrderStatus != OrderStatus.Shipped &&
                         s.OrderHeader.ApplicationUser.CompanyId != null &&
                         s.OrderHeader.ApplicationUser.Company != null &&
                         s.OrderHeader.ApplicationUser.Company.IsActive)
@@ -65,8 +67,8 @@ public class CompanyShipmentProcessingService : ICompanyShipmentProcessingServic
             shipment.TrackingUrl = SD.GetTrackingUrl(shipment.Carrier, shipment.TrackingNumber);
             shipment.ShippingDate = DateTime.UtcNow;
             shipment.ShippedDate = DateTime.UtcNow;
-            shipment.ShipmentStatus = SD.ShipmentStatusShipped;
-            shipment.OrderHeader.OrderStatus = SD.StatusShipped;
+            shipment.ShipmentStatus = ShipmentStatus.Shipped;
+            shipment.OrderHeader.OrderStatus = OrderStatus.Shipped;
             _logger.LogInformation("Shipped OrderHeaderId {OrderId} with tracking {Tracking}",
                 shipment.OrderHeaderId, shipment.TrackingNumber);
         }

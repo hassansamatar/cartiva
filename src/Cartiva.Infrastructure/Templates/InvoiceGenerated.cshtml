@@ -1,7 +1,8 @@
 @model Cartiva.Infrastructure.Templates.Models.InvoiceGeneratedModel
+@using Cartiva.Domain.Enums
 
 @{
-    var isPaid = Model.Status == Cartiva.Domain.InvoiceStatus.Paid || Model.RemainingAmount <= 0;
+    var isPaid = Model.Status == InvoiceStatus.Paid || Model.RemainingAmount <= 0;
     var headerTitle = isPaid ? "Payment Receipt" : "Invoice Ready";
     var introText = isPaid
         ? $"Thank you. We have received payment for invoice {Model.InvoiceNumber}."

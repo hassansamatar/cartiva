@@ -1,5 +1,6 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Extensions;
 using Cartiva.Domain.Enums;
 using Cartiva.Domain.Interfaces;
 using Cartiva.Persistence;
@@ -66,9 +67,9 @@ public class ReturnService : IReturnService
     public async Task<bool> HasExistingReturnAsync(int orderDetailId)
         => await _db.ReturnRequests.AnyAsync(r =>
             r.OrderDetailId == orderDetailId &&
-            (r.Status == SD.ReturnStatusPending ||
-             r.Status == SD.ReturnStatusApproved ||
-             r.Status == SD.ReturnStatusRefunded));
+            (r.Status == ReturnStatus.Pending ||
+             r.Status == ReturnStatus.Approved ||
+             r.Status == ReturnStatus.Refunded));
 
     #endregion
 
@@ -87,7 +88,7 @@ public class ReturnService : IReturnService
         if (orderDetail == null)
             return ReturnValidationResult.Failure("Order not found.");
 
-        if (orderDetail.OrderHeader.OrderStatus != SD.StatusDelivered)
+        if (orderDetail.OrderHeader.OrderStatus != OrderStatus.Delivered)
             return ReturnValidationResult.Failure("Order not delivered.");
 
         var deliveredDate = orderDetail.OrderHeader.OrderDate;
@@ -135,7 +136,7 @@ public class ReturnService : IReturnService
             Description = description?.Trim(),
             Quantity = quantity,
             RequestDate = DateTime.UtcNow,
-            Status = SD.ReturnStatusPending,
+            Status = ReturnStatus.Pending,
             RefundAmount = od.Price * quantity
         };
 
@@ -203,7 +204,7 @@ public class ReturnService : IReturnService
         if (rr == null)
             return ReturnOperationResult.Failed("Not found.");
 
-        rr.Status = SD.ReturnStatusApproved;
+        rr.Status = ReturnStatus.Approved;
         rr.AdminNote = note;
         rr.ResolvedDate = DateTime.UtcNow;
 
@@ -274,7 +275,7 @@ public class ReturnService : IReturnService
         if (rr == null)
             return ReturnOperationResult.Failed("Not found.");
 
-        rr.Status = SD.ReturnStatusRejected;
+        rr.Status = ReturnStatus.Rejected;
         rr.AdminNote = note;
         rr.ResolvedDate = DateTime.UtcNow;
 
@@ -341,7 +342,7 @@ public class ReturnService : IReturnService
             return ReturnOperationResult.Failed("Return request not found.");
         }
 
-        if (returnRequest.Status != SD.ReturnStatusApproved)
+        if (returnRequest.Status != ReturnStatus.Approved)
         {
             return ReturnOperationResult.Failed("Only approved returns can be refunded.");
         }
@@ -359,12 +360,12 @@ public class ReturnService : IReturnService
             // Stripe's API will be the final check.
             isPaid = true;
         }
-        else if (order.PaymentStatus == SD.PaymentStatusPaid)
+        else if (order.PaymentStatus == PaymentStatus.Paid)
         {
             // If no Stripe ID, check if it's an invoice-based order marked as 'Paid'.
             isPaid = true;
         }
-        else if (order.PaymentStatus == SD.PaymentStatusApproved)
+        else if (order.PaymentStatus == PaymentStatus.Approved)
         {
             // Also consider 'Approved' as a paid status for non-Stripe scenarios if applicable.
             isPaid = true;
@@ -438,7 +439,7 @@ public class ReturnService : IReturnService
         // ==========================================
         // FINALIZE RETURN STATUS
         // ==========================================
-        returnRequest.Status = SD.ReturnStatusRefunded;
+        returnRequest.Status = ReturnStatus.Refunded;
         returnRequest.RefundDate = DateTime.UtcNow;
         returnRequest.RefundAmount = refundAmount;
 
@@ -463,7 +464,7 @@ public class ReturnService : IReturnService
 
         var refunded = await _db.ReturnRequests
             .Where(r => detailIds.Contains(r.OrderDetailId)
-                && r.Status == SD.ReturnStatusRefunded)
+                && r.Status == ReturnStatus.Refunded)
             .ToListAsync();
 
         if (refunded.Sum(x => x.Quantity) >= details.Sum(x => x.Count))
@@ -472,8 +473,8 @@ public class ReturnService : IReturnService
 
             if (order != null)
             {
-                order.OrderStatus = SD.StatusRefunded;
-                order.PaymentStatus = SD.PaymentStatusRefunded;
+                order.OrderStatus = OrderStatus.Refunded;
+                order.PaymentStatus = PaymentStatus.Refunded;
             }
         }
     }

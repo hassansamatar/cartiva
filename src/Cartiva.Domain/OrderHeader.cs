@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Cartiva.Shared;
 
 namespace Cartiva.Domain
 {
@@ -121,8 +121,8 @@ namespace Cartiva.Domain
         // ORDER STATUS & PAYMENT
         // =========================
 
-        public string? OrderStatus { get; set; }
-        public string? PaymentStatus { get; set; }
+        public OrderStatus? OrderStatus { get; set; }
+        public PaymentStatus? PaymentStatus { get; set; }
 
         public DateTime? PaymentDate { get; set; }
         public DateOnly? PaymentDueDate { get; set; }
@@ -182,11 +182,11 @@ namespace Cartiva.Domain
         // HELPER PROPERTIES
         // =========================
 
-        public bool IsPending => OrderStatus == SD.StatusPending;
-        public bool IsApproved => OrderStatus == SD.StatusApproved;
-        public bool IsShipped => OrderStatus == SD.StatusShipped;
-        public bool IsDelivered => OrderStatus == SD.StatusDelivered;
-        public bool IsCancelled => OrderStatus == SD.StatusCancelled;
+        public bool IsPending => OrderStatus == Enums.OrderStatus.Pending;
+        public bool IsApproved => OrderStatus == Enums.OrderStatus.Approved;
+        public bool IsShipped => OrderStatus == Enums.OrderStatus.Shipped;
+        public bool IsDelivered => OrderStatus == Enums.OrderStatus.Delivered;
+        public bool IsCancelled => OrderStatus == Enums.OrderStatus.Cancelled;
 
         public bool IsReturnWindowExpired => ReturnExpirationDate.HasValue && DateTime.Now > ReturnExpirationDate.Value;
 
@@ -196,9 +196,9 @@ namespace Cartiva.Domain
 
         public void MarkAsCancelled()
         {
-            OrderStatus = SD.StatusCancelled;
-            if (PaymentStatus == SD.PaymentStatusApproved)
-                PaymentStatus = SD.PaymentStatusRefunded;
+            OrderStatus = Enums.OrderStatus.Cancelled;
+            if (PaymentStatus == Enums.PaymentStatus.Approved)
+                PaymentStatus = Enums.PaymentStatus.Refunded;
         }
 
         /// <summary>

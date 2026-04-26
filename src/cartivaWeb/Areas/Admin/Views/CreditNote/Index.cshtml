@@ -2,6 +2,9 @@
 
 @using Cartiva.Shared
 @using Cartiva.Domain
+@using Cartiva.Domain.Enums
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Extensions
 @using System.Globalization
 
 @{
@@ -181,7 +184,7 @@
                                 </td>
 
                                 <td>
-                                    <span class="badge @SD.GetCreditNoteStatusBadgeClass(item.Status.ToString())">
+                                    <span class="badge @item.Status.GetBadgeClass()">
                                         @item.Status
                                     </span>
                                 </td>

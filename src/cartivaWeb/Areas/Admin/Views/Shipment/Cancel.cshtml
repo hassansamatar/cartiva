@@ -1,8 +1,11 @@
 ﻿@model Shipment
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
 @{
     ViewData["Title"] = "Cancel Shipment";
+    var shipmentStatus = Model.ShipmentStatus;
 }
 
 <div class="container mt-4">
@@ -16,7 +19,7 @@
             <p><strong>Order ID:</strong> @Model.OrderHeader.Id</p>
             <p><strong>Customer:</strong> @Model.OrderHeader.Name</p>
             <p><strong>Order Total:</strong> @Model.OrderHeader.OrderTotal.ToString("C")</p>
-            <p><strong>Current Status:</strong> <span class="badge @SD.GetShipmentStatusBadgeClass(Model.ShipmentStatus)">@Model.ShipmentStatus</span></p>
+            <p><strong>Current Status:</strong> <span class="badge @shipmentStatus.GetBadgeClass()">@Model.ShipmentStatus</span></p>
         </div>
     </div>
     <form asp-action="Cancel" method="post">

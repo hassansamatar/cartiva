@@ -1,11 +1,12 @@
 ﻿@model Cartiva.Domain.Invoice
 @using System.Globalization
+@using Cartiva.Domain.Enums
 @using Cartiva.Shared
 @{
     Layout = null;
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var contact = ViewBag.CartivaContact as dynamic;
-    var isPaid = Model.Status == Cartiva.Domain.InvoiceStatus.Paid;
+    var isPaid = Model.Status == Cartiva.Domain.Enums.InvoiceStatus.Paid;
     var orderId = Model.OrderHeaderId;
     var latestShipment = Model.OrderHeader?.Shipments?.OrderByDescending(s => s.Id).FirstOrDefault();
     var hasCreditNotes = Model.CreditNotes?.Any() == true;

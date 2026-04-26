@@ -1,4 +1,7 @@
 @model List<ReturnRequest>
+
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using System.Globalization
 
@@ -63,7 +66,7 @@
                                     }
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge @SD.GetReturnStatusBadgeClass(r.Status)">@r.Status</span>
+                                    <span class="badge @r.Status.GetBadgeClass()">@r.Status</span>
                                     @if (r.RefundAmount.HasValue)
                                     {
                                         <div class="mt-1">

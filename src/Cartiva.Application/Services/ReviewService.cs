@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -152,7 +154,7 @@ public class ReviewService : IReviewService
             .AnyAsync(od => od.OrderHeader.Id == orderId
                 && od.ProductVariantId == productVariantId
                 && od.OrderHeader.ApplicationUserId == userId
-                && od.OrderHeader.OrderStatus == SD.StatusDelivered);
+                    && od.OrderHeader.OrderStatus == Cartiva.Domain.Enums.OrderStatus.Delivered);
     }
 
     public async Task<bool> HasUserReviewedAsync(string userId, int productVariantId)

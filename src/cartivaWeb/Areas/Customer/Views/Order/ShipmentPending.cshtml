@@ -1,5 +1,8 @@
 ﻿@model OrderHeader
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using Cartiva.Infrastructure.QrCodeServices
 @inject IQrCodeService QrCodeService
@@ -9,6 +12,8 @@
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
+    var orderStatus = Model.OrderStatus ?? OrderStatus.Pending;
+    var paymentStatus = Model.PaymentStatus ?? PaymentStatus.Pending;
 }
 
 <div class="container mt-5 mb-5">
@@ -44,8 +49,8 @@
                     <p class="mb-1"><strong>Order Date:</strong> @Model.OrderDate.ToString("dd MMM yyyy HH:mm")</p>
                     <p class="mb-1">
                         <strong>Order Status:</strong>
-                        <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus)">
-                            <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus)"></i> @Model.OrderStatus
+                        <span class="badge @orderStatus.GetBadgeClass()">
+                            <i class="bi @orderStatus.GetIcon()"></i> @Model.OrderStatus
                         </span>
                     </p>
                 </div>
@@ -53,7 +58,7 @@
                     <h6 class="fw-bold">Payment Information</h6>
                     <p class="mb-1">
                         <strong>Payment Status:</strong>
-                        <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">
+                        <span class="badge @paymentStatus.GetBadgeClass()">
                             @Model.PaymentStatus
                         </span>
                     </p>
@@ -101,7 +106,7 @@
                 <a href="@trackingUrl" class="btn btn-outline-primary btn-sm" target="_blank">
                     <i class="bi bi-link-45deg"></i> Open Tracking Link
                 </a>
-                @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                @if (orderStatus == OrderStatus.AwaitingShipmentApproval)
                 {
                     <div class="alert alert-light small mt-3 mb-0">
                         <i class="bi bi-clock-history"></i>
@@ -134,7 +139,7 @@
         <a asp-action="Index" asp-controller="Home" class="btn btn-outline-primary">
             <i class="bi bi-shop"></i> Continue Shopping
         </a>
-        @if (Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+        @if (orderStatus == OrderStatus.Pending || orderStatus == OrderStatus.AwaitingShipmentApproval)
         {
             <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-outline-danger">
                 <i class="bi bi-x-circle"></i> Cancel Order

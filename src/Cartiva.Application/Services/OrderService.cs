@@ -1,5 +1,6 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Extensions;
 using Cartiva.Domain.Enums;
 using Cartiva.Domain.Interfaces;
 using Cartiva.Domain.ViewModels;
@@ -78,7 +79,8 @@ public class OrderService : IOrderService
 
         if (!string.IsNullOrEmpty(statusFilter))
         {
-            query = query.Where(o => o.OrderStatus == statusFilter);
+            var parsedStatus = OrderStatusExtensions.FromValue(statusFilter);
+            query = query.Where(o => o.OrderStatus == parsedStatus);
         }
 
         return await query.OrderByDescending(o => o.OrderDate).ToListAsync();
@@ -216,8 +218,8 @@ public class OrderService : IOrderService
             if (companyStatus.IsCompanyActive)
             {
                 // Active company – allow deferred payment
-                orderHeader.PaymentStatus = SD.PaymentStatusDeferred;
-                orderHeader.OrderStatus = SD.StatusAwaitingShipmentApproval;
+                orderHeader.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Deferred;
+                orderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval;
                 orderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
                 orderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
                 isDeferredPayment = true;
@@ -226,8 +228,8 @@ public class OrderService : IOrderService
             else
             {
                 // Inactive company – force upfront payment
-                orderHeader.PaymentStatus = SD.PaymentStatusPending;
-                orderHeader.OrderStatus = SD.StatusPending;
+                orderHeader.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Pending;
+                orderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Pending;
                 orderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
                 orderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
             }
@@ -235,8 +237,8 @@ public class OrderService : IOrderService
         else
         {
             // Regular customer – payment required
-            orderHeader.PaymentStatus = SD.PaymentStatusPending;
-            orderHeader.OrderStatus = SD.StatusPending;
+            orderHeader.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Pending;
+            orderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Pending;
             orderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now);
             orderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
         }
@@ -340,7 +342,7 @@ public class OrderService : IOrderService
         if (order == null)
             return OrderOperationResult.Failed("Order not found.");
 
-        order.OrderStatus = newStatus;
+        order.OrderStatus = Cartiva.Domain.Extensions.OrderStatusExtensions.FromValue(newStatus);
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Order {OrderId} status updated to {Status}", orderId, newStatus);
@@ -353,7 +355,7 @@ public class OrderService : IOrderService
         if (order == null)
             return OrderOperationResult.Failed("Order not found.");
 
-        order.PaymentStatus = paymentStatus;
+        order.PaymentStatus = Cartiva.Domain.Extensions.PaymentStatusExtensions.FromValue(paymentStatus);
         if (paymentIntentId != null)
         {
             order.PaymentIntentId = paymentIntentId;
@@ -374,10 +376,10 @@ public class OrderService : IOrderService
         if (order == null)
             return OrderOperationResult.Failed("Order not found.");
 
-        order.PaymentStatus = SD.PaymentStatusApproved;
+        order.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Approved;
         order.PaymentIntentId = paymentIntentId;
         order.PaymentDate = DateTime.Now;
-        order.OrderStatus = SD.StatusAwaitingShipmentApproval;
+        order.OrderStatus = Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval;
 
         await _db.SaveChangesAsync();
 
@@ -434,7 +436,7 @@ public class OrderService : IOrderService
         if (order == null)
             return OrderOperationResult.Failed("Order not found.");
 
-        if (order.OrderStatus == SD.StatusCancelled)
+        if (order.OrderStatus == Cartiva.Domain.Enums.OrderStatus.Cancelled)
             return OrderOperationResult.Failed("Order is already cancelled.");
 
         var cancellationReason = string.IsNullOrWhiteSpace(reason) ? "Not specified" : reason;
@@ -488,7 +490,7 @@ public class OrderService : IOrderService
                 }
             }
 
-            order.PaymentStatus = SD.PaymentStatusRefunded;
+            order.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Refunded;
             order.PaymentDate = DateTime.UtcNow;
 
             if (creditNote != null && !string.IsNullOrWhiteSpace(refundReference))
@@ -506,7 +508,7 @@ public class OrderService : IOrderService
             }
         }
 
-        order.OrderStatus = SD.StatusCancelled;
+        order.OrderStatus = Cartiva.Domain.Enums.OrderStatus.Cancelled;
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Order {OrderId} cancelled. Reason: {Reason}", orderId, cancellationReason);
@@ -526,8 +528,8 @@ public class OrderService : IOrderService
                         ["orderDate"] = order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss"),
                         ["orderTotal"] = order.OrderTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         ["currency"] = order.Currency,
-                        ["orderStatus"] = order.OrderStatus ?? string.Empty,
-                        ["paymentStatus"] = order.PaymentStatus ?? string.Empty,
+                        ["orderStatus"] = order.OrderStatus?.ToString() ?? string.Empty,
+                        ["paymentStatus"] = order.PaymentStatus?.ToString() ?? string.Empty,
                         ["cancellationReason"] = cancellationReason
                     },
                     UserId: order.ApplicationUserId,
@@ -552,8 +554,8 @@ public class OrderService : IOrderService
             return true;
         }
 
-        return order.PaymentStatus == SD.PaymentStatusApproved ||
-               order.PaymentStatus == SD.PaymentStatusPaid;
+        return order.PaymentStatus == Cartiva.Domain.Enums.PaymentStatus.Approved ||
+               order.PaymentStatus == Cartiva.Domain.Enums.PaymentStatus.Paid;
     }
 
     #endregion

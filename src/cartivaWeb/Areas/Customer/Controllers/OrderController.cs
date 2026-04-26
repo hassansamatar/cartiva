@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Authorization;
 using Cartiva.Infrastructure.PaymentService;
 using Cartiva.Shared;
 using Cartiva.Application.Abstractions;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 
 [Area("Customer")]
 [Authorize]
@@ -201,7 +203,7 @@ public class OrderController : Controller
         if (order.ApplicationUserId != userId)
         {
             if (User.IsInRole(SD.Role_Company)
-                && order.PaymentStatus == SD.PaymentStatusDeferred)
+                && order.PaymentStatus == Cartiva.Domain.Enums.PaymentStatus.Deferred)
             {
                 var currentUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
                 if (currentUser?.CompanyId == null || order.ApplicationUser?.CompanyId != currentUser.CompanyId)
@@ -293,7 +295,7 @@ public class OrderController : Controller
             if (paymentIntent.Status == "succeeded")
             {
                 // Update payment status
-                order.PaymentStatus = SD.PaymentStatusApproved;
+                order.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Approved;
                 order.PaymentIntentId = paymentIntentId;
                 order.PaymentDate = DateTime.Now;
 
@@ -301,12 +303,12 @@ public class OrderController : Controller
                 var shipment = new Shipment
                 {
                     OrderHeaderId = order.Id,
-                    ShipmentStatus = SD.ShipmentStatusPendingApproval
+                    ShipmentStatus = Cartiva.Domain.Enums.ShipmentStatus.PendingApproval
                 };
                 _db.Shipments.Add(shipment);
 
                 // Update order status to AwaitingShipmentApproval
-                order.OrderStatus = SD.StatusAwaitingShipmentApproval;
+                order.OrderStatus = Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval;
 
                 await _db.SaveChangesAsync();
                 _logger.LogInformation($"Order {orderId} updated to AwaitingShipmentApproval with pending shipment.");
@@ -317,7 +319,7 @@ public class OrderController : Controller
                     var invoice = await _invoiceService.GetInvoiceByOrderIdAsync(order.Id)
                         ?? await _invoiceService.GenerateInvoiceFromOrderAsync(order.Id);
 
-                    if (invoice.Status != InvoiceStatus.Paid)
+                    if (invoice.Status != Cartiva.Domain.Enums.InvoiceStatus.Paid)
                     {
                         await _invoiceService.RecordPaymentAsync(
                             invoiceId: invoice.Id,
@@ -515,7 +517,7 @@ public class OrderController : Controller
         if (order == null)
             return NotFound();
 
-        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved && order.OrderStatus != SD.StatusAwaitingShipmentApproval)
+        if (order.OrderStatus != Cartiva.Domain.Enums.OrderStatus.Pending && order.OrderStatus != Cartiva.Domain.Enums.OrderStatus.Approved && order.OrderStatus != Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval)
         {
             TempData["Error"] = "This order cannot be cancelled because it's already " + order.OrderStatus;
             return RedirectToAction("Details", new { id });
@@ -541,7 +543,7 @@ public class OrderController : Controller
         if (order == null)
             return NotFound();
 
-        if (order.OrderStatus != SD.StatusPending && order.OrderStatus != SD.StatusApproved && order.OrderStatus != SD.StatusAwaitingShipmentApproval)
+        if (order.OrderStatus != Cartiva.Domain.Enums.OrderStatus.Pending && order.OrderStatus != Cartiva.Domain.Enums.OrderStatus.Approved && order.OrderStatus != Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval)
         {
             return Json(new
             {

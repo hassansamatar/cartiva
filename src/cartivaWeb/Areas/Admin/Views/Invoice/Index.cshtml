@@ -1,5 +1,8 @@
 ﻿@model InvoiceDashboardViewModel
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @{
     ViewData["Title"] = "Invoice Management";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
@@ -113,7 +116,7 @@
                                 <td>@(invoice.OrderHeader?.ApplicationUser?.Company?.Name ?? "-")</td>
                                 <td>@invoice.CustomerName</td>
                                 <td>
-                                    <span class="badge @SD.GetInvoiceStatusBadgeClass(invoice.Status.ToString())">@invoice.Status</span>
+                                    <span class="badge @invoice.Status.GetBadgeClass()">@invoice.Status</span>
                                 </td>
                                 <td class="text-overdue">@invoice.DueDate.ToString("dd.MM.yyyy")</td>
                                 <td class="text-end">@invoice.NetAmount.ToString("N2", culture)</td>
@@ -234,7 +237,7 @@
                     <tbody>
                         @foreach (var invoice in Model.PendingInvoiceEntities)
                         {
-                            var statusLabel = invoice.Status == Cartiva.Domain.InvoiceStatus.Paid ? "Paid" : "Deferred / Outstanding";
+                            var statusLabel = invoice.Status == Cartiva.Domain.Enums.InvoiceStatus.Paid ? "Paid" : "Deferred / Outstanding";
                             <tr>
                                 <td>
                                     <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="fw-bold text-decoration-none">
@@ -256,7 +259,7 @@
                                 <td>@(invoice.OrderHeader?.ApplicationUser?.Company?.Name ?? "-")</td>
                                 <td>@invoice.CustomerName</td>
                                 <td>
-                                    <span class="badge @SD.GetInvoiceStatusBadgeClass(invoice.Status.ToString())">@statusLabel</span>
+                                    <span class="badge @invoice.Status.GetBadgeClass()">@statusLabel</span>
                                 </td>
                                 <td>@invoice.DueDate.ToString("dd.MM.yyyy")</td>
                                 <td class="text-end">@invoice.NetAmount.ToString("N2", culture)</td>
@@ -390,7 +393,7 @@
                                 </td>
                                 <td>@(invoice.OrderHeader?.ApplicationUser?.Company?.Name ?? "-")</td>
                                 <td>@invoice.CustomerName</td>
-                                <td><span class="badge @SD.GetInvoiceStatusBadgeClass(invoice.Status.ToString())">Paid</span></td>
+                                <td><span class="badge @invoice.Status.GetBadgeClass()">Paid</span></td>
                                 <td class="amount-positive">@invoice.PaidDate?.ToString("dd.MM.yyyy")</td>
                                 <td class="text-end">@invoice.NetAmount.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@invoice.VatAmount.ToString("N2", culture)</td>

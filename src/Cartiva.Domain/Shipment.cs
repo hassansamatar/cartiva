@@ -3,8 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
-using Cartiva.Domain;
-using Cartiva.Shared;
+using Cartiva.Domain.Enums;
 
 namespace Cartiva.Domain
 {
@@ -28,7 +27,7 @@ namespace Cartiva.Domain
         public DateTime? DeliveredDate { get; set; }
 
         // Status
-        public string ShipmentStatus { get; set; } = SD.ShipmentStatusPendingApproval;
+        public ShipmentStatus ShipmentStatus { get; set; } = Enums.ShipmentStatus.PendingApproval;
 
         // Shipping label (optional)
         public string? LabelUrl { get; set; }

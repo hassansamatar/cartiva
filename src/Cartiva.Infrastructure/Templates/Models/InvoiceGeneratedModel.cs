@@ -1,4 +1,5 @@
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
 
 namespace Cartiva.Infrastructure.Templates.Models;
 

@@ -172,7 +172,7 @@ ProcessedStripeEvent	Stores Stripe event IDs for idempotent webhook processing
 Update appsettings.json or use User Secrets:
 {  "ConnectionStrings": {    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=Cartiva;Trusted_Connection=True;MultipleActiveResultSets=true"  },  "Stripe": {    "SecretKey": "sk_test_...",    "PublishableKey": "pk_test_...",    "WebhookSecret": "whsec_..."  },  "Bring": {    "ApiKey": "...",    "CustomerId": "..."  },  "Kartverket": {    "BaseUrl": "https://ws.geonorge.no/adresser/v1/"  }}
 
-### 5. Start background job server (Hangfire)
+### Start background job server (Hangfire)
 
 In `Program.cs`, ensure:
 
@@ -185,7 +185,7 @@ Recurring jobs:
 - Return window expiration checks
 - Failed Stripe webhook retries (idempotency ensures duplicates are safely handled)
 
-### 6. Run the application
+### Run the application
 
 ```
 dotnet run --project CartivaWeb
@@ -305,6 +305,14 @@ Duplicate events (e.g., network retries) are detected and ignored, ensuring paym
 | `Cartiva.Infrastructure/BackgroundJobs/*` | Hangfire background jobs (emails, expiry, webhook retries) |
 | `Cartiva.Infrastructure/Logging/SerilogConfig.cs` | Structured logging configuration |
 
+## 📐 Coding Conventions
+
+### Infrastructure Layer Naming
+...
+### Infrastructure naming convention (evolved)
+- Simple modules (single interface + single impl): co-locate in one folder (e.g., ImageServices/)
+- Complex modules (multiple interfaces, multiple subfolders): interfaces go in `Interfaces/` folder under the module root
+- New modules: prefer `Interfaces/` for clarity unless the module is trivially small
 ---
 
 ### 🧩 Shared
@@ -320,16 +328,20 @@ Duplicate events (e.g., network retries) are detected and ignored, ensuring paym
 - Logging is structured using Serilog.
 
 
-🔮 Future Improvements
-#	Improvement	Priority	Effort
-1	Add structured logging (Serilog) – integrated 	
-2	Introduce caching for product catalog – in progress	
-3	Expand deployment guide – done (Docker, Azure, IIS) 
-4	Document promotion rule engine – detailed evaluation logic	
-5	Add Swagger/OpenAPI for any JSON endpoints	
-6	Increase integration test coverage for checkout & webhooks		
-7	Add troubleshooting section – common issues (webhook failures, API rate limits)	
-📄 License
+## 🔮 Future Improvements
+
+- Add structured logging (Serilog) – integrated
+- Introduce caching for product catalog – in progress
+- Expand deployment guide – done (Docker, Azure, IIS)
+- Document promotion rule engine – detailed evaluation logic
+- Add Swagger/OpenAPI for any JSON endpoints
+- Increase integration test coverage for checkout & webhooks
+- Add troubleshooting section – common issues (webhook failures, API rate limits)
+
+---
+
+## 📄 License
+
 MIT © Hassan Samatar
 
 🙌 Acknowledgments

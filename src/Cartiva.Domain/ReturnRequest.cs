@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Cartiva.Shared;
+using Cartiva.Domain.Enums;
 
 namespace Cartiva.Domain
 {
@@ -37,7 +37,7 @@ namespace Cartiva.Domain
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;
 
         [StringLength(30)]
-        public string Status { get; set; } = SD.ReturnStatusPending;
+        public ReturnStatus Status { get; set; } = Enums.ReturnStatus.Pending;
 
         // Admin response
         public string? AdminNote { get; set; }

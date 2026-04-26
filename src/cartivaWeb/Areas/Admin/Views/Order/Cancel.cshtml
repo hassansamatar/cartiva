@@ -1,10 +1,15 @@
 @model OrderHeader
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using System.Globalization
 
 @{
     ViewData["Title"] = "Cancel Order";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var orderStatus = Model.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
+    var paymentStatus = Model.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
 }
 
 <div class="container mt-4">
@@ -20,8 +25,8 @@
             <p><strong>Customer:</strong> @Model.Name</p>
             <p><strong>Order Date:</strong> @Model.OrderDate.ToString("dd MMM yyyy HH:mm")</p>
             <p><strong>Total:</strong> @Model.OrderTotal.ToString("C", culture)</p>
-            <p><strong>Status:</strong> <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus)">@Model.OrderStatus</span></p>
-            <p><strong>Payment:</strong> <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">@Model.PaymentStatus</span></p>
+            <p><strong>Status:</strong> <span class="badge @orderStatus.GetBadgeClass()">@Model.OrderStatus</span></p>
+            <p><strong>Payment:</strong> <span class="badge @paymentStatus.GetBadgeClass()">@Model.PaymentStatus</span></p>
         </div>
     </div>
 

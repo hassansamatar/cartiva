@@ -1,6 +1,9 @@
 ﻿<!-- Views/Order/Track.cshtml -->
 @model OrderHeader
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using Cartiva.Infrastructure.QrCodeServices
 @inject IQrCodeService QrCodeService
@@ -17,26 +20,25 @@
     var carrier = shipment?.Carrier;
     var shippedDate = shipment?.ShippedDate;
     var deliveredDate = shipment?.DeliveredDate;
+    var orderStatus = Model.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
 
     // Determine shipped/delivered status from either shipment dates or order status
     var isShipped = shippedDate.HasValue
-        || Model.OrderStatus == SD.StatusShipped
-        || Model.OrderStatus == SD.StatusDelivered;
+        || orderStatus == OrderStatus.Shipped
+        || orderStatus == OrderStatus.Delivered;
     var isDelivered = deliveredDate.HasValue
-        || Model.OrderStatus == SD.StatusDelivered;
+        || orderStatus == OrderStatus.Delivered;
 
-    // Calculate progress percentage based on order status (using SD helper)
-    int progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
+    int progressPercentage = orderStatus.GetProgress();
 
-    // Get status icon and color using SD helpers
-    var statusInfo = Model.OrderStatus switch
+    var statusInfo = orderStatus switch
     {
-        SD.StatusPending => new { Icon = "⏳", Color = "warning", Text = "Awaiting Payment" },
-        SD.StatusApproved => new { Icon = "✅", Color = "primary", Text = "Payment Confirmed" },
-        SD.StatusAwaitingShipmentApproval => new { Icon = "⏰", Color = "info", Text = "Awaiting Shipment Approval" },
-        SD.StatusShipped => new { Icon = "📦", Color = "info", Text = "On the Way" },
-        SD.StatusDelivered => new { Icon = "🏠", Color = "success", Text = "Delivered" },
-        SD.StatusCancelled => new { Icon = "❌", Color = "danger", Text = "Cancelled" },
+        OrderStatus.Pending => new { Icon = "⏳", Color = "warning", Text = "Awaiting Payment" },
+        OrderStatus.Approved => new { Icon = "✅", Color = "primary", Text = "Payment Confirmed" },
+        OrderStatus.AwaitingShipmentApproval => new { Icon = "⏰", Color = "info", Text = "Awaiting Shipment Approval" },
+        OrderStatus.Shipped => new { Icon = "📦", Color = "info", Text = "On the Way" },
+        OrderStatus.Delivered => new { Icon = "🏠", Color = "success", Text = "Delivered" },
+        OrderStatus.Cancelled => new { Icon = "❌", Color = "danger", Text = "Cancelled" },
         _ => new { Icon = "📝", Color = "secondary", Text = "Processing" }
     };
 }
@@ -78,7 +80,7 @@
                             <div class="fs-1 me-3">@statusInfo.Icon</div>
                             <div>
                                 <h5 class="mb-1">Your order is @statusInfo.Text.ToLower()</h5>
-                                <p class="mb-0">@SD.GetOrderTrackingMessage(Model.OrderStatus)</p>
+                                <p class="mb-0">@orderStatus.GetTrackingMessage()</p>
                             </div>
                         </div>
                     </div>
@@ -86,7 +88,7 @@
                     <!-- Progress Timeline -->
                     <h5 class="fw-bold mb-4">Order Progress</h5>
 
-                    @if (Model.OrderStatus != SD.StatusCancelled)
+                    @if (orderStatus != OrderStatus.Cancelled)
                     {
                         <div class="progress mb-4" style="height: 8px;">
                             <div class="progress-bar bg-@statusInfo.Color progress-bar-striped progress-bar-animated"
@@ -114,9 +116,9 @@
                         </div>
 
                         <!-- Step 2: Payment Confirmed -->
-                        <div class="timeline-step @(Model.PaymentDate.HasValue ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "active"))">
+                        <div class="timeline-step @(Model.PaymentDate.HasValue ? "completed" : (orderStatus == OrderStatus.Cancelled ? "" : "active"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(Model.PaymentDate.HasValue ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "warning"))">
+                                <div class="step-icon bg-@(Model.PaymentDate.HasValue ? "success" : (orderStatus == OrderStatus.Cancelled ? "secondary" : "warning"))">
                                     <i class="bi bi-credit-card"></i>
                                 </div>
                             </div>
@@ -130,7 +132,7 @@
                                     {
                                         <span>Payment of @Model.OrderTotal.ToString("C", culture) completed</span>
                                     }
-                                    else if (Model.OrderStatus == SD.StatusCancelled)
+                                    else if (orderStatus == OrderStatus.Cancelled)
                                     {
                                         <span>Payment not processed</span>
                                     }
@@ -143,7 +145,7 @@
                         </div>
 
                         <!-- Step 3: Shipment Approval (only if status is AwaitingShipmentApproval) -->
-                        @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                        @if (orderStatus == OrderStatus.AwaitingShipmentApproval)
                         {
                             <div class="timeline-step active">
                                 <div class="step-icon-wrapper">
@@ -162,9 +164,9 @@
                         }
 
                         <!-- Step 4: Order Shipped -->
-                        <div class="timeline-step @(isShipped ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
+                        <div class="timeline-step @(isShipped ? "completed" : (orderStatus == OrderStatus.Cancelled ? "" : "pending"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(isShipped ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
+                                <div class="step-icon bg-@(isShipped ? "success" : (orderStatus == OrderStatus.Cancelled ? "secondary" : "light"))">
                                     <i class="bi bi-truck"></i>
                                 </div>
                             </div>
@@ -182,7 +184,7 @@
                                             <span><br />Tracking Number: <strong>@trackingNumber</strong></span>
                                         }
                                     }
-                                    else if (Model.OrderStatus == SD.StatusCancelled)
+                                    else if (orderStatus == OrderStatus.Cancelled)
                                     {
                                         <span>Shipment cancelled</span>
                                     }
@@ -195,9 +197,9 @@
                         </div>
 
                         <!-- Step 5: Delivered -->
-                        <div class="timeline-step @(isDelivered ? "completed" : (Model.OrderStatus == SD.StatusCancelled ? "" : "pending"))">
+                        <div class="timeline-step @(isDelivered ? "completed" : (orderStatus == OrderStatus.Cancelled ? "" : "pending"))">
                             <div class="step-icon-wrapper">
-                                <div class="step-icon bg-@(isDelivered ? "success" : (Model.OrderStatus == SD.StatusCancelled ? "secondary" : "light"))">
+                                <div class="step-icon bg-@(isDelivered ? "success" : (orderStatus == OrderStatus.Cancelled ? "secondary" : "light"))">
                                     <i class="bi bi-house-check"></i>
                                 </div>
                             </div>
@@ -211,7 +213,7 @@
                                     {
                                         <span>Your order has been delivered. Enjoy your purchase!</span>
                                     }
-                                    else if (Model.OrderStatus == SD.StatusCancelled)
+                                    else if (orderStatus == OrderStatus.Cancelled)
                                     {
                                         <span>Order cancelled</span>
                                     }
@@ -403,7 +405,7 @@
 
 @section Scripts {
     <script src="~/js/order-track.js" asp-append-version="true"></script>
-    @if (Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+    @if (orderStatus == OrderStatus.Pending || orderStatus == OrderStatus.AwaitingShipmentApproval)
     {
         <script>
             setTimeout(function() { location.reload(); }, 30000);

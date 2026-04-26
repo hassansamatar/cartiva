@@ -1,5 +1,8 @@
 ﻿@model OrderHeader
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using Cartiva.Infrastructure.QrCodeServices
 @inject IQrCodeService QrCodeService
@@ -8,10 +11,11 @@
     ViewData["Title"] = "Cancel Order";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var refundAmount = Model.OrderTotal;
-    // Allow cancellation for pending, approved, or awaiting shipment approval
-    var canCancel = Model.OrderStatus == SD.StatusPending
-                    || Model.OrderStatus == SD.StatusApproved
-                    || Model.OrderStatus == SD.StatusAwaitingShipmentApproval;
+    var orderStatus = Model.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
+    var paymentStatus = Model.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
+    var canCancel = orderStatus == global::Cartiva.Domain.Enums.OrderStatus.Pending
+                    || orderStatus == global::Cartiva.Domain.Enums.OrderStatus.Approved
+                    || orderStatus == global::Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval;
 
     var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
@@ -79,8 +83,8 @@
                                     <tr>
                                         <td class="text-muted">Order Status:</td>
                                         <td>
-                                            <span class="badge cancel-badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus)">
-                                                <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus)"></i>
+                                            <span class="badge cancel-badge @orderStatus.GetBadgeClass()">
+                                                <i class="bi @orderStatus.GetIcon()"></i>
                                                 @Model.OrderStatus
                                             </span>
                                         </td>
@@ -97,7 +101,7 @@
                                     <tr>
                                         <td class="text-muted">Payment Status:</td>
                                         <td>
-                                            <span class="badge cancel-badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">
+                                            <span class="badge cancel-badge @paymentStatus.GetBadgeClass()">
                                                 @Model.PaymentStatus
                                             </span>
                                         </td>
@@ -139,7 +143,7 @@
                                     <p class="text-muted small mt-2 mb-0">
                                         <i class="bi bi-phone"></i> Scan with your phone to track this order.
                                     </p>
-                                    @if (Model.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                                    @if (orderStatus == global::Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval)
                                     {
                                         <div class="alert alert-light small mt-2 mb-0">
                                             <i class="bi bi-clock-history"></i>
@@ -251,7 +255,7 @@
                                     </li>
                                     <li>
                                         <i class="bi bi-check2-circle text-success me-2"></i>
-                                        @if (Model.PaymentStatus == SD.PaymentStatusApproved)
+                                        @if (paymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Approved)
                                         {
                                             <span>Refund will be processed within 5-7 business days</span>
                                         }

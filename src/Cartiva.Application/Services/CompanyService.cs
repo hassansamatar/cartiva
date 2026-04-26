@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 using Cartiva.Domain.ViewModels;
 using Cartiva.Persistence;
 using Cartiva.Shared;
@@ -56,18 +58,18 @@ public class CompanyService : ICompanyService
             if (companyOrders.Any())
             {
                 if (companyOrders.Any(o =>
-                        o.PaymentStatus == SD.PaymentStatusDeferred &&
+                        o.PaymentStatus == Cartiva.Domain.Enums.PaymentStatus.Deferred &&
                         o.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now)))
                 {
                     paymentStatus = "Overdue";
                 }
                 else if (companyOrders.Any(o =>
-                        o.PaymentStatus == SD.PaymentStatusDeferred))
+                        o.PaymentStatus == Cartiva.Domain.Enums.PaymentStatus.Deferred))
                 {
                     paymentStatus = "Pending";
                 }
                 else if (companyOrders.All(o =>
-                        o.PaymentStatus == SD.PaymentStatusApproved))
+                        o.PaymentStatus == Cartiva.Domain.Enums.PaymentStatus.Approved))
                 {
                     paymentStatus = "Paid";
                 }

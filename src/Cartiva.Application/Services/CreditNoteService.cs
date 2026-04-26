@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +38,7 @@ namespace Cartiva.Application.Services
             if (returnRequest == null)
                 throw new InvalidOperationException($"Return request with ID {returnRequestId} not found.");
 
-            if (returnRequest.Status != SD.ReturnStatusApproved)
+            if (returnRequest.Status != ReturnStatus.Approved)
                 throw new InvalidOperationException("Credit notes can only be created for approved return requests.");
 
             var orderId = returnRequest.OrderDetail.OrderHeaderId;

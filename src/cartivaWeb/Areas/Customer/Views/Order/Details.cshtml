@@ -1,5 +1,8 @@
 ﻿@model OrderHeader
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
 @using Cartiva.Persistence
@@ -11,7 +14,9 @@
 @{
     ViewData["Title"] = $"Order Details #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
-    var canCancel = Model.OrderStatus == SD.StatusPending || Model.OrderStatus == SD.StatusApproved;
+    var orderStatus = Model.OrderStatus ?? OrderStatus.Pending;
+    var paymentStatus = Model.PaymentStatus ?? PaymentStatus.Pending;
+    var canCancel = orderStatus == OrderStatus.Pending || orderStatus == OrderStatus.Approved;
     var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
     // Load existing return requests for this order's items
@@ -23,9 +28,9 @@
     // Generate QR Code and Tracking URL
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Id);
     var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
-    var progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
-    var trackingMessage = SD.GetOrderTrackingMessage(Model.OrderStatus);
-    var progressBarColor = SD.GetStatusProgressBarColor(Model.OrderStatus);
+    var progressPercentage = orderStatus.GetProgress();
+    var trackingMessage = orderStatus.GetTrackingMessage();
+    var progressBarColor = orderStatus.GetProgressBarColor();
 
     // Get the first shipment (if any)
     var shipment = Model.Shipments?.OrderBy(s => s.Id).FirstOrDefault();
@@ -34,10 +39,10 @@
 
     // Determine shipped/delivered status from either shipment dates or order status
     var isShipped = shippedDate.HasValue
-        || Model.OrderStatus == SD.StatusShipped
-        || Model.OrderStatus == SD.StatusDelivered;
+        || orderStatus == OrderStatus.Shipped
+        || orderStatus == OrderStatus.Delivered;
     var isDelivered = deliveredDate.HasValue
-        || Model.OrderStatus == SD.StatusDelivered;
+        || orderStatus == OrderStatus.Delivered;
 }
 
 <div class="container mt-4 mb-5">
@@ -90,11 +95,11 @@
                 </div>
             }
             <div>
-                <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus) px-4 py-3 fs-6">
-                    <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus) me-2"></i>
+                <span class="badge @orderStatus.GetBadgeClass() px-4 py-3 fs-6">
+                    <i class="bi @orderStatus.GetIcon() me-2"></i>
                     @Model.OrderStatus
                 </span>
-                <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus) px-4 py-3 fs-6 ms-2">
+                <span class="badge @paymentStatus.GetBadgeClass() px-4 py-3 fs-6 ms-2">
                     <i class="bi bi-credit-card me-2"></i>
                     @Model.PaymentStatus
                 </span>
@@ -152,20 +157,20 @@
                 </div>
                 <div class="col-md-2">
                     <div class="position-relative">
-                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusProcessing || Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
-                            <i class="bi @(Model.OrderStatus == SD.StatusProcessing || Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bi-check-circle-fill text-success" : "bi-gear text-secondary") fs-2"></i>
+                        <div class="rounded-circle @(orderStatus == OrderStatus.Processing || orderStatus == OrderStatus.Shipped || orderStatus == OrderStatus.Delivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(orderStatus == OrderStatus.Processing || orderStatus == OrderStatus.Shipped || orderStatus == OrderStatus.Delivered ? "bi-check-circle-fill text-success" : "bi-gear text-secondary") fs-2"></i>
                         </div>
                         <h6 class="fw-bold">Processing</h6>
                         <small class="text-muted">
-                            @(Model.OrderStatus == SD.StatusProcessing ? "In Progress" :
-                              Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "Completed" : "Pending")
+                            @(orderStatus == OrderStatus.Processing ? "In Progress" :
+                              orderStatus == OrderStatus.Shipped || orderStatus == OrderStatus.Delivered ? "Completed" : "Pending")
                         </small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="position-relative">
-                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
-                            <i class="bi @(Model.OrderStatus == SD.StatusShipped || Model.OrderStatus == SD.StatusDelivered ? "bi-check-circle-fill text-success" : "bi-truck text-secondary") fs-2"></i>
+                        <div class="rounded-circle @(orderStatus == OrderStatus.Shipped || orderStatus == OrderStatus.Delivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(orderStatus == OrderStatus.Shipped || orderStatus == OrderStatus.Delivered ? "bi-check-circle-fill text-success" : "bi-truck text-secondary") fs-2"></i>
                         </div>
                         <h6 class="fw-bold">Shipped</h6>
                         <small class="text-muted">
@@ -175,8 +180,8 @@
                 </div>
                 <div class="col-md-3">
                     <div class="position-relative">
-                        <div class="rounded-circle @(Model.OrderStatus == SD.StatusDelivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
-                            <i class="bi @(Model.OrderStatus == SD.StatusDelivered ? "bi-check-circle-fill text-success" : "bi-house-check text-primary") fs-2"></i>
+                        <div class="rounded-circle @(orderStatus == OrderStatus.Delivered ? "bg-success" : "bg-light") bg-opacity-10 d-inline-flex p-3 mb-2">
+                            <i class="bi @(orderStatus == OrderStatus.Delivered ? "bi-check-circle-fill text-success" : "bi-house-check text-primary") fs-2"></i>
                         </div>
                         <h6 class="fw-bold">Delivered</h6>
                         <small class="text-muted">
@@ -227,7 +232,7 @@
                             </div>
                         </div>
                     }
-                    else if (shipment != null && shipment.ShipmentStatus == SD.ShipmentStatusPendingApproval)
+                    else if (shipment != null && shipment.ShipmentStatus == ShipmentStatus.PendingApproval)
                     {
                         <div class="alert alert-warning">
                             <i class="bi bi-clock-history"></i>
@@ -271,8 +276,8 @@
                         <tr>
                             <td><strong>Payment Status:</strong></td>
                             <td>
-                                <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">
-                                    <i class="bi @SD.GetPaymentStatusIcon(Model.PaymentStatus) me-1"></i>
+                                <span class="badge @paymentStatus.GetBadgeClass()">
+                                    <i class="bi @paymentStatus.GetIcon() me-1"></i>
                                     @Model.PaymentStatus
                                 </span>
                             </td>
@@ -327,7 +332,7 @@
                         <th class="py-3 text-center" style="width: 12%">Price</th>
                         <th class="py-3 text-center" style="width: 8%">Quantity</th>
                         <th class="py-3 text-end" style="width: 12%">Total</th>
-                        @if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+                        @if (orderStatus == OrderStatus.Delivered && !isColleagueOrder)
                         {
                             <th class="py-3 text-center" style="width: 13%">Return</th>
                         }
@@ -396,13 +401,13 @@
                             <td class="text-end align-middle py-3">
                                 <span class="fw-bold text-primary">@subtotal.ToString("C", culture)</span>
                             </td>
-                            @if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+                            @if (orderStatus == OrderStatus.Delivered && !isColleagueOrder)
                             {
                                 <td class="text-center align-middle py-3">
                                     @if (existingReturns.ContainsKey(item.Id))
                                     {
                                         var ret = existingReturns[item.Id];
-                                        <span class="badge @SD.GetReturnStatusBadgeClass(ret.Status)">
+                                        <span class="badge @ret.Status.GetBadgeClass()">
                                             @ret.Status
                                         </span>
                                     }
@@ -421,7 +426,7 @@
                 </tbody>
                 <tfoot class="table-light">
                     @{
-                        var colSpan = (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder) ? 4 : 3;
+                        var colSpan = (orderStatus == OrderStatus.Delivered && !isColleagueOrder) ? 4 : 3;
                     }
                     <tr>
                         <td colspan="@colSpan" class="text-end py-3"><strong class="fs-5">Subtotal:</strong></td>
@@ -459,13 +464,13 @@
                     <i class="bi bi-x-circle"></i> Cancel Order
                 </a>
             }
-            @if (Model.OrderStatus == SD.StatusDelivered)
+            @if (orderStatus == OrderStatus.Delivered)
             {
                 <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reviewModal">
                     <i class="bi bi-star"></i> Leave Review
                 </button>
             }
-            @if (User.IsInRole(SD.Role_Company) && Model.PaymentStatus == SD.PaymentStatusDeferred)
+            @if (User.IsInRole(SD.Role_Company) && paymentStatus == PaymentStatus.Deferred)
             {
                 <a asp-action="Payment" asp-route-orderId="@Model.Id" class="btn btn-success">
                     <i class="bi bi-credit-card"></i> Pay Now
@@ -507,7 +512,7 @@
     </div>
 </div>
 
-@if (Model.OrderStatus == SD.StatusDelivered && !isColleagueOrder)
+@if (orderStatus == OrderStatus.Delivered && !isColleagueOrder)
 {
     var reviewedVariantIds = _reviewDb.Reviews
         .Where(r => r.ApplicationUserId == currentUserId)

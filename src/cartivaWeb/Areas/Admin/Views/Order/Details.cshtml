@@ -1,5 +1,8 @@
 @model OrderHeader
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
 @{
@@ -7,6 +10,8 @@
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var latestShipment = Model.Shipments.OrderByDescending(s => s.Id).FirstOrDefault();
     var relatedInvoice = ViewBag.RelatedInvoice as Invoice;
+    var orderStatus = Model.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
+    var paymentStatus = Model.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
 }
 
 <div class="container mt-4">
@@ -25,12 +30,12 @@
                         <dd class="col-sm-8">@Model.OrderDate.ToString("dd MMM yyyy HH:mm")</dd>
 
                         <dt class="col-sm-4">Order Status</dt>
-                        <dd class="col-sm-8"><span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus)">@Model.OrderStatus</span></dd>
+                        <dd class="col-sm-8"><span class="badge @orderStatus.GetBadgeClass()">@Model.OrderStatus</span></dd>
 
                         <dt class="col-sm-4">Payment Status</dt>
                         <dd class="col-sm-8">
-                            <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus)">@Model.PaymentStatus</span>
-                            @if (Model.PaymentStatus == SD.PaymentStatusRefunded)
+                            <span class="badge @paymentStatus.GetBadgeClass()">@Model.PaymentStatus</span>
+                            @if (paymentStatus == PaymentStatus.Refunded)
                             {
                                 <div class="mt-1">
                                     <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="small text-decoration-none">
@@ -145,11 +150,11 @@
         {
             <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id" class="btn btn-outline-dark">View Shipment</a>
         }
-        @if (Model.PaymentStatus == SD.PaymentStatusRefunded)
+        @if (paymentStatus == PaymentStatus.Refunded)
         {
             <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="btn btn-outline-primary">View Credit Note</a>
         }
-        @if (Model.OrderStatus != SD.StatusCancelled)
+        @if (orderStatus != OrderStatus.Cancelled)
         {
             <a asp-action="Cancel" asp-route-orderId="@Model.Id" class="btn btn-danger">Cancel Order</a>
         }

@@ -1,5 +1,6 @@
 @model Cartiva.Infrastructure.Templates.Models.OrderConfirmationModel
 @using Cartiva.Shared
+@using Cartiva.Domain.Enums
 
 @{
     var customerName = string.IsNullOrWhiteSpace(Model.Name) ? "Customer" : Model.Name;

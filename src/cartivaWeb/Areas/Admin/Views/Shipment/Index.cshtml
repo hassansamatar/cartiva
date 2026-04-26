@@ -1,5 +1,7 @@
 ﻿@model IEnumerable<Shipment>
 @using System.Globalization
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
 @{
@@ -9,10 +11,10 @@
 
     // Calculate stats
     var allShipments = Model.ToList();
-    var pendingCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusPendingApproval);
-    var shippedCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusShipped);
-    var deliveredCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusDelivered);
-    var cancelledCount = allShipments.Count(s => s.ShipmentStatus == SD.ShipmentStatusCancelled);
+    var pendingCount = allShipments.Count(s => s.ShipmentStatus == ShipmentStatus.PendingApproval);
+    var shippedCount = allShipments.Count(s => s.ShipmentStatus == ShipmentStatus.Shipped);
+    var deliveredCount = allShipments.Count(s => s.ShipmentStatus == ShipmentStatus.Delivered);
+    var cancelledCount = allShipments.Count(s => s.ShipmentStatus == ShipmentStatus.Cancelled);
     var totalCount = allShipments.Count;
 }
 
@@ -76,20 +78,20 @@
                        class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-dark" : "btn-outline-dark")">
                         All
                     </a>
-                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusPendingApproval" 
-                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusPendingApproval ? "btn-warning" : "btn-outline-warning")">
+                     <a asp-action="Index" asp-route-status="@ShipmentStatus.PendingApproval" 
+                        class="btn btn-sm @(currentStatus == nameof(ShipmentStatus.PendingApproval) ? "btn-warning" : "btn-outline-warning")">
                         Pending
                     </a>
-                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusShipped" 
-                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusShipped ? "btn-info" : "btn-outline-info")">
+                     <a asp-action="Index" asp-route-status="@ShipmentStatus.Shipped" 
+                        class="btn btn-sm @(currentStatus == nameof(ShipmentStatus.Shipped) ? "btn-info" : "btn-outline-info")">
                         Shipped
                     </a>
-                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusDelivered" 
-                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusDelivered ? "btn-success" : "btn-outline-success")">
+                     <a asp-action="Index" asp-route-status="@ShipmentStatus.Delivered" 
+                        class="btn btn-sm @(currentStatus == nameof(ShipmentStatus.Delivered) ? "btn-success" : "btn-outline-success")">
                         Delivered
                     </a>
-                    <a asp-action="Index" asp-route-status="@SD.ShipmentStatusCancelled" 
-                       class="btn btn-sm @(currentStatus == SD.ShipmentStatusCancelled ? "btn-danger" : "btn-outline-danger")">
+                     <a asp-action="Index" asp-route-status="@ShipmentStatus.Cancelled" 
+                        class="btn btn-sm @(currentStatus == nameof(ShipmentStatus.Cancelled) ? "btn-danger" : "btn-outline-danger")">
                         Cancelled
                     </a>
                 </div>
@@ -121,12 +123,13 @@
                     <tbody>
                         @foreach (var s in Model)
                         {
-                            var badgeClass = s.ShipmentStatus switch
+                            var shipmentStatus = s.ShipmentStatus;
+                            var badgeClass = shipmentStatus switch
                             {
-                                SD.ShipmentStatusPendingApproval => "badge-pending",
-                                SD.ShipmentStatusShipped => "badge-company",
-                                SD.ShipmentStatusDelivered => "badge-paid",
-                                SD.ShipmentStatusCancelled => "badge-overdue",
+                                ShipmentStatus.PendingApproval => "badge-pending",
+                                ShipmentStatus.Shipped => "badge-company",
+                                ShipmentStatus.Delivered => "badge-paid",
+                                ShipmentStatus.Cancelled => "badge-overdue",
                                 _ => "badge-pending"
                             };
 
@@ -171,7 +174,7 @@
                                             <i class="bi bi-bag"></i>
                                         </a>
 
-                                        @if (s.OrderHeader.PaymentStatus == SD.PaymentStatusRefunded)
+                                         @if (s.OrderHeader.PaymentStatus == PaymentStatus.Refunded)
                                         {
                                             <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@s.OrderHeader.Id" asp-route-type="cancellation"
                                                class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Note">
@@ -179,7 +182,7 @@
                                             </a>
                                         }
 
-                                        @if (s.ShipmentStatus == SD.ShipmentStatusShipped || s.ShipmentStatus == SD.ShipmentStatusDelivered)
+                                         @if (shipmentStatus == ShipmentStatus.Shipped || shipmentStatus == ShipmentStatus.Delivered)
                                         {
                                             <form asp-action="SendEmail" asp-route-id="@s.Id" method="post" class="d-inline">
                                                 @Html.AntiForgeryToken()
@@ -189,7 +192,7 @@
                                             </form>
                                         }
 
-                                        @if (s.ShipmentStatus == SD.ShipmentStatusPendingApproval)
+                                         @if (shipmentStatus == ShipmentStatus.PendingApproval)
                                         {
                                             <a asp-action="Approve" asp-route-id="@s.Id" 
                                                class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="Approve">
@@ -197,9 +200,9 @@
                                             </a>
                                         }
 
-                                        @if (s.ShipmentStatus != SD.ShipmentStatusShipped && 
-                                             s.ShipmentStatus != SD.ShipmentStatusDelivered && 
-                                             s.ShipmentStatus != SD.ShipmentStatusCancelled)
+                                         @if (shipmentStatus != ShipmentStatus.Shipped && 
+                                              shipmentStatus != ShipmentStatus.Delivered && 
+                                              shipmentStatus != ShipmentStatus.Cancelled)
                                         {
                                             <a asp-action="Cancel" asp-route-id="@s.Id" 
                                                class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Cancel">

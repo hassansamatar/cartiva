@@ -1,5 +1,8 @@
 @model IEnumerable<OrderHeader>
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
 @{
@@ -8,10 +11,10 @@
     var invoiceByOrderId = ViewBag.InvoiceByOrderId as Dictionary<int, int> ?? new Dictionary<int, int>();
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var allOrders = Model.ToList();
-    var pendingCount = allOrders.Count(o => o.OrderStatus == SD.StatusPending);
-    var approvedCount = allOrders.Count(o => o.OrderStatus == SD.StatusApproved || o.OrderStatus == SD.StatusAwaitingShipmentApproval);
-    var shippedCount = allOrders.Count(o => o.OrderStatus == SD.StatusShipped);
-    var cancelledCount = allOrders.Count(o => o.OrderStatus == SD.StatusCancelled);
+    var pendingCount = allOrders.Count(o => o.OrderStatus == OrderStatus.Pending);
+    var approvedCount = allOrders.Count(o => o.OrderStatus == OrderStatus.Approved || o.OrderStatus == OrderStatus.AwaitingShipmentApproval);
+    var shippedCount = allOrders.Count(o => o.OrderStatus == OrderStatus.Shipped);
+    var cancelledCount = allOrders.Count(o => o.OrderStatus == OrderStatus.Cancelled);
 }
 
 @section Styles {
@@ -68,10 +71,10 @@
                 <h3><i class="bi bi-table"></i> All Orders</h3>
                 <div class="btn-group" role="group">
                     <a asp-action="Index" asp-route-status="" class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-dark" : "btn-outline-dark")">All</a>
-                    <a asp-action="Index" asp-route-status="@SD.StatusPending" class="btn btn-sm @(currentStatus == SD.StatusPending ? "btn-warning" : "btn-outline-warning")">Pending</a>
-                    <a asp-action="Index" asp-route-status="@SD.StatusAwaitingShipmentApproval" class="btn btn-sm @(currentStatus == SD.StatusAwaitingShipmentApproval ? "btn-info" : "btn-outline-info")">Awaiting Shipment</a>
-                    <a asp-action="Index" asp-route-status="@SD.StatusShipped" class="btn btn-sm @(currentStatus == SD.StatusShipped ? "btn-success" : "btn-outline-success")">Shipped</a>
-                    <a asp-action="Index" asp-route-status="@SD.StatusCancelled" class="btn btn-sm @(currentStatus == SD.StatusCancelled ? "btn-danger" : "btn-outline-danger")">Cancelled</a>
+                    <a asp-action="Index" asp-route-status="@OrderStatus.Pending" class="btn btn-sm @(currentStatus == nameof(OrderStatus.Pending) ? "btn-warning" : "btn-outline-warning")">Pending</a>
+                    <a asp-action="Index" asp-route-status="@OrderStatus.AwaitingShipmentApproval" class="btn btn-sm @(currentStatus == nameof(OrderStatus.AwaitingShipmentApproval) ? "btn-info" : "btn-outline-info")">Awaiting Shipment</a>
+                    <a asp-action="Index" asp-route-status="@OrderStatus.Shipped" class="btn btn-sm @(currentStatus == nameof(OrderStatus.Shipped) ? "btn-success" : "btn-outline-success")">Shipped</a>
+                    <a asp-action="Index" asp-route-status="@OrderStatus.Cancelled" class="btn btn-sm @(currentStatus == nameof(OrderStatus.Cancelled) ? "btn-danger" : "btn-outline-danger")">Cancelled</a>
                 </div>
             </div>
 
@@ -100,14 +103,16 @@
                     <tbody>
                         @foreach (var order in Model)
                         {
+                            var orderStatus = order.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
+                            var paymentStatus = order.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
                             <tr>
                                 <td><strong>#@order.Id</strong></td>
                                 <td>@order.Name</td>
                                 <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
-                                <td><span class="badge-status @SD.GetOrderStatusBadgeClass(order.OrderStatus)">@order.OrderStatus</span></td>
+                                <td><span class="badge-status @orderStatus.GetBadgeClass()">@order.OrderStatus</span></td>
                                 <td>
-                                    <span class="badge-status @SD.GetPaymentStatusBadgeClass(order.PaymentStatus)">@order.PaymentStatus</span>
-                                    @if (order.PaymentStatus == SD.PaymentStatusRefunded)
+                                    <span class="badge-status @paymentStatus.GetBadgeClass()">@order.PaymentStatus</span>
+                                    @if (paymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Refunded)
                                     {
                                         <br />
                                         <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-search="@($"{order.Id}")" class="small text-decoration-none">
@@ -133,13 +138,13 @@
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                         }
-                                        @if (order.PaymentStatus == SD.PaymentStatusRefunded)
+                                        @if (paymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Refunded)
                                         {
                                             <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@order.Id" asp-route-type="cancellation" class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Notes">
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                         }
-                                        @if (order.OrderStatus != SD.StatusCancelled)
+                                        @if (orderStatus != global::Cartiva.Domain.Enums.OrderStatus.Cancelled)
                                         {
                                             <a asp-action="Cancel" asp-route-orderId="@order.Id" class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Cancel Order">
                                                 <i class="bi bi-x-lg"></i>

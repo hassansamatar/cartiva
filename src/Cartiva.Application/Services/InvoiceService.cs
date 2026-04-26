@@ -1,6 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
 using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 using Cartiva.Domain.Interfaces;
 using Cartiva.Persistence;
 using Cartiva.Shared;
@@ -309,7 +310,7 @@ namespace Cartiva.Application.Services
                 var order = await _db.OrderHeaders.FindAsync(new object[] { invoice.OrderHeaderId.Value }, ct);
                 if (order != null)
                 {
-                    order.PaymentStatus = SD.PaymentStatusPaid;
+                    order.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Paid;
                     order.PaymentDate = DateTime.UtcNow;
                 }
             }

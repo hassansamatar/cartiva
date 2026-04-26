@@ -1,5 +1,7 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
+using Cartiva.Domain.Enums;
+using Cartiva.Domain.Extensions;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.AspNetCore.Authorization;
@@ -54,7 +56,7 @@ public class OrderController : Controller
             return NotFound();
         }
 
-        if (order.OrderStatus == SD.StatusCancelled)
+        if (order.OrderStatus == Cartiva.Domain.Enums.OrderStatus.Cancelled)
         {
             TempData["Error"] = "This order is already cancelled.";
             return RedirectToAction(nameof(Index));

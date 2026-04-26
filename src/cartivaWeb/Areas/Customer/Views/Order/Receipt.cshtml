@@ -16,17 +16,22 @@
     // ✅ Generate tracking URL using Url.Action (same as Details page)
     var trackingUrl = Url.Action("Track", "Order", new { id = Model.Id, area = "Customer" });
 
-    // Get progress percentage and messages from SD
-    var progressPercentage = SD.GetOrderProgressPercentage(Model.OrderStatus);
-    var trackingMessage = SD.GetOrderTrackingMessage(Model.OrderStatus);
-    var progressBarColor = SD.GetStatusProgressBarColor(Model.OrderStatus);
-
     // Get the first shipment (if any)
     var shipment = Model.Shipments?.OrderBy(s => s.Id).FirstOrDefault();
     var shippedDate = shipment?.ShippedDate;
     var deliveredDate = shipment?.DeliveredDate;
     var trackingNumber = shipment?.TrackingNumber;
     var carrier = shipment?.Carrier;
+    var orderStatus = Model.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
+    var paymentStatus = Model.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
+
+    var progressPercentage = global::Cartiva.Application.Extensions.OrderStatusUiExtensions.GetProgress(orderStatus);
+    var trackingMessage = global::Cartiva.Application.Extensions.OrderStatusUiExtensions.GetTrackingMessage(orderStatus);
+    var progressBarColor = global::Cartiva.Application.Extensions.OrderStatusUiExtensions.GetProgressBarColor(orderStatus);
+    var paymentBadgeClass = Cartiva.Application.Extensions.PaymentStatusUiExtensions.GetBadgeClass(paymentStatus);
+    var paymentIcon = Cartiva.Application.Extensions.PaymentStatusUiExtensions.GetIcon(paymentStatus);
+    var orderBadgeClass = Cartiva.Application.Extensions.OrderStatusUiExtensions.GetBadgeClass(orderStatus);
+    var orderIcon = Cartiva.Application.Extensions.OrderStatusUiExtensions.GetIcon(orderStatus);
 }
 
 <div class="container mt-4 mb-5">
@@ -212,7 +217,7 @@
                             </div>
                         </div>
                     }
-                    else if (shipment != null && shipment.ShipmentStatus == SD.ShipmentStatusPendingApproval)
+                    else if (shipment != null && shipment.ShipmentStatus == global::Cartiva.Domain.Enums.ShipmentStatus.PendingApproval)
                     {
                         <div class="alert alert-warning mt-3 mb-0">
                             <i class="bi bi-clock-history"></i>
@@ -251,8 +256,8 @@
                         <tr>
                             <td><strong>Payment Status:</strong></td>
                             <td>
-                                <span class="badge @SD.GetPaymentStatusBadgeClass(Model.PaymentStatus) px-3 py-2">
-                                    <i class="bi @SD.GetPaymentStatusIcon(Model.PaymentStatus) me-1"></i>
+                                <span class="badge @paymentBadgeClass px-3 py-2">
+                                    <i class="bi @paymentIcon me-1"></i>
                                     @Model.PaymentStatus
                                 </span>
                             </td>
@@ -260,8 +265,8 @@
                         <tr>
                             <td><strong>Order Status:</strong></td>
                             <td>
-                                <span class="badge @SD.GetOrderStatusBadgeClass(Model.OrderStatus) px-3 py-2">
-                                    <i class="bi @SD.GetOrderStatusIcon(Model.OrderStatus) me-1"></i>
+                                <span class="badge @orderBadgeClass px-3 py-2">
+                                    <i class="bi @orderIcon me-1"></i>
                                     @Model.OrderStatus
                                 </span>
                             </td>

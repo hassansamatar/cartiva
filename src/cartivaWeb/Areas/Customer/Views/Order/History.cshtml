@@ -1,5 +1,8 @@
 ﻿@model IEnumerable<OrderHeader>
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using Cartiva.Infrastructure.QrCodeServices
 @inject IQrCodeService QrCodeService
@@ -14,11 +17,11 @@
     // Company Orders Statistics
     var totalCompanyOrders = companyOrders?.Count ?? 0;
     var uniqueUsers = companyOrders?.Select(o => o.ApplicationUserId).Distinct().Count() ?? 0;
-    var outstandingBills = companyOrders?.Count(o => o.PaymentStatus == SD.PaymentStatusDeferred) ?? 0;
+    var outstandingBills = companyOrders?.Count(o => o.PaymentStatus == PaymentStatus.Deferred) ?? 0;
     var totalOutstandingAmount = companyOrders?
-        .Where(o => o.PaymentStatus == SD.PaymentStatusDeferred)
+        .Where(o => o.PaymentStatus == PaymentStatus.Deferred)
         .Sum(o => o.OrderTotal) ?? 0;
-    var overdueBills = companyOrders?.Count(o => o.PaymentStatus == SD.PaymentStatusDeferred 
+    var overdueBills = companyOrders?.Count(o => o.PaymentStatus == PaymentStatus.Deferred 
         && o.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now)) ?? 0;
 }
 
@@ -71,9 +74,11 @@
             {
                 var trackingUrl = Url.Action("Track", "Order", new { id = order.Id, area = "Customer" });
                 var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(order.Id);
-                var progressPercentage = SD.GetOrderProgressPercentage(order.OrderStatus);
-                var statusIcon = SD.GetOrderStatusIcon(order.OrderStatus);
-                var statusBadgeClass = SD.GetOrderStatusBadgeClass(order.OrderStatus);
+                var orderStatus = order.OrderStatus ?? OrderStatus.Pending;
+                var paymentStatus = order.PaymentStatus ?? PaymentStatus.Pending;
+                var progressPercentage = orderStatus.GetProgress();
+                var statusIcon = orderStatus.GetIcon();
+                var statusBadgeClass = orderStatus.GetBadgeClass();
 
                 <div class="col-12">
                     <div class="card shadow-sm">
@@ -87,7 +92,7 @@
                                 <span class="badge @statusBadgeClass">
                                     <i class="bi @statusIcon"></i> @order.OrderStatus
                                 </span>
-                                <span class="badge @SD.GetPaymentStatusBadgeClass(order.PaymentStatus)">
+                                <span class="badge @paymentStatus.GetBadgeClass()">
                                     <i class="bi bi-credit-card"></i> @order.PaymentStatus
                                 </span>
                             </div>
@@ -203,7 +208,7 @@
                                                 <small class="text-muted d-block mt-2">
                                                     <i class="bi bi-phone"></i> Scan to track
                                                 </small>
-                                                @if (order.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                        @if (orderStatus == OrderStatus.AwaitingShipmentApproval)
                                                 {
                                                     <div class="alert alert-light small mt-2 mb-0">
                                                         <i class="bi bi-clock-history"></i>
@@ -227,14 +232,14 @@
                         <div class="card-footer d-flex justify-content-between align-items-center">
                             <div>
                                 <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary">View Details</a>
-                                @if (User.IsInRole(SD.Role_Company) && order.PaymentStatus == SD.PaymentStatusDeferred)
+                                @if (User.IsInRole(SD.Role_Company) && paymentStatus == PaymentStatus.Deferred)
                                 {
                                     <a asp-action="Payment" asp-route-orderId="@order.Id" class="btn btn-sm btn-success ms-2">
                                         <i class="bi bi-credit-card"></i> Pay Now
                                     </a>
                                 }
                             </div>
-                            @if (order.OrderStatus == SD.StatusPending || order.OrderStatus == SD.StatusAwaitingShipmentApproval)
+                            @if (orderStatus == OrderStatus.Pending || orderStatus == OrderStatus.AwaitingShipmentApproval)
                             {
                                 <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(@order.Id)">Cancel</button>
                             }
@@ -297,11 +302,13 @@
                     <div class="row g-4">
                         @foreach (var coOrder in companyOrders!.OrderBy(o => o.PaymentDueDate ?? DateOnly.MaxValue).ThenByDescending(o => o.OrderDate))
                         {
-                            var coStatusIcon = SD.GetOrderStatusIcon(coOrder.OrderStatus);
-                            var coStatusBadgeClass = SD.GetOrderStatusBadgeClass(coOrder.OrderStatus);
+                            var coOrderStatus = coOrder.OrderStatus ?? OrderStatus.Pending;
+                            var coPaymentStatus = coOrder.PaymentStatus ?? PaymentStatus.Pending;
+                            var coStatusIcon = coOrderStatus.GetIcon();
+                            var coStatusBadgeClass = coOrderStatus.GetBadgeClass();
 
                             <div class="col-12">
-                                <div class="card shadow-sm border-start border-4 @(coOrder.PaymentStatus == SD.PaymentStatusDeferred && coOrder.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now) ? "border-danger" : coOrder.PaymentStatus == SD.PaymentStatusDeferred ? "border-warning" : "border-success")">
+                                <div class="card shadow-sm border-start border-4 @(coPaymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Deferred && coOrder.PaymentDueDate < DateOnly.FromDateTime(DateTime.Now) ? "border-danger" : coPaymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Deferred ? "border-warning" : "border-success")">
                                     <!-- Order Header -->
                                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                         <div>
@@ -312,7 +319,7 @@
                                                 </small>
                                             </h5>
                                             <small class="text-muted">@coOrder.OrderDate.ToString("dd MMM yyyy 'at' HH:mm")</small>
-                                            @if (coOrder.PaymentStatus == SD.PaymentStatusDeferred && coOrder.PaymentDueDate != null)
+                                            @if (coPaymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Deferred && coOrder.PaymentDueDate != null)
                                             {
                                                 var daysLeft = coOrder.PaymentDueDate.Value.DayNumber - DateOnly.FromDateTime(DateTime.Now).DayNumber;
                                                 if (daysLeft < 0)
@@ -339,7 +346,7 @@
                                             <span class="badge @coStatusBadgeClass">
                                                 <i class="bi @coStatusIcon"></i> @coOrder.OrderStatus
                                             </span>
-                                            <span class="badge @SD.GetPaymentStatusBadgeClass(coOrder.PaymentStatus)">
+                                            <span class="badge @coPaymentStatus.GetBadgeClass()">
                                                 <i class="bi bi-credit-card"></i> @coOrder.PaymentStatus
                                             </span>
                                         </div>
@@ -371,7 +378,7 @@
                                             <a asp-action="Details" asp-route-id="@coOrder.Id" class="btn btn-sm btn-outline-primary">
                                                 <i class="bi bi-eye"></i> View Details
                                             </a>
-                                            @if (User.IsInRole(SD.Role_Company) && coOrder.PaymentStatus == SD.PaymentStatusDeferred)
+                                            @if (User.IsInRole(SD.Role_Company) && coPaymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Deferred)
                                             {
                                                 <a asp-action="Payment" asp-route-orderId="@coOrder.Id" class="btn btn-sm btn-success ms-2">
                                                     <i class="bi bi-credit-card"></i> Pay Now

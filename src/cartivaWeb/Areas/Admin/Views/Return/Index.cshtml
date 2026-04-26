@@ -1,12 +1,15 @@
 @model List<ReturnRequest>
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Enums
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using System.Globalization
 
 @{
     ViewData["Title"] = "Return Management";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
-    var pendingCount = Model.Count(r => r.Status == SD.ReturnStatusPending);
-    var approvedCount = Model.Count(r => r.Status == SD.ReturnStatusApproved);
+    var pendingCount = Model.Count(r => r.Status == ReturnStatus.Pending);
+    var approvedCount = Model.Count(r => r.Status == ReturnStatus.Approved);
 }
 
 <div class="container mt-4">
@@ -41,7 +44,7 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolved" type="button">
-                        Resolved <span class="badge bg-secondary ms-1">@Model.Count(r => r.Status == SD.ReturnStatusRefunded || r.Status == SD.ReturnStatusRejected)</span>
+                        Resolved <span class="badge bg-secondary ms-1">@Model.Count(r => r.Status == ReturnStatus.Refunded || r.Status == ReturnStatus.Rejected)</span>
                     </button>
                 </li>
             </ul>
@@ -49,7 +52,7 @@
             <div class="tab-content">
                 <!-- Pending -->
                 <div class="tab-pane fade show active" id="pending" role="tabpanel">
-                    @{ var pendingReturns = Model.Where(r => r.Status == SD.ReturnStatusPending).ToList(); }
+                    @{ var pendingReturns = Model.Where(r => r.Status == ReturnStatus.Pending).ToList(); }
                     @if (!pendingReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">
@@ -68,7 +71,7 @@
 
                 <!-- Approved (awaiting refund) -->
                 <div class="tab-pane fade" id="approved" role="tabpanel">
-                    @{ var approvedReturns = Model.Where(r => r.Status == SD.ReturnStatusApproved).ToList(); }
+                    @{ var approvedReturns = Model.Where(r => r.Status == ReturnStatus.Approved).ToList(); }
                     @if (!approvedReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">
@@ -87,7 +90,7 @@
 
                 <!-- Resolved -->
                 <div class="tab-pane fade" id="resolved" role="tabpanel">
-                    @{ var resolvedReturns = Model.Where(r => r.Status == SD.ReturnStatusRefunded || r.Status == SD.ReturnStatusRejected).ToList(); }
+                    @{ var resolvedReturns = Model.Where(r => r.Status == ReturnStatus.Refunded || r.Status == ReturnStatus.Rejected).ToList(); }
                     @if (!resolvedReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">

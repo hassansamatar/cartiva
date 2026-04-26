@@ -1,5 +1,7 @@
 ﻿@model PaymentVM
 @using System.Globalization
+@using Cartiva.Application.Extensions
+@using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 @using Cartiva.Infrastructure.QrCodeServices
 @inject IQrCodeService QrCodeService
@@ -10,6 +12,7 @@
     var returnUrl = Url.Action("ConfirmPayment", "Order", new { orderId = Model.Order.Id }, Context.Request.Scheme);
     var qrCodeBase64 = QrCodeService.GenerateOrderQrCode(Model.Order.Id);
     var trackingUrl = QrCodeService.GetOrderTrackingUrl(Model.Order.Id);
+    var orderStatus = Model.Order.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
 }
 
 <!-- Add Stripe.js -->
@@ -38,8 +41,8 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold">Order #@Model.Order.Id</h6>
-                        <span class="badge @SD.GetOrderStatusBadgeClass(Model.Order.OrderStatus)">
-                            <i class="bi @SD.GetOrderStatusIcon(Model.Order.OrderStatus) me-1"></i>
+                        <span class="badge @orderStatus.GetBadgeClass()">
+                            <i class="bi @orderStatus.GetIcon() me-1"></i>
                             @Model.Order.OrderStatus
                         </span>
                     </div>

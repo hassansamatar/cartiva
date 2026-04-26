@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Cartiva.Domain;
 
 namespace Cartiva.Persistence
@@ -87,6 +88,22 @@ namespace Cartiva.Persistence
             modelBuilder.Entity<Shipment>()
                 .Property(p => p.Weight)
                 .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<OrderHeader>(e =>
+            {
+                e.Property(p => p.OrderStatus).HasConversion<string>();
+                e.Property(p => p.PaymentStatus).HasConversion<string>();
+            });
+
+            modelBuilder.Entity<Shipment>(e =>
+            {
+                e.Property(p => p.ShipmentStatus).HasConversion<string>();
+            });
+
+            modelBuilder.Entity<ReturnRequest>(e =>
+            {
+                e.Property(p => p.Status).HasConversion<string>();
+            });
 
             // ======================
             // RELATIONSHIPS
