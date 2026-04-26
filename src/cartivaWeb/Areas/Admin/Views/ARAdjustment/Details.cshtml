@@ -1,0 +1,281 @@
+@model Cartiva.Domain.AccountsReceivableAdjustment
+
+@using Cartiva.Domain.Enums
+@using System.Globalization
+
+@{
+    ViewData["Title"] = $"AR Adjustment #{Model.Id}";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var isManual = Model.ReturnRequestId == 0;
+
+    var statusClass = Model.Status switch
+    {
+        ARAdjustmentStatus.Pending => "warning",
+        ARAdjustmentStatus.Approved => "info",
+        ARAdjustmentStatus.Applied => "success",
+        _ => "secondary"
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
+
+<div class="admin-dashboard">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-calculator"></i> AR Adjustment #@Model.Id
+                <span class="badge bg-@statusClass ms-2">@Model.Status</span>
+            </h2>
+            <div>
+                @if (Model.Status == ARAdjustmentStatus.Approved && !Model.StripeCreditBalanceApplied && !string.IsNullOrWhiteSpace(Model.Company.StripeCustomerId))
+                {
+                    <form asp-action="ApplyStripe" asp-route-id="@Model.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-primary" onclick="return confirm('Apply this adjustment to Stripe credit balance?');">
+                            <i class="bi bi-credit-card"></i> Apply to Stripe
+                        </button>
+                    </form>
+                }
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Main Details -->
+            <div class="col-lg-8">
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h3><i class="bi bi-info-circle"></i> Adjustment Details</h3>
+                    </div>
+                    <div class="section-body">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">Adjustment ID:</th>
+                                <td><strong>#@Model.Id</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>
+                                    @if (isManual)
+                                    {
+                                        <span class="badge bg-warning">Manual Adjustment</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary">Return-Based</span>
+                                        <a asp-controller="Return" asp-action="Index" asp-route-id="@Model.ReturnRequestId" class="ms-2">
+                                            View Return #@Model.ReturnRequestId
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Company:</th>
+                                <td>
+                                    <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.CompanyId">
+                                        @Model.Company.Name
+                                    </a>
+                                    @if (Model.Company.IsActive)
+                                    {
+                                        <span class="badge bg-success ms-2">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary ms-2">Inactive</span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Invoice:</th>
+                                <td>
+                                    <a asp-controller="Invoice" asp-action="Details" asp-route-id="@Model.InvoiceId">
+                                        @Model.Invoice.InvoiceNumber
+                                    </a>
+                                    <span class="text-muted ms-2">
+                                        (@Model.Invoice.TotalAmount.ToString("N2", culture) @Model.Invoice.Currency)
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Amount:</th>
+                                <td>
+                                    <h4 class="@(Model.Amount < 0 ? "text-danger" : "text-success") mb-0">
+                                        @Model.Amount.ToString("N2", culture) @Model.Currency
+                                    </h4>
+                                    <small class="text-muted">
+                                        @if (Model.Amount < 0)
+                                        {
+                                            <text>Reduces company balance</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Increases company balance</text>
+                                        }
+                                    </small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Reason:</th>
+                                <td>@Model.Reason</td>
+                            </tr>
+                            @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                            {
+                                <tr>
+                                    <th>Notes:</th>
+                                    <td>
+                                        <div class="alert alert-light mb-0">
+                                            @Model.Notes
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    <span class="badge bg-@statusClass">@Model.Status</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Created:</th>
+                                <td>
+                                    @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm", culture)
+                                    @if (!string.IsNullOrWhiteSpace(Model.CreatedByUserId))
+                                    {
+                                        <span class="text-muted">by @Model.CreatedByUserId</span>
+                                    }
+                                </td>
+                            </tr>
+                            @if (Model.AppliedAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Applied:</th>
+                                    <td>@Model.AppliedAt.Value.ToString("dd.MM.yyyy HH:mm", culture)</td>
+                                </tr>
+                            }
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Stripe Integration -->
+                <div class="admin-section mt-4">
+                    <div class="section-header">
+                        <h3><i class="bi bi-credit-card-2-back"></i> Stripe Integration</h3>
+                    </div>
+                    <div class="section-body">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">Stripe Customer ID:</th>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(Model.Company.StripeCustomerId))
+                                    {
+                                        <code>@Model.Company.StripeCustomerId</code>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not configured</span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Credit Balance Applied:</th>
+                                <td>
+                                    @if (Model.StripeCreditBalanceApplied)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Applied
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-x-circle"></i> Not Applied
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                            @if (!string.IsNullOrWhiteSpace(Model.StripeCustomerBalanceReference))
+                            {
+                                <tr>
+                                    <th>Stripe Transaction ID:</th>
+                                    <td>
+                                        <code>@Model.StripeCustomerBalanceReference</code>
+                                        <a href="https://dashboard.stripe.com/test/balance_transactions/@Model.StripeCustomerBalanceReference" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-outline-primary ms-2">
+                                            View in Stripe <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Invoice Summary -->
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h3><i class="bi bi-receipt"></i> Invoice Impact</h3>
+                    </div>
+                    <div class="section-body">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <th>Invoice Total:</th>
+                                <td class="text-end">@Model.Invoice.TotalAmount.ToString("N2", culture)</td>
+                            </tr>
+                            <tr>
+                                <th>Paid:</th>
+                                <td class="text-end text-success">-@Model.Invoice.TotalPaid.ToString("N2", culture)</td>
+                            </tr>
+                            <tr>
+                                <th>Credit Notes:</th>
+                                <td class="text-end text-warning">-@Model.Invoice.TotalCredited.ToString("N2", culture)</td>
+                            </tr>
+                            <tr>
+                                <th>AR Adjustments:</th>
+                                <td class="text-end text-danger">-@Model.Invoice.TotalARAdjustments.ToString("N2", culture)</td>
+                            </tr>
+                            <tr class="border-top">
+                                <th><strong>Remaining:</strong></th>
+                                <td class="text-end">
+                                    <strong class="@(Model.Invoice.RemainingAmount > 0 ? "text-danger" : "text-success")">
+                                        @Model.Invoice.RemainingAmount.ToString("N2", culture) @Model.Currency
+                                    </strong>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="admin-section mt-3">
+                    <div class="section-header">
+                        <h3><i class="bi bi-lightning"></i> Quick Actions</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="d-grid gap-2">
+                            <a asp-controller="Invoice" asp-action="Details" asp-route-id="@Model.InvoiceId" class="btn btn-outline-primary">
+                                <i class="bi bi-receipt"></i> View Invoice
+                            </a>
+                            <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.CompanyId" class="btn btn-outline-primary">
+                                <i class="bi bi-building"></i> View Company
+                            </a>
+                            @if (!isManual && Model.ReturnRequestId > 0)
+                            {
+                                <a asp-controller="Return" asp-action="Index" asp-route-id="@Model.ReturnRequestId" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-return-left"></i> View Return
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

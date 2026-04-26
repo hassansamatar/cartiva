@@ -1,0 +1,255 @@
+@using Cartiva.Domain
+@using System.Globalization
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@{
+    ViewData["Title"] = "Create Manual AR Adjustment";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+    var selectedInvoice = ViewBag.SelectedInvoice as Invoice;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
+
+<div class="admin-dashboard">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-plus-circle"></i> Create Manual AR Adjustment</h2>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h3><i class="bi bi-pencil-square"></i> Adjustment Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <form asp-action="Create" method="post" id="adjustmentForm">
+                            @Html.AntiForgeryToken()
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Manual Adjustments</strong> are used for corrections outside the return flow.
+                                Use negative amounts to reduce company balance (credit), positive to increase (debit).
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="companyId" class="form-label">
+                                    Company <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="companyId" name="companyId" required>
+                                    <option value="">Select a company...</option>
+                                    @foreach (var company in ViewBag.Companies)
+                                    {
+                                        <option value="@company.Id">@company.Name</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="invoiceId" class="form-label">
+                                    Invoice <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="invoiceId" name="invoiceId" required disabled>
+                                    <option value="">Select a company first...</option>
+                                </select>
+                                <small class="form-text text-muted">
+                                    Only invoices with outstanding balance are shown.
+                                </small>
+                            </div>
+
+                            <div id="invoiceDetails" class="alert alert-light d-none mb-3">
+                                <h6>Invoice Details</h6>
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr>
+                                        <th width="40%">Invoice Number:</th>
+                                        <td id="invoiceNumber">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total Amount:</th>
+                                        <td id="invoiceTotalAmount">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Remaining Amount:</th>
+                                        <td id="invoiceRemainingAmount" class="text-danger">-</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Due Date:</th>
+                                        <td id="invoiceDueDate">-</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">
+                                    Adjustment Amount <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="number"
+                                           class="form-control"
+                                           id="amount"
+                                           name="amount"
+                                           step="0.01"
+                                           required
+                                           placeholder="Enter amount (negative to reduce balance)" />
+                                    <span class="input-group-text">NOK</span>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <strong>Negative amount</strong> = Credit (reduces balance) |
+                                    <strong>Positive amount</strong> = Debit (increases balance)
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reason" class="form-label">
+                                    Reason <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="reason"
+                                       name="reason"
+                                       required
+                                       maxlength="500"
+                                       placeholder="E.g., 'Price correction for bulk discount'" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">
+                                    Additional Notes
+                                </label>
+                                <textarea class="form-control"
+                                          id="notes"
+                                          name="notes"
+                                          rows="3"
+                                          maxlength="1000"
+                                          placeholder="Optional additional information..."></textarea>
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Create Adjustment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h3><i class="bi bi-question-circle"></i> Help</h3>
+                    </div>
+                    <div class="section-body">
+                        <h6>When to use manual adjustments:</h6>
+                        <ul>
+                            <li>Price corrections</li>
+                            <li>Billing errors</li>
+                            <li>Bulk discounts applied late</li>
+                            <li>Good will credits</li>
+                            <li>Service credits</li>
+                        </ul>
+
+                        <h6 class="mt-3">Amount Guidelines:</h6>
+                        <ul>
+                            <li><strong>-500.00</strong> = Reduce balance by 500 (credit company)</li>
+                            <li><strong>+500.00</strong> = Increase balance by 500 (debit company)</li>
+                        </ul>
+
+                        <h6 class="mt-3">Stripe Integration:</h6>
+                        <p class="small">
+                            If the company has a Stripe customer ID configured, the adjustment will automatically
+                            be applied as a credit balance in Stripe after creation.
+                        </p>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Important:</strong> Manual adjustments cannot be deleted. Ensure the amount and reason are correct before creating.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var culture = '@culture.Name';
+
+            // Company selection change
+            $('#companyId').on('change', function () {
+                var companyId = $(this).val();
+                var invoiceSelect = $('#invoiceId');
+
+                if (!companyId) {
+                    invoiceSelect.prop('disabled', true).html('<option value="">Select a company first...</option>');
+                    $('#invoiceDetails').addClass('d-none');
+                    return;
+                }
+
+                invoiceSelect.prop('disabled', true).html('<option value="">Loading invoices...</option>');
+
+                $.get('@Url.Action("GetInvoicesForCompany")', { companyId: companyId })
+                    .done(function (invoices) {
+                        if (invoices.length === 0) {
+                            invoiceSelect.html('<option value="">No outstanding invoices for this company</option>');
+                        } else {
+                            var options = '<option value="">Select an invoice...</option>';
+                            $.each(invoices, function (i, invoice) {
+                                options += '<option value="' + invoice.id + '" ' +
+                                    'data-number="' + invoice.invoiceNumber + '" ' +
+                                    'data-total="' + invoice.totalAmount + '" ' +
+                                    'data-remaining="' + invoice.remainingAmount + '" ' +
+                                    'data-currency="' + invoice.currency + '" ' +
+                                    'data-duedate="' + invoice.dueDate + '">' +
+                                    invoice.invoiceNumber + ' - Remaining: ' + invoice.remainingAmount.toFixed(2) + ' ' + invoice.currency +
+                                    '</option>';
+                            });
+                            invoiceSelect.html(options);
+                        }
+                        invoiceSelect.prop('disabled', false);
+                    })
+                    .fail(function () {
+                        invoiceSelect.html('<option value="">Error loading invoices</option>');
+                        alert('Failed to load invoices for the selected company.');
+                    });
+            });
+
+            // Invoice selection change
+            $('#invoiceId').on('change', function () {
+                var selected = $(this).find(':selected');
+                if (selected.val()) {
+                    $('#invoiceNumber').text(selected.data('number'));
+                    $('#invoiceTotalAmount').text(selected.data('total').toFixed(2) + ' ' + selected.data('currency'));
+                    $('#invoiceRemainingAmount').text(selected.data('remaining').toFixed(2) + ' ' + selected.data('currency'));
+                    $('#invoiceDueDate').text(selected.data('duedate'));
+                    $('#invoiceDetails').removeClass('d-none');
+                } else {
+                    $('#invoiceDetails').addClass('d-none');
+                }
+            });
+
+            // Form validation
+            $('#adjustmentForm').on('submit', function (e) {
+                var amount = parseFloat($('#amount').val());
+                if (amount === 0) {
+                    e.preventDefault();
+                    alert('Amount cannot be zero.');
+                    return false;
+                }
+
+                if (!confirm('Are you sure you want to create this adjustment?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+    </script>
+}

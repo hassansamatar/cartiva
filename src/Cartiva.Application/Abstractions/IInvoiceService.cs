@@ -70,5 +70,10 @@ namespace Cartiva.Application.Abstractions
         /// Gets the next credit note sequence number for the current year
         /// </summary>
         Task<int> GetNextCreditNoteSequenceAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Gets all invoices for a specific company
+        /// </summary>
+        Task<List<Invoice>> GetInvoicesForCompanyAsync(int companyId, CancellationToken ct = default);
     }
 }

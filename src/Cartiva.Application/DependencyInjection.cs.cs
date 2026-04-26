@@ -18,6 +18,7 @@ public static class DependencyInjection
         // Invoice services
         services.AddScoped<IInvoiceService, InvoiceService>();
         services.AddScoped<ICreditNoteService, CreditNoteService>();
+        services.AddScoped<IAccountsReceivableAdjustmentService, AccountsReceivableAdjustmentService>();
 
         // Product services
         services.AddScoped<IProductService, ProductService>();

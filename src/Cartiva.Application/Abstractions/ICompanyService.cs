@@ -14,6 +14,11 @@ public interface ICompanyService
     Task<List<CompanyListVM>> GetAllCompaniesWithStatsAsync();
 
     /// <summary>
+    /// Get all companies (simple list without stats)
+    /// </summary>
+    Task<List<Company>> GetAllCompaniesAsync();
+
+    /// <summary>
     /// Get a company by ID
     /// </summary>
     Task<Company?> GetCompanyByIdAsync(int id);

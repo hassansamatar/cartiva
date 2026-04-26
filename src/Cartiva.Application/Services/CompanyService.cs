@@ -24,6 +24,13 @@ public class CompanyService : ICompanyService
         _logger = logger;
     }
 
+    public async Task<List<Company>> GetAllCompaniesAsync()
+    {
+        return await _db.Companies
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+    }
+
     public async Task<List<CompanyListVM>> GetAllCompaniesWithStatsAsync()
     {
         var companies = await _db.Companies.ToListAsync();

@@ -14,90 +14,91 @@
     var paymentStatus = Model.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
 }
 
-<div class="container mt-4">
-    <h2>Order #@Model.Id</h2>
+<div class="container-fluid py-4" style="max-height: calc(100vh - 100px); overflow-y: auto;">
+    <div class="container">
+        <h2>Order #@Model.Id</h2>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header bg-primary text-white">Order Information</div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-4">Customer</dt>
-                        <dd class="col-sm-8">@Model.Name</dd>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">Order Information</div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Customer</dt>
+                            <dd class="col-sm-8">@Model.Name</dd>
 
-                        <dt class="col-sm-4">Order Date</dt>
-                        <dd class="col-sm-8">@Model.OrderDate.ToString("dd MMM yyyy HH:mm")</dd>
+                            <dt class="col-sm-4">Order Date</dt>
+                            <dd class="col-sm-8">@Model.OrderDate.ToString("dd MMM yyyy HH:mm")</dd>
 
-                        <dt class="col-sm-4">Order Status</dt>
-                        <dd class="col-sm-8"><span class="badge @orderStatus.GetBadgeClass()">@Model.OrderStatus</span></dd>
+                            <dt class="col-sm-4">Order Status</dt>
+                            <dd class="col-sm-8"><span class="badge @orderStatus.GetBadgeClass()">@Model.OrderStatus</span></dd>
 
-                        <dt class="col-sm-4">Payment Status</dt>
-                        <dd class="col-sm-8">
-                            <span class="badge @paymentStatus.GetBadgeClass()">@Model.PaymentStatus</span>
-                            @if (paymentStatus == PaymentStatus.Refunded)
-                            {
-                                <div class="mt-1">
-                                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="small text-decoration-none">
-                                        View related credit note(s)
+                            <dt class="col-sm-4">Payment Status</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge @paymentStatus.GetBadgeClass()">@Model.PaymentStatus</span>
+                                @if (paymentStatus == PaymentStatus.Refunded)
+                                {
+                                    <div class="mt-1">
+                                        <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="small text-decoration-none">
+                                            View related credit note(s)
+                                        </a>
+                                    </div>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Total</dt>
+                            <dd class="col-sm-8">@Model.OrderTotal.ToString("C", culture)</dd>
+
+                            <dt class="col-sm-4">Invoice</dt>
+                            <dd class="col-sm-8">
+                                @if (relatedInvoice != null)
+                                {
+                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@relatedInvoice.Id">
+                                        @relatedInvoice.InvoiceNumber
                                     </a>
-                                </div>
-                            }
-                        </dd>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No invoice available</span>
+                                }
+                            </dd>
 
-                        <dt class="col-sm-4">Total</dt>
-                        <dd class="col-sm-8">@Model.OrderTotal.ToString("C", culture)</dd>
-
-                        <dt class="col-sm-4">Invoice</dt>
-                        <dd class="col-sm-8">
-                            @if (relatedInvoice != null)
-                            {
-                                <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@relatedInvoice.Id">
-                                    @relatedInvoice.InvoiceNumber
-                                </a>
-                            }
-                            else
-                            {
-                                <span class="text-muted">No invoice available</span>
-                            }
-                        </dd>
-
-                        <dt class="col-sm-4">Shipment</dt>
-                        <dd class="col-sm-8">
-                            @if (latestShipment != null)
-                            {
-                                <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id">
-                                    Shipment #@latestShipment.Id
-                                </a>
-                                <div><small class="text-muted">@latestShipment.ShipmentStatus</small></div>
-                            }
-                            else
-                            {
-                                <span class="text-muted">No shipment created</span>
-                            }
-                        </dd>
-                    </dl>
+                            <dt class="col-sm-4">Shipment</dt>
+                            <dd class="col-sm-8">
+                                @if (latestShipment != null)
+                                {
+                                    <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id">
+                                        Shipment #@latestShipment.Id
+                                    </a>
+                                    <div><small class="text-muted">@latestShipment.ShipmentStatus</small></div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No shipment created</span>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header bg-success text-white">Customer Information</div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-4">Email</dt>
-                        <dd class="col-sm-8">@Model.ApplicationUser?.Email</dd>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">Customer Information</div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Email</dt>
+                            <dd class="col-sm-8">@Model.ApplicationUser?.Email</dd>
 
-                        <dt class="col-sm-4">Phone</dt>
-                        <dd class="col-sm-8">@Model.PhoneNumber</dd>
+                            <dt class="col-sm-4">Phone</dt>
+                            <dd class="col-sm-8">@Model.PhoneNumber</dd>
 
-                        <dt class="col-sm-4">Address</dt>
-                        <dd class="col-sm-8">
-                            @Model.StreetAddress<br />
-                            @Model.PostalCode @Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "")<br />
-                            @Model.Country
-                        </dd>
+                            <dt class="col-sm-4">Address</dt>
+                            <dd class="col-sm-8">
+                                @Model.StreetAddress<br />
+                                @Model.PostalCode @Model.City@(!string.IsNullOrEmpty(Model.State) ? $", {Model.State}" : "")<br />
+                                @Model.Country
+                            </dd>
                     </dl>
                 </div>
             </div>
@@ -140,23 +141,24 @@
         </div>
     </div>
 
-    <div class="mt-3">
-        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
-        @if (relatedInvoice != null)
-        {
-            <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@relatedInvoice.Id" class="btn btn-outline-primary">View Invoice</a>
-        }
-        @if (latestShipment != null)
-        {
-            <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id" class="btn btn-outline-dark">View Shipment</a>
-        }
-        @if (paymentStatus == PaymentStatus.Refunded)
-        {
-            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="btn btn-outline-primary">View Credit Note</a>
-        }
-        @if (orderStatus != OrderStatus.Cancelled)
-        {
-            <a asp-action="Cancel" asp-route-orderId="@Model.Id" class="btn btn-danger">Cancel Order</a>
-        }
+            <div class="mt-3 mb-4">
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                @if (relatedInvoice != null)
+                {
+                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@relatedInvoice.Id" class="btn btn-outline-primary">View Invoice</a>
+                }
+                @if (latestShipment != null)
+                {
+                    <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@latestShipment.Id" class="btn btn-outline-dark">View Shipment</a>
+                }
+                @if (paymentStatus == PaymentStatus.Refunded)
+                {
+                    <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@Model.Id" asp-route-type="cancellation" class="btn btn-outline-primary">View Credit Note</a>
+                }
+                @if (orderStatus != OrderStatus.Cancelled)
+                {
+                    <a asp-action="Cancel" asp-route-orderId="@Model.Id" class="btn btn-danger">Cancel Order</a>
+                }
+            </div>
+        </div>
     </div>
-</div>

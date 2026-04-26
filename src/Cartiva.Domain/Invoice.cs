@@ -138,6 +138,9 @@ namespace Cartiva.Domain
         [ValidateNever]
         public ICollection<CreditNote> CreditNotes { get; set; } = new List<CreditNote>();
 
+        [ValidateNever]
+        public ICollection<AccountsReceivableAdjustment> AccountsReceivableAdjustments { get; set; } = new List<AccountsReceivableAdjustment>();
+
         // =========================
         // COMPUTED
         // =========================
@@ -150,7 +153,12 @@ namespace Cartiva.Domain
             .Sum(c => c.TotalAmount) ?? 0;
 
         [NotMapped]
-        public decimal RemainingAmount => TotalAmount - TotalPaid - TotalCredited;
+        public decimal TotalARAdjustments => AccountsReceivableAdjustments?
+            .Where(a => a.Status == ARAdjustmentStatus.Applied)
+            .Sum(a => Math.Abs(a.Amount)) ?? 0;
+
+        [NotMapped]
+        public decimal RemainingAmount => TotalAmount - TotalPaid - TotalCredited - TotalARAdjustments;
 
         [NotMapped]
         public bool IsFullyPaid => RemainingAmount <= 0;

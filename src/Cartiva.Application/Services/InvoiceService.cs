@@ -422,5 +422,21 @@ namespace Cartiva.Application.Services
 
             return 1;
         }
+
+        public async Task<List<Invoice>> GetInvoicesForCompanyAsync(int companyId, CancellationToken ct = default)
+        {
+            return await _db.Set<Invoice>()
+                .Include(i => i.OrderHeader)
+                    .ThenInclude(oh => oh.ApplicationUser)
+                .Include(i => i.Lines)
+                .Include(i => i.Payments)
+                .Include(i => i.CreditNotes)
+                .Include(i => i.AccountsReceivableAdjustments)
+                .Where(i => i.OrderHeader != null && 
+                           i.OrderHeader.ApplicationUser != null && 
+                           i.OrderHeader.ApplicationUser.CompanyId == companyId)
+                .OrderByDescending(i => i.IssueDate)
+                .ToListAsync(ct);
+        }
     }
 }

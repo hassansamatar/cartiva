@@ -39,6 +39,7 @@ namespace Cartiva.Persistence
         public DbSet<InvoicePayment> InvoicePayments { get; set; }
         public DbSet<CreditNote> CreditNotes { get; set; }
         public DbSet<CreditNoteLine> CreditNoteLines { get; set; }
+        public DbSet<AccountsReceivableAdjustment> AccountsReceivableAdjustments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
 
         // ======================
@@ -105,6 +106,12 @@ namespace Cartiva.Persistence
                 e.Property(p => p.Status).HasConversion<string>();
             });
 
+            modelBuilder.Entity<AccountsReceivableAdjustment>(e =>
+            {
+                e.Property(p => p.Amount).HasColumnType("decimal(18,2)");
+                e.Property(p => p.Status).HasConversion<string>();
+            });
+
             // ======================
             // RELATIONSHIPS
             // ======================
@@ -154,6 +161,24 @@ namespace Cartiva.Persistence
                 .HasOne(c => c.ReturnRequest)
                 .WithMany()
                 .HasForeignKey(c => c.ReturnRequestId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AccountsReceivableAdjustment>()
+                .HasOne(a => a.Company)
+                .WithMany()
+                .HasForeignKey(a => a.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AccountsReceivableAdjustment>()
+                .HasOne(a => a.Invoice)
+                .WithMany(i => i.AccountsReceivableAdjustments)
+                .HasForeignKey(a => a.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AccountsReceivableAdjustment>()
+                .HasOne(a => a.ReturnRequest)
+                .WithMany()
+                .HasForeignKey(a => a.ReturnRequestId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<InvoicePayment>()

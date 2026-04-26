@@ -30,6 +30,8 @@ namespace Cartiva.Application.Services
             var returnRequest = await _db.ReturnRequests
                 .Include(r => r.OrderDetail)
                     .ThenInclude(od => od.OrderHeader)
+                        .ThenInclude(oh => oh.ApplicationUser)
+                            .ThenInclude(u => u.Company)
                 .Include(r => r.OrderDetail)
                     .ThenInclude(od => od.ProductVariant)
                         .ThenInclude(pv => pv!.Product)
@@ -40,6 +42,27 @@ namespace Cartiva.Application.Services
 
             if (returnRequest.Status != ReturnStatus.Approved)
                 throw new InvalidOperationException("Credit notes can only be created for approved return requests.");
+
+            // =========================
+            // GUARD: Prevent credit note creation for B2B company returns WITH DEFERRED PAYMENT
+            // Company orders paid UPFRONT are allowed credit notes (treated like individuals)
+            // =========================
+            var user = returnRequest.OrderDetail.OrderHeader.ApplicationUser;
+            var order = returnRequest.OrderDetail.OrderHeader;
+
+            bool isCompanyDeferredPayment = 
+                user?.CompanyId.HasValue == true && 
+                user.Company?.IsActive == true &&
+                (order.PaymentStatus == PaymentStatus.Deferred || order.PaymentStatus == PaymentStatus.Pending);
+
+            if (isCompanyDeferredPayment)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create credit note for company return with deferred payment. " +
+                    $"Company returns with deferred payment use Accounts Receivable Adjustments instead. " +
+                    $"Return request {returnRequestId} belongs to company {user.Company.Name}. " +
+                    $"Payment Status: {order.PaymentStatus}");
+            }
 
             var orderId = returnRequest.OrderDetail.OrderHeaderId;
 

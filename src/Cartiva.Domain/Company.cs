@@ -42,5 +42,11 @@ namespace Cartiva.Domain
         public string? PhoneNumber { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        /// <summary>
+        /// Stripe customer ID for B2B credit balance management
+        /// </summary>
+        [StringLength(100)]
+        public string? StripeCustomerId { get; set; }
     }
 }

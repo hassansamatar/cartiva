@@ -17,17 +17,20 @@ public class ReturnService : IReturnService
     private readonly ILogger<ReturnService> _logger;
     private readonly ICreditNoteService _creditNoteService;
     private readonly INotificationService _notificationService;
+    private readonly IAccountsReceivableAdjustmentService _arAdjustmentService;
 
     public ReturnService(
         ApplicationDbContext db,
         ILogger<ReturnService> logger,
         ICreditNoteService creditNoteService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IAccountsReceivableAdjustmentService arAdjustmentService)
     {
         _db = db;
         _logger = logger;
         _creditNoteService = creditNoteService;
         _notificationService = notificationService;
+        _arAdjustmentService = arAdjustmentService;
     }
 
     #region Queries
@@ -40,6 +43,8 @@ public class ReturnService : IReturnService
                     .ThenInclude(pv => pv.Product)
             .Include(r => r.OrderDetail)
                 .ThenInclude(od => od.OrderHeader)
+                    .ThenInclude(oh => oh.ApplicationUser)
+                        .ThenInclude(u => u.Company)
             .OrderByDescending(r => r.RequestDate)
             .ToListAsync();
 
@@ -196,6 +201,7 @@ public class ReturnService : IReturnService
             .Include(r => r.OrderDetail)
                 .ThenInclude(o => o.OrderHeader)
                     .ThenInclude(h => h.ApplicationUser)
+                        .ThenInclude(u => u.Company)
             .Include(r => r.OrderDetail)
                 .ThenInclude(o => o.ProductVariant)
                     .ThenInclude(pv => pv.Product)
@@ -213,6 +219,100 @@ public class ReturnService : IReturnService
             variant.Stock += rr.Quantity;
 
         await _db.SaveChangesAsync();
+
+        // =========================
+        // RETURN FLOW ROUTING LOGIC
+        // =========================
+        var user = rr.OrderDetail.OrderHeader.ApplicationUser;
+        var order = rr.OrderDetail.OrderHeader;
+
+        // Check if this is a company order with DEFERRED payment (B2B flow)
+        // Company orders paid upfront are treated like individual customers
+        bool isCompanyDeferredPayment = 
+            user?.CompanyId.HasValue == true && 
+            user.Company?.IsActive == true &&
+            (order.PaymentStatus == PaymentStatus.Deferred || order.PaymentStatus == PaymentStatus.Pending);
+
+        if (isCompanyDeferredPayment)
+        {
+            // =========================
+            // B2B COMPANY RETURN FLOW: Create AR Adjustment (NOT Credit Note)
+            // Company with DEFERRED payment - use AR adjustment
+            // =========================
+            _logger.LogInformation(
+                "Return {ReturnId} is for company {CompanyId} with deferred payment, creating AR adjustment",
+                id, user.CompanyId);
+
+            try
+            {
+                // Find invoice for this order
+                var invoice = await _db.Invoices
+                    .FirstOrDefaultAsync(i => i.OrderHeaderId == rr.OrderDetail.OrderHeaderId);
+
+                if (invoice != null)
+                {
+                    // Create AR adjustment for B2B company with deferred payment
+                    await _arAdjustmentService.CreateFromReturnRequestAsync(
+                        returnRequestId: rr.Id,
+                        invoiceId: invoice.Id,
+                        companyId: user.CompanyId.Value,
+                        createdByUserId: null); // Could pass admin user ID if available
+
+                    _logger.LogInformation(
+                        "AR adjustment created for company return {ReturnId}",
+                        id);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "No invoice found for order {OrderId}, cannot create AR adjustment",
+                        rr.OrderDetail.OrderHeaderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create AR adjustment for return {ReturnId}",
+                    id);
+                // Continue execution - return approval succeeded even if AR adjustment failed
+            }
+        }
+        else
+        {
+            // =========================
+            // B2C OR COMPANY UPFRONT PAYMENT FLOW: Auto-create Credit Note
+            // Individual customers OR company orders paid upfront
+            // =========================
+            if (user?.CompanyId.HasValue == true)
+            {
+                _logger.LogInformation(
+                    "Return {ReturnId} is for company {CompanyId} with UPFRONT payment, auto-creating credit note",
+                    id, user.CompanyId);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Return {ReturnId} is for individual customer, auto-creating credit note",
+                    id);
+            }
+
+            try
+            {
+                // Auto-create credit note
+                var creditNote = await _creditNoteService.CreateFromReturnRequestAsync(rr.Id);
+
+                _logger.LogInformation(
+                    "Credit note {CreditNoteNumber} auto-created for return {ReturnId}",
+                    creditNote.CreditNoteNumber, id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to auto-create credit note for return {ReturnId}",
+                    id);
+                // Continue execution - return approval succeeded even if credit note failed
+            }
+        }
 
         // Send return request approved notification
         if (rr.OrderDetail.OrderHeader.ApplicationUser?.Email != null)

@@ -12,6 +12,19 @@
     var orderId = Model.OrderDetail?.OrderHeaderId;
     var refundAmount = Model.RefundAmount ?? (Model.OrderDetail.Price * Model.Quantity);
     var returnStatus = Model.Status;
+
+    // Determine if this is a company order and what type
+    var isCompanyOrder = Model.OrderDetail?.OrderHeader?.ApplicationUser?.CompanyId != null;
+    var company = Model.OrderDetail?.OrderHeader?.ApplicationUser?.Company;
+    var paymentStatus = Model.OrderDetail?.OrderHeader?.PaymentStatus ?? PaymentStatus.Pending;
+    var isCompanyActive = company?.IsActive ?? false;
+
+    // Company with deferred payment → AR Adjustment
+    var useARAdjustment = isCompanyOrder && isCompanyActive && 
+                          (paymentStatus == PaymentStatus.Deferred || paymentStatus == PaymentStatus.Pending);
+
+    // Company with upfront payment OR individual → Credit Note + Refund
+    var useCreditNote = !useARAdjustment;
 }
 
 <div id="return-@Model.Id" class="card mb-3 shadow-sm">
@@ -25,21 +38,64 @@
                 <span class="badge bg-secondary">@color</span>
                 <span class="text-muted small ms-1">× @Model.Quantity</span>
 
+                @* Company & Payment Type Indicators *@
+                @if (isCompanyOrder && company != null)
+                {
+                    <div class="mt-2">
+                        <span class="badge bg-info">
+                            <i class="bi bi-building"></i> @company.Name
+                        </span>
+                        @if (useARAdjustment)
+                        {
+                            <span class="badge bg-warning text-dark" title="Deferred payment - Will create AR Adjustment automatically on approval">
+                                <i class="bi bi-calculator"></i> AR Adjustment
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success" title="Paid upfront - Will use Credit Note + Refund flow">
+                                <i class="bi bi-file-earmark-text"></i> Credit Note
+                            </span>
+                        }
+                    </div>
+                }
+
                 <div class="mt-2">
                     <a asp-area="Admin"
-                       asp-controller="CreditNote"
-                       asp-action="DetailsByReturn"
-                       asp-route-returnRequestId="@Model.Id"
-                       class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-receipt"></i> View Credit Note (Order #@orderId)
+                       asp-controller="Order"
+                       asp-action="Details"
+                       asp-route-orderId="@orderId"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-bag"></i> View Order
                     </a>
-                    <a asp-area="Admin"
-                       asp-controller="CreditNote"
-                       asp-action="Test"
-                       
-                       class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-receipt"></i> Test (Order #@orderId)
-                    </a>
+
+                    @* Show AR Adjustment link ONLY if company with deferred payment *@
+                    @if (useARAdjustment && isCompanyOrder)
+                    {
+                        var companyId = Model.OrderDetail.OrderHeader.ApplicationUser.CompanyId.Value;
+                        <a asp-area="Admin"
+                           asp-controller="ARAdjustment"
+                           asp-action="Index"
+                           asp-route-companyId="@companyId"
+                           asp-route-search="@Model.Id"
+                           class="btn btn-sm btn-outline-info"
+                           title="View AR Adjustments for this company">
+                            <i class="bi bi-calculator"></i> View AR Adjustments
+                        </a>
+                    }
+
+                    @* Show Credit Note link ONLY if paid upfront (company or individual) *@
+                    @if (useCreditNote && returnStatus == ReturnStatus.Approved)
+                    {
+                        <a asp-area="Admin"
+                           asp-controller="CreditNote"
+                           asp-action="Index"
+                           asp-route-search="@Model.Id"
+                           class="btn btn-sm btn-outline-primary"
+                           title="Create or view Credit Note">
+                            <i class="bi bi-file-earmark-text"></i> Credit Note
+                        </a>
+                    }
                 </div>
 
                 <div class="mt-1">
@@ -65,6 +121,29 @@
                     <i class="bi bi-calendar"></i>
                     @Model.RequestDate.ToString("dd MMM yyyy HH:mm")
                 </small>
+
+                @* Show workflow instruction after approval *@
+                @if (returnStatus == ReturnStatus.Approved)
+                {
+                    <div class="alert alert-info alert-sm mt-2 mb-0 py-1 px-2">
+                        @if (useARAdjustment)
+                        {
+                            <small>
+                                <i class="bi bi-check-circle"></i>
+                                <strong>AR Adjustment created.</strong> 
+                                No further action needed.
+                            </small>
+                        }
+                        else
+                        {
+                            <small>
+                                <i class="bi bi-arrow-right"></i>
+                                <strong>Credit Note created.</strong> 
+                                Process refund when ready.
+                            </small>
+                        }
+                    </div>
+                }
             </div>
 
             <!-- STATUS & ACTIONS -->
@@ -82,6 +161,7 @@
 
                 @if (returnStatus == ReturnStatus.Pending)
                 {
+                    @* PENDING: Show Approve/Reject buttons *@
                     <div class="d-flex justify-content-end gap-1 flex-wrap">
 
                         <form asp-area="Admin"
@@ -90,7 +170,7 @@
                               asp-route-id="@Model.Id"
                               method="post">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-outline-success">
+                            <button type="submit" class="btn btn-sm btn-success">
                                 <i class="bi bi-check-lg"></i> Approve
                             </button>
                         </form>
@@ -110,42 +190,88 @@
                 }
                 else if (returnStatus == ReturnStatus.Approved)
                 {
-                    <form asp-area="Admin"
-                          asp-controller="Return"
-                          asp-action="Refund"
-                          asp-route-id="@Model.Id"
-                          method="post"
-                          class="btn-swal-confirm-form"
-                          data-swal-title="Process refund of @refundAmount.ToString("C", culture)?"
-                          data-swal-text="This will issue a Stripe refund to the customer.">
+                    @* APPROVED: Show what happened automatically *@
 
-                        @Html.AntiForgeryToken()
+                    @if (useARAdjustment)
+                    {
+                        @* Company with deferred payment - AR Adjustment created automatically *@
+                        <div class="alert alert-success alert-sm mb-0 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                                <div>
+                                    <small class="d-block">
+                                        <strong>AR Adjustment Created</strong>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        Balance adjusted automatically.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Individual or company paid upfront - Credit Note created automatically *@
+                        <div class="alert alert-success alert-sm mb-0 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                                <div>
+                                    <small class="d-block">
+                                        <strong>Credit Note Created</strong>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        Ready for refund processing.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
 
-                        <button type="submit" class="btn btn-sm btn-success">
-                            <i class="bi bi-credit-card"></i> Process Refund
-                        </button>
-                    </form>
+                        @* Refund button still needed for manual Stripe refund *@
+                        <form asp-area="Admin"
+                              asp-controller="Return"
+                              asp-action="Refund"
+                              asp-route-id="@Model.Id"
+                              method="post"
+                              class="btn-swal-confirm-form mt-2"
+                              data-swal-title="Process refund of @refundAmount.ToString("C", culture)?"
+                              data-swal-text="This will issue a Stripe refund to the customer.">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                <i class="bi bi-credit-card"></i> Process Refund
+                            </button>
+                        </form>
+                    }
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(Model.AdminNote))
+                    @* RESOLVED: Show completion info *@
+                    @if (!string.IsNullOrEmpty(Model.AdminNote))
                     {
                         <small class="text-muted d-block">
                             <i class="bi bi-chat-dots"></i> @Model.AdminNote
                         </small>
                     }
 
-                    if (Model.RefundDate.HasValue)
+                    @if (Model.RefundDate.HasValue)
                     {
                         <small class="text-muted d-block">
                             Refunded @Model.RefundDate.Value.ToString("dd MMM yyyy")
                         </small>
                     }
 
-                    if (!string.IsNullOrEmpty(Model.RefundId))
+                    @if (!string.IsNullOrEmpty(Model.RefundId))
                     {
                         <small class="text-muted d-block">
                             Stripe: @Model.RefundId
+                        </small>
+                    }
+
+                    @if (returnStatus == ReturnStatus.Approved && useARAdjustment)
+                    {
+                        <small class="text-success d-block">
+                            <i class="bi bi-check-circle"></i> AR Adjustment applied
                         </small>
                     }
                 }

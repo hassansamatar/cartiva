@@ -69,14 +69,14 @@
                     }
                 </div>
 
-                <!-- Approved (awaiting refund) -->
+                <!-- Approved (Credit Note/AR Adjustment created, awaiting refund if needed) -->
                 <div class="tab-pane fade" id="approved" role="tabpanel">
                     @{ var approvedReturns = Model.Where(r => r.Status == ReturnStatus.Approved).ToList(); }
                     @if (!approvedReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">
-                            <i class="bi bi-credit-card" style="font-size: 3rem;"></i>
-                            <p class="mt-2">No returns awaiting refund.</p>
+                            <i class="bi bi-check-all" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No approved returns awaiting action.</p>
                         </div>
                     }
                     else
