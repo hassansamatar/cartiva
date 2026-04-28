@@ -76,5 +76,12 @@ namespace Cartiva.Application.Abstractions
         /// Checks if an AR adjustment already exists for a return request
         /// </summary>
         Task<bool> ExistsForReturnRequestAsync(int returnRequestId);
+
+        /// <summary>
+        /// Sends an email notification for the AR adjustment using the dedicated template
+        /// </summary>
+        /// <param name="adjustmentId">The adjustment ID to send email for</param>
+        /// <returns>True if email was sent successfully, false otherwise</returns>
+        Task<bool> SendAdjustmentEmailAsync(int adjustmentId);
     }
 }

@@ -42,3 +42,31 @@ public class GenericEmailModel
     public string Body { get; set; } = string.Empty;
     public Dictionary<string, object> Data { get; set; } = new();
 }
+
+public class CreditNoteGeneratedModel
+{
+    public string CreditNoteNumber { get; set; } = string.Empty;
+    public string OrderId { get; set; } = string.Empty;
+    public string IssueDate { get; set; } = string.Empty;
+    public string TotalAmount { get; set; } = string.Empty;
+    public string NetAmount { get; set; } = string.Empty;
+    public string VatAmount { get; set; } = string.Empty;
+    public string Currency { get; set; } = "NOK";
+    public string Reason { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+}
+
+public class ARAdjustmentNotificationModel
+{
+    public string CompanyName { get; set; } = string.Empty;
+    public string Amount { get; set; } = string.Empty;
+    public string Currency { get; set; } = "NOK";
+    public string Reason { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string CreatedAt { get; set; } = string.Empty;
+    public string? AppliedAt { get; set; }
+    public string? InvoiceNumber { get; set; }
+    public string? Notes { get; set; }
+}

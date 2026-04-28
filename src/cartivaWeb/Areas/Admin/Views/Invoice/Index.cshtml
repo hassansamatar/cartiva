@@ -18,14 +18,12 @@
     <link rel="stylesheet" href="~/css/invoice.css" asp-append-version="true" />
 }
 
-<div class="admin-dashboard invoice-dashboard">
+<div class="admin-dashboard">
     <div class="container-fluid">
         <h2><i class="bi bi-receipt"></i> Invoice Management</h2>
-
-        <!-- Summary Cards -->
         <div class="row mb-4 g-3">
             <div class="col-lg-3 col-md-6">
-                <div class="card invoice-card card-overdue">
+                <div class="card admin-card card-warning">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-exclamation-triangle-fill"></i> Overdue</h5>
                         <h3>@Model.OverdueCount</h3>
@@ -35,7 +33,7 @@
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card invoice-card card-pending">
+                <div class="card admin-card card-info">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-clock-fill"></i> Pending</h5>
                         <h3>@Model.PendingCount</h3>
@@ -45,7 +43,7 @@
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card invoice-card card-paid">
+                <div class="card admin-card card-success">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-check-circle-fill"></i> Paid</h5>
                         <h3>@Model.PaidCount</h3>
@@ -55,7 +53,7 @@
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card invoice-card card-outstanding">
+                <div class="card admin-card card-danger">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-cash-stack"></i> Total Outstanding</h5>
                         <h3>@Model.TotalOutstanding.ToString("C", culture)</h3>
@@ -89,18 +87,14 @@
                             <th>Ex VAT</th>
                             <th>VAT</th>
                             <th>Total</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var invoice in Model.OverdueInvoiceEntities)
                         {
                             <tr>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="fw-bold text-decoration-none">
-                                        @invoice.InvoiceNumber
-                                    </a>
-                                </td>
+                                <td>@invoice.InvoiceNumber</td>
                                 <td>
                                     @if (invoice.OrderHeaderId.HasValue)
                                     {
@@ -122,31 +116,31 @@
                                 <td class="text-end">@invoice.NetAmount.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@invoice.VatAmount.ToString("N2", culture)</td>
                                 <td class="text-end amount-large">@invoice.RemainingAmount.ToString("C", culture)</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Invoice">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@invoice.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    @if (invoice.OrderHeaderId.HasValue)
-                                    {
-                                        <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@invoice.OrderHeaderId.Value" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
-                                            <i class="bi bi-bag"></i>
+                                <td class="action-buttons">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@invoice.Id" target="_blank" class="btn btn-sm btn-secondary" title="Print Invoice">
+                                            <i class="bi bi-printer"></i>
                                         </a>
-                                    }
-                                    @if (!invoice.SentDate.HasValue)
-                                    {
-                                        <form asp-action="Send" asp-route-id="@invoice.Id" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Send Invoice">
-                                                <i class="bi bi-envelope"></i>
-                                            </button>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge badge-sent"><i class="bi bi-check"></i> Sent</span>
-                                    }
+                                        @if (invoice.OrderHeaderId.HasValue)
+                                        {
+                                            <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@invoice.OrderHeaderId.Value" class="btn btn-sm btn-outline-primary" title="View Order">
+                                                <i class="bi bi-bag"></i>
+                                            </a>
+                                        }
+                                        @if (!invoice.SentDate.HasValue)
+                                        {
+                                            <form asp-action="Send" asp-route-id="@invoice.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-primary" title="Send Invoice">
+                                                    <i class="bi bi-envelope"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check"></i> Sent</span>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -156,14 +150,8 @@
                             var exVat = order.SubtotalExVat > 0 ? order.SubtotalExVat : order.OrderTotal / 1.25m;
                             var vat = order.TotalVatAmount > 0 ? order.TotalVatAmount : order.OrderTotal - exVat;
                             <tr>
-                                <td>
-                                    <span class="text-muted">Generate on send</span>
-                                </td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="fw-bold text-decoration-none">
-                                        #@order.Id
-                                    </a>
-                                </td>
+                                <td><span class="text-muted">Generate on send</span></td>
+                                <td><span>#@order.Id</span></td>
                                 <td>@(order.ApplicationUser?.Company?.Name ?? "-")</td>
                                 <td>@(order.ApplicationUser?.Name ?? order.Name)</td>
                                 <td><span class="badge bg-danger">Outstanding</span></td>
@@ -171,25 +159,28 @@
                                 <td class="text-end">@exVat.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@vat.ToString("N2", culture)</td>
                                 <td class="text-end amount-large">@order.OrderTotal.ToString("C", culture)</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
-                                        <i class="bi bi-bag"></i>
-                                    </a>
-                                    @if (!order.InvoiceSent)
-                                    {
-                                        <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline" data-confirm="Send reminder to customer?">
-                                            <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Send Reminder">
-                                                <i class="bi bi-envelope"></i>
-                                            </button>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge badge-sent"><i class="bi bi-check"></i> Sent</span>
-                                    }
+                                <td class="action-buttons">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-secondary" title="Print Invoice">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                        <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-sm btn-outline-primary" title="View Order">
+                                            <i class="bi bi-bag"></i>
+                                        </a>
+                                        @if (!order.InvoiceSent)
+                                        {
+                                            <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline" data-confirm="Send reminder to customer?">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-primary" title="Send Reminder">
+                                                    <i class="bi bi-envelope"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check"></i> Sent</span>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -231,19 +222,15 @@
                             <th>Ex VAT</th>
                             <th>VAT</th>
                             <th>Total</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var invoice in Model.PendingInvoiceEntities)
                         {
-                            var statusLabel = invoice.Status == Cartiva.Domain.Enums.InvoiceStatus.Paid ? "Paid" : "Deferred / Outstanding";
+                            var statusLabel = invoice.Status == InvoiceStatus.Paid ? "Paid" : "Deferred / Outstanding";
                             <tr>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="fw-bold text-decoration-none">
-                                        @invoice.InvoiceNumber
-                                    </a>
-                                </td>
+                                <td>@invoice.InvoiceNumber</td>
                                 <td>
                                     @if (invoice.OrderHeaderId.HasValue)
                                     {
@@ -265,24 +252,24 @@
                                 <td class="text-end">@invoice.NetAmount.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@invoice.VatAmount.ToString("N2", culture)</td>
                                 <td class="text-end amount-large">@invoice.RemainingAmount.ToString("C", culture)</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Invoice">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@invoice.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    @if (invoice.OrderHeaderId.HasValue)
-                                    {
-                                        <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@invoice.OrderHeaderId.Value" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
-                                            <i class="bi bi-bag"></i>
+                                <td class="action-buttons">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@invoice.Id" target="_blank" class="btn btn-sm btn-secondary" title="Print Invoice">
+                                            <i class="bi bi-printer"></i>
                                         </a>
-                                    }
-                                    <form asp-action="Send" asp-route-id="@invoice.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Send Invoice">
-                                            <i class="bi bi-envelope"></i>
-                                        </button>
-                                    </form>
+                                        @if (invoice.OrderHeaderId.HasValue)
+                                        {
+                                            <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@invoice.OrderHeaderId.Value" class="btn btn-sm btn-outline-primary" title="View Order">
+                                                <i class="bi bi-bag"></i>
+                                            </a>
+                                        }
+                                        <form asp-action="Send" asp-route-id="@invoice.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Send Invoice">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -292,14 +279,8 @@
                             var exVat = order.SubtotalExVat > 0 ? order.SubtotalExVat : order.OrderTotal / 1.25m;
                             var vat = order.TotalVatAmount > 0 ? order.TotalVatAmount : order.OrderTotal - exVat;
                             <tr>
-                                <td>
-                                    <span class="text-muted">Generate on send</span>
-                                </td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="fw-bold text-decoration-none">
-                                        #@order.Id
-                                    </a>
-                                </td>
+                                <td><span class="text-muted">Generate on send</span></td>
+                                <td><span>#@order.Id</span></td>
                                 <td>@(order.ApplicationUser?.Company?.Name ?? "-")</td>
                                 <td>@(order.ApplicationUser?.Name ?? order.Name)</td>
                                 <td><span class="badge bg-info">Deferred / Outstanding</span></td>
@@ -307,25 +288,18 @@
                                 <td class="text-end">@exVat.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@vat.ToString("N2", culture)</td>
                                 <td class="text-end amount-large">@order.OrderTotal.ToString("C", culture)</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
-                                        <i class="bi bi-bag"></i>
-                                    </a>
-                                    @if (!order.InvoiceSent)
-                                    {
+                                <td class="action-buttons">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-secondary" title="Print Invoice">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
                                         <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Mark as Sent">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Send Invoice">
                                                 <i class="bi bi-envelope"></i>
                                             </button>
                                         </form>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge badge-sent"><i class="bi bi-check"></i> Sent</span>
-                                    }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -367,18 +341,14 @@
                             <th>Ex VAT</th>
                             <th>VAT</th>
                             <th>Total</th>
-                            <th>Print</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var invoice in Model.PaidInvoiceEntities)
                         {
                             <tr>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="fw-bold text-decoration-none">
-                                        @invoice.InvoiceNumber
-                                    </a>
-                                </td>
+                                <td>@invoice.InvoiceNumber</td>
                                 <td>
                                     @if (invoice.OrderHeaderId.HasValue)
                                     {
@@ -398,24 +368,24 @@
                                 <td class="text-end">@invoice.NetAmount.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@invoice.VatAmount.ToString("N2", culture)</td>
                                 <td class="text-end amount-large amount-positive">@invoice.TotalAmount.ToString("C", culture)</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoice.Id" class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Invoice">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@invoice.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    @if (invoice.OrderHeaderId.HasValue)
-                                    {
-                                        <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@invoice.OrderHeaderId.Value" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
-                                            <i class="bi bi-bag"></i>
+                                <td class="action-buttons">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@invoice.Id" target="_blank" class="btn btn-sm btn-secondary" title="Print Invoice">
+                                            <i class="bi bi-printer"></i>
                                         </a>
-                                    }
-                                    <form asp-action="Send" asp-route-id="@invoice.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Send Invoice Receipt">
-                                            <i class="bi bi-envelope"></i>
-                                        </button>
-                                    </form>
+                                        @if (invoice.OrderHeaderId.HasValue)
+                                        {
+                                            <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@invoice.OrderHeaderId.Value" class="btn btn-sm btn-outline-primary" title="View Order">
+                                                <i class="bi bi-bag"></i>
+                                            </a>
+                                        }
+                                        <form asp-action="Send" asp-route-id="@invoice.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Send Invoice">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -425,14 +395,8 @@
                             var exVat = order.SubtotalExVat > 0 ? order.SubtotalExVat : order.OrderTotal / 1.25m;
                             var vat = order.TotalVatAmount > 0 ? order.TotalVatAmount : order.OrderTotal - exVat;
                             <tr>
-                                <td>
-                                    <span class="text-muted">Generate on send</span>
-                                </td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="fw-bold text-decoration-none">
-                                        #@order.Id
-                                    </a>
-                                </td>
+                                <td><span class="text-muted">Generate on send</span></td>
+                                <td><span>#@order.Id</span></td>
                                 <td>@(order.ApplicationUser?.Company?.Name ?? "-")</td>
                                 <td>@(order.ApplicationUser?.Name ?? order.Name)</td>
                                 <td><span class="badge bg-success">Paid</span></td>
@@ -440,18 +404,18 @@
                                 <td class="text-end">@exVat.ToString("N2", culture)</td>
                                 <td class="text-end text-muted-light">@vat.ToString("N2", culture)</td>
                                 <td class="text-end amount-large amount-positive">@order.OrderTotal.ToString("C", culture)</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-action btn-print" data-bs-toggle="tooltip" title="Print Invoice">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Order">
-                                        <i class="bi bi-bag"></i>
-                                    </a>
-                                    <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-action btn-send" data-bs-toggle="tooltip" title="Send Invoice Receipt">
-                                            <i class="bi bi-envelope"></i>
-                                        </button>
-                                    </form>
+                                <td class="action-buttons">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@order.Id" target="_blank" class="btn btn-sm btn-secondary" title="Print Invoice">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                        <form asp-action="Send" asp-route-id="@order.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Send Invoice Receipt">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }

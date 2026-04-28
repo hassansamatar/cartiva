@@ -1,10 +1,16 @@
 using Cartiva.Application.Abstractions;
+using Cartiva.Domain.Interfaces;
+using Cartiva.Domain.Enums;
 using Cartiva.Domain;
 using Cartiva.Domain.Enums;
+using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace cartivaWeb.Areas.Admin.Controllers
 {
@@ -15,15 +21,24 @@ namespace cartivaWeb.Areas.Admin.Controllers
         private readonly IAccountsReceivableAdjustmentService _arAdjustmentService;
         private readonly ICompanyService _companyService;
         private readonly IInvoiceService _invoiceService;
+        private readonly INotificationService _notificationService;
+        private readonly ApplicationDbContext _db;
+        private readonly ILogger<ARAdjustmentController> _logger;
 
         public ARAdjustmentController(
             IAccountsReceivableAdjustmentService arAdjustmentService,
             ICompanyService companyService,
-            IInvoiceService invoiceService)
+            IInvoiceService invoiceService,
+            INotificationService notificationService,
+            ApplicationDbContext db,
+            ILogger<ARAdjustmentController> logger)
         {
             _arAdjustmentService = arAdjustmentService;
             _companyService = companyService;
             _invoiceService = invoiceService;
+            _notificationService = notificationService;
+            _db = db;
+            _logger = logger;
         }
 
         // GET: Admin/ARAdjustment
@@ -82,79 +97,6 @@ namespace cartivaWeb.Areas.Admin.Controllers
             return View(adjustment);
         }
 
-        // GET: Admin/ARAdjustment/Create
-        // DISABLED: Manual AR Adjustment creation not allowed
-        // AR Adjustments are created automatically from return approvals
-        /*
-        public async Task<IActionResult> Create(int? companyId, int? invoiceId)
-        {
-            var companies = await _companyService.GetAllCompaniesAsync();
-            ViewBag.Companies = new SelectList(
-                companies.Where(c => c.IsActive).OrderBy(c => c.Name),
-                "Id",
-                "Name",
-                companyId);
-
-            if (invoiceId.HasValue)
-            {
-                var invoice = await _invoiceService.GetInvoiceByIdAsync(invoiceId.Value);
-                if (invoice != null)
-                {
-                    ViewBag.SelectedInvoice = invoice;
-                }
-            }
-
-            return View();
-        }
-        */
-
-        // POST: Admin/ARAdjustment/Create
-        // DISABLED: Manual AR Adjustment creation not allowed
-        /*
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(
-            int companyId,
-            int invoiceId,
-            decimal amount,
-            string reason,
-            string? notes)
-        {
-            try
-            {
-                var adjustment = await _arAdjustmentService.CreateManualAdjustmentAsync(
-                    companyId: companyId,
-                    invoiceId: invoiceId,
-                    amount: amount,
-                    reason: reason,
-                    notes: notes,
-                    createdByUserId: User.Identity?.Name);
-
-                TempData["success"] = "AR Adjustment created successfully.";
-                return RedirectToAction(nameof(Details), new { id = adjustment.Id });
-            }
-            catch (Exception ex)
-            {
-                TempData["error"] = ex.Message;
-
-                // Reload view with data
-                var companies = await _companyService.GetAllCompaniesAsync();
-                ViewBag.Companies = new SelectList(
-                    companies.Where(c => c.IsActive).OrderBy(c => c.Name),
-                    "Id",
-                    "Name",
-                    companyId);
-
-                var invoice = await _invoiceService.GetInvoiceByIdAsync(invoiceId);
-                if (invoice != null)
-                {
-                    ViewBag.SelectedInvoice = invoice;
-                }
-
-                return View();
-            }
-        }
-        */
 
         // POST: Admin/ARAdjustment/ApplyStripe/5
         [HttpPost]
@@ -205,6 +147,23 @@ namespace cartivaWeb.Areas.Admin.Controllers
             {
                 return Json(new List<object>());
             }
+        }
+
+        // POST: Admin/ARAdjustment/SendEmail/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendEmail(int id)
+        {
+            var success = await _arAdjustmentService.SendAdjustmentEmailAsync(id);
+
+            if (!success)
+            {
+                TempData["Error"] = "Failed to send email. AR Adjustment not found or no recipient email address.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            TempData["Success"] = "AR Adjustment notification email sent successfully.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

@@ -6,228 +6,249 @@
 @{
     ViewData["Title"] = $"AR Adjustment #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
-    var isManual = Model.ReturnRequestId == 0;
-
-    var statusClass = Model.Status switch
-    {
-        ARAdjustmentStatus.Pending => "warning",
-        ARAdjustmentStatus.Approved => "info",
-        ARAdjustmentStatus.Applied => "success",
-        _ => "secondary"
-    };
+    // Removed isManual variable as requested
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+    <style media="print">
+        /* Print optimizations – remove colors, shadows, extra margins */
+        body {
+            background: white;
+            color: black;
+            margin: 1.5cm;
+            font-size: 11pt;
+        }
+
+        .container, .container-fluid {
+            max-width: 100%;
+            padding: 0;
+        }
+
+        .card {
+            border: 1px solid #ccc !important;
+            box-shadow: none !important;
+            margin-bottom: 1rem;
+        }
+
+        .card-header {
+            background-color: #f5f5f5 !important;
+            color: black !important;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .badge {
+            background: none !important;
+            border: 1px solid #aaa !important;
+            color: black !important;
+        }
+
+        .text-success, .text-danger, .text-warning, .text-muted {
+            color: black !important;
+        }
+
+        a {
+            text-decoration: none;
+            color: black;
+        }
+
+            a[href]:after {
+                content: none !important;
+            }
+
+        .d-print-none {
+            display: none !important;
+        }
+
+        .d-none.d-print-inline {
+            display: inline !important;
+        }
+
+        .table th, .table td {
+            border: 1px solid #ccc;
+            padding: 0.4rem;
+        }
+
+        .table-borderless th, .table-borderless td {
+            border: none;
+        }
+
+        footer {
+            font-size: 9pt;
+            text-align: center;
+            border-top: 1px solid #ccc;
+            margin-top: 2rem;
+            padding-top: 0.5rem;
+        }
+    </style>
 }
 
-<div class="admin-dashboard">
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>
-                <i class="bi bi-calculator"></i> AR Adjustment #@Model.Id
-                <span class="badge bg-@statusClass ms-2">@Model.Status</span>
-            </h2>
-            <div>
-                @if (Model.Status == ARAdjustmentStatus.Approved && !Model.StripeCreditBalanceApplied && !string.IsNullOrWhiteSpace(Model.Company.StripeCustomerId))
-                {
-                    <form asp-action="ApplyStripe" asp-route-id="@Model.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-primary" onclick="return confirm('Apply this adjustment to Stripe credit balance?');">
-                            <i class="bi bi-credit-card"></i> Apply to Stripe
-                        </button>
-                    </form>
-                }
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to List
-                </a>
+<!-- DocumentActionBar removed as requested (old print/email links) -->
+
+<div class="container-fluid py-4">
+    <div class="container">
+        <!-- TempData message alerts (success/error) -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-3 d-print-none" role="alert">
+                @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-3 d-print-none" role="alert">
+                @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <!-- Title + Action Buttons (Print & Email) -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h3>AR Adjustment #@Model.Id</h3>
+            <div class="d-flex gap-2">
+                <!-- Print button -->
+                <button class="btn btn-secondary d-print-none" onclick="window.print();">
+                    <i class="bi bi-printer"></i> Print / Save as PDF
+                </button>
+
+                <!-- Send Email button - POST to SendEmail action -->
+                <form asp-action="SendEmail" asp-route-id="@Model.Id" method="post" class="d-print-none">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary" @(string.IsNullOrWhiteSpace(Model.Invoice?.OrderHeader?.ApplicationUser?.Email) ? "disabled title='No customer email available'" : "")>
+                        <i class="bi bi-envelope"></i> Send Email
+                    </button>
+                </form>
             </div>
         </div>
 
         <div class="row">
-            <!-- Main Details -->
+            <!-- Left Column: Adjustment Information and Details -->
             <div class="col-lg-8">
-                <div class="admin-section">
-                    <div class="section-header">
-                        <h3><i class="bi bi-info-circle"></i> Adjustment Details</h3>
-                    </div>
-                    <div class="section-body">
-                        <table class="table table-borderless">
-                            <tr>
-                                <th width="30%">Adjustment ID:</th>
-                                <td><strong>#@Model.Id</strong></td>
-                            </tr>
-                            <tr>
-                                <th>Type:</th>
-                                <td>
-                                    @if (isManual)
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">Adjustment Information</div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">Company</dt>
+                            <dd class="col-sm-9">
+                                <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.CompanyId" class="d-print-none">
+                                    @Model.Company.Name
+                                </a>
+                                <span class="d-none d-print-inline">@Model.Company.Name</span>
+                                @if (Model.Company.IsActive)
+                                {
+                                    <span class="badge bg-success ms-2">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary ms-2">Inactive</span>
+                                }
+                            </dd>
+                            <dt class="col-sm-3">Invoice</dt>
+                            <dd class="col-sm-9">
+                                <a asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@Model.InvoiceId" class="d-print-none">
+                                    @Model.Invoice.InvoiceNumber
+                                </a>
+                                <span class="d-none d-print-inline">@Model.Invoice.InvoiceNumber</span>
+                                <span class="text-muted ms-2">(@Model.Invoice.TotalAmount.ToString("N2", culture) @Model.Invoice.Currency)</span>
+                            </dd>
+                            <dt class="col-sm-3">Amount</dt>
+                            <dd class="col-sm-9">
+                                <h4 class="@(Model.Amount < 0 ? "text-danger" : "text-success") mb-0">
+                                    @Model.Amount.ToString("N2", culture) @Model.Currency
+                                </h4>
+                                <small class="text-muted">
+                                    @if (Model.Amount < 0)
                                     {
-                                        <span class="badge bg-warning">Manual Adjustment</span>
+                                        <text>Reduces company balance</text>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-primary">Return-Based</span>
-                                        <a asp-controller="Return" asp-action="Index" asp-route-id="@Model.ReturnRequestId" class="ms-2">
-                                            View Return #@Model.ReturnRequestId
-                                        </a>
+                                        <text>Increases company balance</text>
                                     }
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Company:</th>
-                                <td>
-                                    <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.CompanyId">
-                                        @Model.Company.Name
-                                    </a>
-                                    @if (Model.Company.IsActive)
-                                    {
-                                        <span class="badge bg-success ms-2">Active</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary ms-2">Inactive</span>
-                                    }
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Invoice:</th>
-                                <td>
-                                    <a asp-controller="Invoice" asp-action="Details" asp-route-id="@Model.InvoiceId">
-                                        @Model.Invoice.InvoiceNumber
-                                    </a>
-                                    <span class="text-muted ms-2">
-                                        (@Model.Invoice.TotalAmount.ToString("N2", culture) @Model.Invoice.Currency)
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Amount:</th>
-                                <td>
-                                    <h4 class="@(Model.Amount < 0 ? "text-danger" : "text-success") mb-0">
-                                        @Model.Amount.ToString("N2", culture) @Model.Currency
-                                    </h4>
-                                    <small class="text-muted">
-                                        @if (Model.Amount < 0)
-                                        {
-                                            <text>Reduces company balance</text>
-                                        }
-                                        else
-                                        {
-                                            <text>Increases company balance</text>
-                                        }
-                                    </small>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Reason:</th>
-                                <td>@Model.Reason</td>
-                            </tr>
+                                </small>
+                            </dd>
+                            <dt class="col-sm-3">Reason</dt>
+                            <dd class="col-sm-9">@Model.Reason</dd>
                             @if (!string.IsNullOrWhiteSpace(Model.Notes))
                             {
-                                <tr>
-                                    <th>Notes:</th>
-                                    <td>
-                                        <div class="alert alert-light mb-0">
-                                            @Model.Notes
-                                        </div>
-                                    </td>
-                                </tr>
+                                <dt class="col-sm-3">Notes</dt>
+                                <dd class="col-sm-9">
+                                    <div class="alert alert-light mb-0">
+                                        @Model.Notes
+                                    </div>
+                                </dd>
                             }
-                            <tr>
-                                <th>Status:</th>
-                                <td>
-                                    <span class="badge bg-@statusClass">@Model.Status</span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Created:</th>
-                                <td>
-                                    @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm", culture)
-                                    @if (!string.IsNullOrWhiteSpace(Model.CreatedByUserId))
-                                    {
-                                        <span class="text-muted">by @Model.CreatedByUserId</span>
-                                    }
-                                </td>
-                            </tr>
+                            <dt class="col-sm-3">Created</dt>
+                            <dd class="col-sm-9">
+                                @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm", culture)
+                                @if (!string.IsNullOrWhiteSpace(Model.CreatedByUserId))
+                                {
+                                    <span class="text-muted">by @Model.CreatedByUserId</span>
+                                }
+                            </dd>
                             @if (Model.AppliedAt.HasValue)
                             {
-                                <tr>
-                                    <th>Applied:</th>
-                                    <td>@Model.AppliedAt.Value.ToString("dd.MM.yyyy HH:mm", culture)</td>
-                                </tr>
+                                <dt class="col-sm-3">Applied</dt>
+                                <dd class="col-sm-9">@Model.AppliedAt.Value.ToString("dd.MM.yyyy HH:mm", culture)</dd>
                             }
-                        </table>
+                        </dl>
                     </div>
                 </div>
 
-                <!-- Stripe Integration -->
-                <div class="admin-section mt-4">
-                    <div class="section-header">
-                        <h3><i class="bi bi-credit-card-2-back"></i> Stripe Integration</h3>
-                    </div>
-                    <div class="section-body">
-                        <table class="table table-borderless">
-                            <tr>
-                                <th width="30%">Stripe Customer ID:</th>
-                                <td>
-                                    @if (!string.IsNullOrWhiteSpace(Model.Company.StripeCustomerId))
-                                    {
-                                        <code>@Model.Company.StripeCustomerId</code>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Not configured</span>
-                                    }
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Credit Balance Applied:</th>
-                                <td>
-                                    @if (Model.StripeCreditBalanceApplied)
-                                    {
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Applied
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-x-circle"></i> Not Applied
-                                        </span>
-                                    }
-                                </td>
-                            </tr>
+                <!-- Stripe Integration Card -->
+                <div class="card mt-3">
+                    <div class="card-header bg-secondary text-white">Stripe Integration</div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Stripe Customer ID</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrWhiteSpace(Model.Company.StripeCustomerId))
+                                {
+                                    <code>@Model.Company.StripeCustomerId</code>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not configured</span>
+                                }
+                            </dd>
+                            <dt class="col-sm-4">Credit Balance Applied</dt>
+                            <dd class="col-sm-8">
+                                @if (Model.StripeCreditBalanceApplied)
+                                {
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Applied</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Applied</span>
+                                }
+                            </dd>
                             @if (!string.IsNullOrWhiteSpace(Model.StripeCustomerBalanceReference))
                             {
-                                <tr>
-                                    <th>Stripe Transaction ID:</th>
-                                    <td>
-                                        <code>@Model.StripeCustomerBalanceReference</code>
-                                        <a href="https://dashboard.stripe.com/test/balance_transactions/@Model.StripeCustomerBalanceReference" 
-                                           target="_blank" 
-                                           class="btn btn-sm btn-outline-primary ms-2">
-                                            View in Stripe <i class="bi bi-box-arrow-up-right"></i>
-                                        </a>
-                                    </td>
-                                </tr>
+                                <dt class="col-sm-4">Stripe Transaction ID</dt>
+                                <dd class="col-sm-8">
+                                    <code>@Model.StripeCustomerBalanceReference</code>
+                                    <a href="https://dashboard.stripe.com/test/balance_transactions/@Model.StripeCustomerBalanceReference"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-primary ms-2 d-print-none">
+                                        View in Stripe <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                </dd>
                             }
-                        </table>
+                        </dl>
                     </div>
                 </div>
             </div>
 
-            <!-- Sidebar -->
+            <!-- Right Column: Invoice Impact & Quick Actions -->
             <div class="col-lg-4">
-                <!-- Invoice Summary -->
-                <div class="admin-section">
-                    <div class="section-header">
-                        <h3><i class="bi bi-receipt"></i> Invoice Impact</h3>
-                    </div>
-                    <div class="section-body">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">Invoice Impact</div>
+                    <div class="card-body">
                         <table class="table table-sm table-borderless">
                             <tr>
                                 <th>Invoice Total:</th>
-                                <td class="text-end">@Model.Invoice.TotalAmount.ToString("N2", culture)</td>
+                                <td class="text-end">@Model.Invoice.TotalAmount.ToString("N2", culture) @Model.Currency</td>
                             </tr>
                             <tr>
                                 <th>Paid:</th>
@@ -253,29 +274,30 @@
                     </div>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="admin-section mt-3">
-                    <div class="section-header">
-                        <h3><i class="bi bi-lightning"></i> Quick Actions</h3>
-                    </div>
-                    <div class="section-body">
+                <div class="card mt-3 d-print-none">
+                    <div class="card-header bg-secondary text-white">Quick Actions</div>
+                    <div class="card-body">
                         <div class="d-grid gap-2">
-                            <a asp-controller="Invoice" asp-action="Details" asp-route-id="@Model.InvoiceId" class="btn btn-outline-primary">
+                            <a asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@Model.InvoiceId" class="btn btn-outline-primary">
                                 <i class="bi bi-receipt"></i> View Invoice
                             </a>
-                            <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.CompanyId" class="btn btn-outline-primary">
-                                <i class="bi bi-building"></i> View Company
+                            <a asp-area="Admin" asp-controller="Return" asp-action="Index" asp-route-id="@Model.ReturnRequestId" class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-counterclockwise"></i> View Return
                             </a>
-                            @if (!isManual && Model.ReturnRequestId > 0)
-                            {
-                                <a asp-controller="Return" asp-action="Index" asp-route-id="@Model.ReturnRequestId" class="btn btn-outline-primary">
-                                    <i class="bi bi-arrow-return-left"></i> View Return
-                                </a>
-                            }
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Back to List button – hidden when printing -->
+        <div class="mt-4 d-print-none">
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </div>
+
+        <!-- Optional print footer (only visible on print) -->
+        <footer class="d-none d-print-block">
+            Printed on @DateTime.Now.ToString("dd.MM.yyyy HH:mm") | AR Adjustment #@Model.Id
+        </footer>
     </div>
 </div>

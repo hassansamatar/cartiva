@@ -15,76 +15,72 @@
         ? $"Paid on {Model.PaidDate?.ToString("dd MMM yyyy") ?? "recorded date unavailable"}."
         : $"Payment is due by {Model.DueDate.ToString("dd MMM yyyy")}.";
 }
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Invoice @Model.InvoiceNumber</title>
-    <style>
-            body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                margin: 40px;
-                color: #333;
-                font-size: 14px;
-            }
 
-            .invoice-container {
-                max-width: 800px;
-                margin: 0 auto;
-                border: 1px solid #ddd;
-                padding: 30px;
-                border-radius: 8px;
-            }
-
-            .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                margin-bottom: 30px;
-                border-bottom: 2px solid #2c3e50;
-                padding-bottom: 20px;
-            }
-
-            .header-left {
-                flex: 1;
-            }
-
-            .header-right {
-                text-align: right;
-            }
-
-            .invoice-title {
-                font-size: 28px;
-                font-weight: bold;
-                color: #2c3e50;
-                margin-bottom: 5px;
-            }
-
-            .invoice-number {
-                font-size: 16px;
-                color: #7f8c8d;
-            }
-
-            /* Status badge styles removed as requested */
-
-            .info-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 30px;
-                margin-bottom: 30px;
-            }
-
-            .info-box {
-                padding: 15px;
-                background: #f8f9fa;
-                border-radius: 8px;
-            }
-
-                .info-box h4 {
-                    margin: 0 0 10px 0;
-                    color: #2c3e50;
-                    font-size: 12px;
-                    text-transform: uppercase;
+@await Component.InvokeAsync("DocumentActionBar", new cartivaWeb.Areas.Admin.ViewComponents.DocumentActionBarViewModel {
+    DocumentId = Model.Id,
+    DocumentType = "Invoice",
+    DocumentNumber = Model.InvoiceNumber,
+    ShowView = false,
+    ShowPrint = true,
+    ShowEmail = true,
+    ShowResend = false,
+    EmailSent = false,
+    EmailRecipient = Model.OrderHeader?.ApplicationUser?.Email,
+    StatusBadgeClass = isPaid ? "badge-success" : "badge-warning",
+    StatusText = Model.Status.ToString()
+})
+<div class="container-fluid py-4" style="max-width: 900px;">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Invoice #@Model.InvoiceNumber</h2>
+            <span class="badge @(Model.Status == Cartiva.Domain.Enums.InvoiceStatus.Paid ? "badge-success" : Model.Status == Cartiva.Domain.Enums.InvoiceStatus.Overdue ? "badge-danger" : "badge-warning") fs-6">@Model.Status</span>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">Invoice Information</div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Order</dt>
+                            <dd class="col-sm-8">
+                                <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@Model.OrderHeaderId">
+                                    #@Model.OrderHeaderId
+                                </a>
+                            </dd>
+                            <dt class="col-sm-4">Customer</dt>
+                            <dd class="col-sm-8">@Model.CustomerName</dd>
+                            <dt class="col-sm-4">Issue Date</dt>
+                            <dd class="col-sm-8">@Model.IssueDate.ToString("dd.MM.yyyy")</dd>
+                            <dt class="col-sm-4">Due Date</dt>
+                            <dd class="col-sm-8">@Model.DueDate.ToString("dd.MM.yyyy")</dd>
+                            <dt class="col-sm-4">Status</dt>
+                            <dd class="col-sm-8">@Model.Status</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">Amounts</div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Net</dt>
+                            <dd class="col-sm-8">@Model.NetAmount.ToString("C", culture)</dd>
+                            <dt class="col-sm-4">VAT</dt>
+                            <dd class="col-sm-8">@Model.VatAmount.ToString("C", culture)</dd>
+                            <dt class="col-sm-4">Total</dt>
+                            <dd class="col-sm-8">@Model.TotalAmount.ToString("C", culture)</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 mb-4">
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@Model.OrderHeaderId" class="btn btn-outline-dark">View Order</a>
+        </div>
+    </div>
+</div>
                     letter-spacing: 1px;
                 }
 
@@ -233,7 +229,7 @@
                 }
             }
     </style>
-</head>
+
 <body>
     <div class="invoice-container invoice-wrapper">
         @if (isPaid)
@@ -453,4 +449,4 @@
             </div>
         </div>
     </body>
-</html>
+

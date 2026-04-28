@@ -30,11 +30,7 @@
 
 <div class="admin-dashboard">
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="bi bi-calculator"></i> AR Adjustments Management</h2>
-            @* Manual creation disabled - AR Adjustments created automatically from returns *@
-        </div>
-
+        <h2><i class="bi bi-calculator"></i> AR Adjustments Management</h2>
         <div class="row mb-4 g-3">
             <div class="col-lg-3 col-md-6">
                 <div class="card admin-card card-warning">
@@ -85,7 +81,7 @@
                            name="search"
                            value="@currentSearch"
                            class="form-control"
-                           placeholder="Search company, invoice, or reason" />
+                           placeholder="Search company, invoice" />
                 </div>
                 <div class="col-lg-2">
                     <select name="companyId" class="form-select">
@@ -134,10 +130,8 @@
                             <th>Company</th>
                             <th>Invoice</th>
                             <th>Amount</th>
-                            <th>Reason</th>
                             <th>Status</th>
                             <th>Stripe</th>
-                            <th>Type</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -152,7 +146,6 @@
                                 _ => "secondary"
                             };
 
-                            var isManual = adjustment.ReturnRequestId == 0;
                             <tr>
                                 <td>@adjustment.Id</td>
                                 <td>@adjustment.CreatedAt.ToString("dd.MM.yyyy", culture)</td>
@@ -162,17 +155,12 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <a asp-controller="Invoice" asp-action="Details" asp-route-id="@adjustment.InvoiceId">
+                                    <a asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@adjustment.InvoiceId">
                                         @adjustment.Invoice.InvoiceNumber
                                     </a>
                                 </td>
                                 <td class="@(adjustment.Amount < 0 ? "text-danger" : "text-success")">
                                     @adjustment.Amount.ToString("N2", culture) @adjustment.Currency
-                                </td>
-                                <td>
-                                    <span title="@adjustment.Reason">
-                                        @(adjustment.Reason.Length > 50 ? adjustment.Reason.Substring(0, 50) + "..." : adjustment.Reason)
-                                    </span>
                                 </td>
                                 <td>
                                     <span class="badge bg-@statusClass">@adjustment.Status</span>
@@ -187,22 +175,21 @@
                                         <i class="bi bi-x-circle text-muted" title="Not applied"></i>
                                     }
                                 </td>
-                                <td>
-                                    @if (isManual)
-                                    {
-                                        <span class="badge bg-warning">Manual</span>
-                                    }
-                                    else
-                                    {
-                                        <a asp-controller="Return" asp-action="Index" asp-route-id="@adjustment.ReturnRequestId" class="badge bg-primary">
-                                            Return #@adjustment.ReturnRequestId
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                        <a asp-action="Details" asp-route-id="@adjustment.Id" class="btn btn-sm btn-info" title="View">
+                                            <i class="bi bi-eye"></i>
                                         </a>
-                                    }
-                                </td>
-                                <td>
-                                    <a asp-action="Details" asp-route-id="@adjustment.Id" class="btn btn-sm btn-info">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
+                                             <form asp-action="SendEmail" asp-route-id="@adjustment.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Send Email">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
+                                        </form>
+                                        
+                                        <a asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@adjustment.InvoiceId" class="btn btn-sm btn-outline-secondary" title="Invoice">
+                                            <i class="bi bi-receipt"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -221,24 +208,24 @@
 
     <script>
         $(document).ready(function () {
-            $('#adjustmentsTable').DataTable({
-                responsive: true,
-                order: [[1, 'desc']], // Sort by date descending
-                pageLength: 25,
-                language: {
-                    search: "Search:",
-                    lengthMenu: "Show _MENU_ adjustments",
-                    info: "Showing _START_ to _END_ of _TOTAL_ adjustments",
-                    infoEmpty: "No adjustments found",
-                    infoFiltered: "(filtered from _MAX_ total)",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    }
-                }
-            });
+        $('#adjustmentsTable').DataTable({
+        responsive: true,
+        order: [[1, 'desc']], // Sort by date descending
+        pageLength: 25,
+        language: {
+        search: "Search:",
+        lengthMenu: "Show _MENU_ adjustments",
+        info: "Showing _START_ to _END_ of _TOTAL_ adjustments",
+        infoEmpty: "No adjustments found",
+        infoFiltered: "(filtered from _MAX_ total)",
+        paginate: {
+        first: "First",
+        last: "Last",
+        next: "Next",
+        previous: "Previous"
+        }
+        }
+        });
         });
     </script>
 }

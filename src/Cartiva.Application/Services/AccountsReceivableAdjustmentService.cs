@@ -1,12 +1,16 @@
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain;
 using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
+using Cartiva.Infrastructure.Notifications.Interfaces;
+using Cartiva.Infrastructure.Templates.Models;
 using Cartiva.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -16,13 +20,16 @@ namespace Cartiva.Application.Services
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<AccountsReceivableAdjustmentService> _logger;
+        private readonly INotificationService _notificationService;
 
         public AccountsReceivableAdjustmentService(
             ApplicationDbContext db,
-            ILogger<AccountsReceivableAdjustmentService> logger)
+            ILogger<AccountsReceivableAdjustmentService> logger,
+            INotificationService notificationService)
         {
             _db = db;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<AccountsReceivableAdjustment> CreateFromReturnRequestAsync(
@@ -93,10 +100,6 @@ namespace Cartiva.Application.Services
                 "Created AR adjustment {AdjustmentId} for return {ReturnRequestId}, amount {Amount}. Status: Approved (awaiting manual application).",
                 adjustment.Id, returnRequestId, adjustmentAmount);
 
-            // NOTE: Stripe credit balance is NOT applied here
-            // Admin must manually click "Apply AR Adjustment" to apply to Stripe
-            // This allows for proper 3-stage workflow: Pending → Approved → Resolved
-
             return adjustment;
         }
 
@@ -130,7 +133,6 @@ namespace Cartiva.Application.Services
             try
             {
                 // Apply credit balance using Stripe Customer Balance Transaction API
-                // Credit balance is represented as a negative amount in Stripe
                 var options = new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = (long)(Math.Abs(adjustment.Amount) * 100), // Convert to cents
@@ -242,7 +244,7 @@ namespace Cartiva.Application.Services
             {
                 CompanyId = companyId,
                 InvoiceId = invoiceId,
-                ReturnRequestId = 0, // 0 indicates manual adjustment (no return request)
+                ReturnRequestId = 0,
                 Amount = amount,
                 Currency = invoice.Currency,
                 Reason = reason,
@@ -314,6 +316,83 @@ namespace Cartiva.Application.Services
             return await query
                 .OrderByDescending(a => a.CreatedAt)
                 .ToListAsync();
+        }
+
+        /// <summary>
+        /// Sends an email notification for this AR adjustment using the dedicated template.
+        /// </summary>
+        public async Task<bool> SendAdjustmentEmailAsync(int adjustmentId)
+        {
+            var adjustment = await _db.AccountsReceivableAdjustments
+                .Include(a => a.Company)
+                .Include(a => a.Invoice)
+                    .ThenInclude(i => i!.OrderHeader)
+                        .ThenInclude(o => o!.ApplicationUser)
+                .Include(a => a.ReturnRequest)
+                    .ThenInclude(rr => rr!.OrderDetail)
+                        .ThenInclude(od => od.OrderHeader)
+                            .ThenInclude(oh => oh.ApplicationUser)
+                .FirstOrDefaultAsync(a => a.Id == adjustmentId);
+
+            if (adjustment == null)
+            {
+                _logger.LogWarning("AR adjustment {AdjustmentId} not found when trying to send email.", adjustmentId);
+                return false;
+            }
+
+            // Determine recipient email
+            var recipientEmail = adjustment.Invoice?.OrderHeader?.ApplicationUser?.Email
+                ?? adjustment.Invoice?.CustomerEmail
+                ?? adjustment.ReturnRequest?.OrderDetail?.OrderHeader?.ApplicationUser?.Email;
+
+            if (string.IsNullOrWhiteSpace(recipientEmail))
+            {
+                _logger.LogWarning("No customer email found for AR adjustment {AdjustmentId}", adjustmentId);
+                return false;
+            }
+
+            try
+            {
+                var culture = CultureInfo.GetCultureInfo("nb-NO");
+                var isApplied = adjustment.Status == ARAdjustmentStatus.Applied;
+
+                // Build dictionary for the notification service (matches the email template model properties)
+                var templateData = new Dictionary<string, object>
+                {
+                    ["AdjustmentId"] = adjustment.Id.ToString(),
+                    ["CompanyName"] = adjustment.Company.Name,
+                    ["Amount"] = adjustment.Amount.ToString("N2", culture),
+                    ["Currency"] = adjustment.Currency,
+                    ["Reason"] = adjustment.Reason,
+                    ["Status"] = adjustment.Status.ToString(),
+                    ["CreatedAt"] = adjustment.CreatedAt.ToString("dd MMM yyyy HH:mm", culture),
+                    ["AppliedAt"] = adjustment.AppliedAt?.ToString("dd MMM yyyy HH:mm", culture) ?? string.Empty,
+                    ["InvoiceNumber"] = adjustment.Invoice?.InvoiceNumber ?? string.Empty,
+                    ["Notes"] = adjustment.Notes ?? string.Empty,
+                    ["IsApplied"] = isApplied
+                };
+
+                var userId = adjustment.Invoice?.OrderHeader?.ApplicationUserId
+                    ?? adjustment.ReturnRequest?.OrderDetail?.OrderHeader?.ApplicationUserId;
+
+                await _notificationService.SendAsync(new NotificationRequest(
+                    Recipient: recipientEmail,
+                    Type: NotificationType.ARAdjustmentApplied,
+                    TemplateData: templateData,
+                    UserId: userId,
+                    ReferenceId: adjustment.Id.ToString(),
+                    ReferenceType: "ARAdjustment",
+                    Subject: $"Account Receivable Adjustment - {adjustment.Amount:N2} {adjustment.Currency} - {adjustment.Company.Name}"
+                ));
+
+                _logger.LogInformation("AR adjustment email for {AdjustmentId} sent to {Recipient}", adjustmentId, recipientEmail);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send AR adjustment email for ID {AdjustmentId}", adjustmentId);
+                return false;
+            }
         }
     }
 }

@@ -121,32 +121,41 @@
                                     }
                                 </td>
                                 <td><strong>@order.OrderTotal.ToString("C", culture)</strong></td>
-                                <td>
+                                <td class="action-buttons">
                                     <div class="d-flex gap-1 flex-wrap">
-                                        <a asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-action btn-edit" data-bs-toggle="tooltip" title="View Details">
+                                        <a asp-action="Details" asp-route-orderId="@order.Id" class="btn btn-sm btn-info" title="View Order">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        <a asp-action="Print" asp-route-orderId="@order.Id" class="btn btn-sm btn-secondary" title="Print Order">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                        <form asp-action="ResendEmail" asp-route-orderId="@order.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Resend Email">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        </form>
                                         @if (order.Shipments.Any())
                                         {
-                                            <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@order.Shipments.OrderByDescending(s => s.Id).First().Id" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Shipment">
+                                            <a asp-area="Admin" asp-controller="Shipment" asp-action="Details" asp-route-id="@order.Shipments.OrderByDescending(s => s.Id).First().Id" class="btn btn-sm btn-outline-primary" title="View Shipment">
                                                 <i class="bi bi-truck"></i>
                                             </a>
                                         }
                                         @if (invoiceByOrderId.TryGetValue(order.Id, out var invoiceId))
                                         {
-                                            <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoiceId" class="btn btn-action btn-roles" data-bs-toggle="tooltip" title="View Invoice">
+                                            <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@invoiceId" class="btn btn-sm btn-outline-secondary" title="View Invoice">
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                         }
                                         @if (paymentStatus == global::Cartiva.Domain.Enums.PaymentStatus.Refunded)
                                         {
-                                            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@order.Id" asp-route-type="cancellation" class="btn btn-action btn-activate" data-bs-toggle="tooltip" title="View Credit Notes">
+                                            <a asp-area="Admin" asp-controller="CreditNote" asp-action="Index" asp-route-orderId="@order.Id" asp-route-type="cancellation" class="btn btn-sm btn-outline-success" title="View Credit Notes">
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                         }
                                         @if (orderStatus != global::Cartiva.Domain.Enums.OrderStatus.Cancelled)
                                         {
-                                            <a asp-action="Cancel" asp-route-orderId="@order.Id" class="btn btn-action btn-delete" data-bs-toggle="tooltip" title="Cancel Order">
+                                            <a asp-action="Cancel" asp-route-orderId="@order.Id" class="btn btn-sm btn-danger" title="Cancel Order">
                                                 <i class="bi bi-x-lg"></i>
                                             </a>
                                         }

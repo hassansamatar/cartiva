@@ -5,15 +5,18 @@
 
 
 ## ⚡ TL;DR – What You Get
-
-- ✅ Stripe payments & refunds (idempotent webhooks)
-- ✅ B2C + B2B (company accounts, 30-day invoicing)
-- ✅ Role-based access (Admin, Employee, Customer, Company)
-- ✅ Returns & 30-day refund workflow
-- ✅ Shipment tracking with QR codes (Bring, Posten, DHL)
-- ✅ Promotion engine – Buy X Get Y Free
-- ✅ Clean Architecture + background jobs (Hangfire)
-- ✅ Cookie-based cart (scalable, no server session)
+✅ B2C: easy access to discounts, promotions, 14-day returns (any reason) & defective item handling, compliant credit note issuance (Norwegian regulations), and refund.
+✅ B2B: multi-user company accounts, order & billing management
+✅ Flexible payments: upfront + deferred (30-day invoicing)
+✅ Financials: credit notes + accounts receivable adjustments
+✅ Auto order approval & shipment processing
+✅ Stripe payments & refunds (secure webhooks)
+✅ Shipment tracking (QR) via Bring, Posten Norge, DHL
+✅ Promotion engine (Buy X Get Y Free)
+✅ Notifications via email & SMS
+✅ Clean Architecture + background jobs with Hangfire
+✅ Scalable cookie-based cart
+✅ Role-based access (Admin, Employee, Customer, Company)
 
 ---
 

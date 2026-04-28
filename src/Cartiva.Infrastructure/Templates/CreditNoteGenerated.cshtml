@@ -1,0 +1,116 @@
+@model Cartiva.Infrastructure.Templates.Models.CreditNoteGeneratedModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credit Note Generated</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #198754;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .credit-note-box {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid #198754;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #198754;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .amount-highlight {
+            font-size: 24px;
+            color: #198754;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💳 Credit Note Issued</h1>
+    </div>
+
+    <div class="content">
+        <p>Hello @Model.CustomerName,</p>
+
+        <p>A credit note has been issued for your order. This credit reduces the amount you owe.</p>
+
+        <div class="credit-note-box">
+            <h3>Credit Note Details</h3>
+            <p><strong>Credit Note Number:</strong> @Model.CreditNoteNumber</p>
+            @if (!string.IsNullOrEmpty(Model.OrderId))
+            {
+                <p><strong>Order Number:</strong> #@Model.OrderId</p>
+            }
+            <p><strong>Issue Date:</strong> @Model.IssueDate</p>
+            <p><strong>Credit Amount:</strong> <span class="amount-highlight">@Model.TotalAmount @Model.Currency</span></p>
+
+            @if (!string.IsNullOrEmpty(Model.Reason))
+            {
+                <p><strong>Reason:</strong> @Model.Reason</p>
+            }
+
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;" />
+
+            <p><strong>Amount Breakdown:</strong></p>
+            <p>Net Amount: @Model.NetAmount @Model.Currency</p>
+            <p>VAT: @Model.VatAmount @Model.Currency</p>
+            <p><strong>Total Credit: @Model.TotalAmount @Model.Currency</strong></p>
+        </div>
+
+        <p><strong>What this means:</strong></p>
+        <p>This credit note reduces your outstanding balance with us by <strong>@Model.TotalAmount @Model.Currency</strong>.</p>
+
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div style="background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 15px 0;">
+                <p><strong>Additional Notes:</strong></p>
+                <p>@Model.Notes</p>
+            </div>
+        }
+
+        <p>If you have any questions about this credit note, please don't hesitate to contact us.</p>
+    </div>
+
+    <div class="footer">
+        <p>
+            <strong>Cartiva E-Commerce</strong><br />
+            Storgata 1, 0155 Oslo, Norway<br />
+            Email: support@cartiva.no | Phone: +47 12345678
+        </p>
+        <p style="color: #999; font-size: 11px;">
+            This is an automated email. Please do not reply directly to this message.
+        </p>
+    </div>
+</body>
+</html>

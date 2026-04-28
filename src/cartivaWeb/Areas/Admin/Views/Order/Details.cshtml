@@ -5,6 +5,7 @@
 @using Cartiva.Domain.Extensions
 @using Cartiva.Shared
 
+
 @{
     ViewData["Title"] = $"Order Details #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
@@ -13,6 +14,20 @@
     var orderStatus = Model.OrderStatus ?? global::Cartiva.Domain.Enums.OrderStatus.Pending;
     var paymentStatus = Model.PaymentStatus ?? global::Cartiva.Domain.Enums.PaymentStatus.Pending;
 }
+
+@await Component.InvokeAsync("DocumentActionBar", new cartivaWeb.Areas.Admin.ViewComponents.DocumentActionBarViewModel {
+    DocumentId = Model.Id,
+    DocumentType = "Order",
+    DocumentNumber = Model.Id.ToString(),
+    ShowView = false,
+    ShowPrint = true,
+    ShowEmail = false,
+    ShowResend = true,
+    EmailSent = false,
+    EmailRecipient = Model.ApplicationUser?.Email,
+    StatusBadgeClass = orderStatus.GetBadgeClass(),
+    StatusText = orderStatus.ToString()
+})
 
 <div class="container-fluid py-4" style="max-height: calc(100vh - 100px); overflow-y: auto;">
     <div class="container">

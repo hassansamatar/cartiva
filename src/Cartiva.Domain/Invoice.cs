@@ -32,7 +32,7 @@ namespace Cartiva.Domain
         // =========================
         // DATES
         // =========================
-        public DateOnly IssueDate { get; set; }
+        public DateOnly IssueDate { get; set; } 
         public DateOnly DueDate { get; set; }
 
         // =========================

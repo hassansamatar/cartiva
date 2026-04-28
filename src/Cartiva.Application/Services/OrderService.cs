@@ -220,8 +220,8 @@ public class OrderService : IOrderService
                 // Active company – allow deferred payment
                 orderHeader.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Deferred;
                 orderHeader.OrderStatus = Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval;
-                orderHeader.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
-                orderHeader.ReturnExpirationDate = DateTime.Now.AddDays(30);
+                orderHeader.PaymentDueDate = DateOnly.FromDateTime(orderHeader.OrderDate.AddDays(30));
+                orderHeader.ReturnExpirationDate = DateTime.Now.AddDays(14);
                 isDeferredPayment = true;
                 requiresPayment = payNow; // Only requires payment if explicitly requested
             }

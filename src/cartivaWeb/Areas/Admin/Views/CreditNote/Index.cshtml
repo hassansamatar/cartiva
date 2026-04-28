@@ -29,7 +29,6 @@
 <div class="admin-dashboard">
     <div class="container-fluid">
         <h2><i class="bi bi-file-earmark-text"></i> Credit Note Management</h2>
-
         <div class="row mb-4 g-3">
             <div class="col-lg-3 col-md-6">
                 <div class="card admin-card card-warning">
@@ -80,7 +79,7 @@
                            name="search"
                            value="@currentSearch"
                            class="form-control"
-                           placeholder="Search number, customer, invoice, order or reason" />
+                           placeholder="Search number, customer, invoice or order" />
                 </div>
                 <div class="col-lg-3">
                     <select name="status" class="form-select">
@@ -107,145 +106,104 @@
             <div class="card shadow-sm">
                 <div class="card-body p-0">
                     <table id="creditNotesTable" class="table table-hover mb-0 align-middle admin-table">
-                <thead class="table-light">
-                    <tr>
-                        <th>Number</th>
-                        <th>Type</th>
-                        <th>Customer</th>
-                        <th>Original Invoice</th>
-                        <th>Order</th>
-                        <th>Status</th>
-                        <th class="text-end">Total</th>
-                        <th>Reason</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @if (!allCreditNotes.Any())
-                    {
-                        <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
-                                No credit notes found.
-                            </td>
-                        </tr>
-                    }
-                    else
-                    {
-                        foreach (var item in allCreditNotes)
-                        {
-                            var orderId = item.OriginalInvoice?.OrderHeaderId
-                                ?? item.ReturnRequest?.OrderDetail?.OrderHeaderId;
-                            var typeLabel = item.ReturnRequestId.HasValue ? "Return" : "Cancellation / Adjustment";
-
+                        <thead class="table-light">
                             <tr>
-                                <td>
-                                    <div class="fw-semibold">@item.CreditNoteNumber</div>
-                                    <small class="text-muted">#@item.Id</small>
-                                </td>
-
-                                <td>
-                                    <span class="badge bg-secondary">@typeLabel</span>
-                                </td>
-
-                                <td>
-                                    <div class="fw-semibold">@item.CustomerName</div>
-                                    @if (!string.IsNullOrWhiteSpace(item.CustomerOrgNumber))
-                                    {
-                                        <small class="text-muted">Org: @item.CustomerOrgNumber</small>
-                                    }
-                                </td>
-
-                                <td>
-                                    @if (item.OriginalInvoice != null)
-                                    {
-                                        <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@item.OriginalInvoiceId">
-                                            @item.OriginalInvoice.InvoiceNumber
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Invoice #@item.OriginalInvoiceId</span>
-                                    }
-                                </td>
-
-                                <td>
-                                    @if (orderId.HasValue)
-                                    {
-                                        <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@orderId.Value">
-                                            Order #@orderId.Value
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">—</span>
-                                    }
-                                </td>
-
-                                <td>
-                                    <span class="badge @item.Status.GetBadgeClass()">
-                                        @item.Status
-                                    </span>
-                                </td>
-
-                                <td class="text-end">
-                                    @item.TotalAmount.ToString("C", culture)
-                                </td>
-
-                                <td>
-                                    @item.Reason
-                                </td>
-
-                                <td>
-                                    @item.CreatedAt.ToString("dd.MM.yyyy")
-                                </td>
-
-                                <td class="text-end">
-                                    <div class="d-flex gap-1 justify-content-end flex-wrap">
-                                        <a asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-primary">
-                                            View
-                                        </a>
-
-                                        <a asp-area="Admin"
-                                           asp-controller="Invoice"
-                                           asp-action="Details"
-                                           asp-route-id="@item.OriginalInvoiceId"
-                                           class="btn btn-sm btn-outline-secondary">
-                                            Invoice
-                                        </a>
-
-                                        @if (item.ReturnRequestId.HasValue)
-                                        {
-                                            <a asp-area="Admin"
-                                               asp-controller="Return"
-                                               asp-action="Index"
-                                               asp-fragment="return-@item.ReturnRequestId"
-                                               class="btn btn-sm btn-outline-info">
-                                                Returns
-                                            </a>
-                                        }
-
-                                        @if (orderId.HasValue)
-                                        {
-                                            <a asp-area="Admin"
-                                               asp-controller="Order"
-                                               asp-action="Details"
-                                               asp-route-orderId="@orderId.Value"
-                                               class="btn btn-sm btn-outline-dark">
-                                                Order
-                                            </a>
-                                        }
-                                    </div>
-                                </td>
+                                <th>Number</th>
+                                <th>Type</th>
+                                <th>Customer</th>
+                                <th>Original Invoice</th>
+                                <th>Order</th>
+                                <th>Status</th>
+                                <th class="text-end">Total</th>
+                                <th>Actions</th>
                             </tr>
-                        }
-                    }
-                </tbody>
+                        </thead>
+                        <tbody>
+                            @if (!allCreditNotes.Any())
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        No credit notes found.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in allCreditNotes)
+                                {
+                                    var orderId = item.OriginalInvoice?.OrderHeaderId
+                                        ?? item.ReturnRequest?.OrderDetail?.OrderHeaderId;
+                                    var typeLabel = item.ReturnRequestId.HasValue ? "Return" : "Cancellation / Adjustment";
 
-            </table>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@item.CreditNoteNumber</div>
+                                            <small class="text-muted">#@item.Id</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">@typeLabel</span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">@item.CustomerName</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.CustomerOrgNumber))
+                                            {
+                                                <small class="text-muted">Org: @item.CustomerOrgNumber</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.OriginalInvoice != null)
+                                            {
+                                                <a asp-area="Admin" asp-controller="Invoice" asp-action="Details" asp-route-id="@item.OriginalInvoiceId">
+                                                    @item.OriginalInvoice.InvoiceNumber
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Invoice #@item.OriginalInvoiceId</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (orderId.HasValue)
+                                            {
+                                                <a asp-area="Admin" asp-controller="Order" asp-action="Details" asp-route-orderId="@orderId.Value">
+                                                    Order #@orderId.Value
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge @item.Status.GetBadgeClass()">@item.Status</span>
+                                        </td>
+                                        <td class="text-end">
+                                            @item.TotalAmount.ToString("C", culture)
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <form asp-action="SendEmail" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-primary" title="Send Email">
+                                                        <i class="bi bi-envelope"></i>
+                                                    </button>
+                                                </form>
+                                                @if (item.ReturnRequestId.HasValue)
+                                                {
+                                                    <a asp-area="Admin" asp-controller="Return" asp-action="Index" asp-fragment="return-@item.ReturnRequestId" class="btn btn-sm btn-outline-info" title="Returns">
+                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                    </a>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -260,13 +218,24 @@
     <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function () {
-            initAdminTable('#creditNotesTable', {
-                paging: false,
-                searching: false,
-                info: false,
-                order: [[8, 'desc']],
-                columnDefs: [{ targets: [-1], orderable: false }]
-            });
+        if (typeof initAdminTable === 'function') {
+        initAdminTable('#creditNotesTable', {
+        paging: false,
+        searching: false,
+        info: false,
+        order: [[0, 'desc']],
+        columnDefs: [{ targets: [-1], orderable: false }]
+        });
+        } else {
+        // Fallback if initAdminTable is not defined
+        $('#creditNotesTable').DataTable({
+        paging: false,
+        searching: false,
+        info: false,
+        order: [[0, 'desc']],
+        columnDefs: [{ targets: [-1], orderable: false }]
+        });
+        }
         });
     </script>
 }

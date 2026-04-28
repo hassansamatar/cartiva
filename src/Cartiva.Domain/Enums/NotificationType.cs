@@ -17,5 +17,7 @@ public enum NotificationType
     ReturnRequestRejected = 13,
     PromotionalEmail = 14,
     AccountUpdated = 15,
+    CreditNoteGenerated = 16,
+    ARAdjustmentApplied = 17,
     Custom = 99
 }
