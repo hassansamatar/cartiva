@@ -2,7 +2,7 @@
 # 🛒 Cartiva — Full-Stack E-Commerce Platform
 
 > 🚀 A production-ready e-commerce platform built with Clean Architecture, ASP.NET Core (.NET 10), and Stripe — supporting B2C, B2B invoicing, returns, and real-time shipment tracking.
-
+---
 
 ## ⚡ TL;DR – What You Get
 ✅ B2C: easy access to discounts, promotions, 14-day returns (any reason) & defective item handling, compliant credit note issuance (Norwegian regulations), and refund.
