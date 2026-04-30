@@ -138,6 +138,11 @@ public class EmailNotificationChannel : INotificationChannel
                 CreateWelcomeEmailTemplateModel(templateData),
                 cancellationToken),
 
+            NotificationType.ARAdjustmentApplied => await _templateRenderer.RenderAsync(
+                templateName,
+                templateData,
+                cancellationToken),
+
             _ => await _templateRenderer.RenderAsync(
                 "Generic",
                 CreateGenericNotificationModel(notification, templateData),
@@ -160,6 +165,7 @@ public class EmailNotificationChannel : INotificationChannel
         NotificationType.ReturnRequestReceived => "ReturnRequestReceived",
         NotificationType.ReturnRequestApproved => "ReturnRequestApproved",
         NotificationType.ReturnRequestRejected => "ReturnRequestRejected",
+        NotificationType.ARAdjustmentApplied => "ARAdjustmentEmail",
         _ => "Generic"
     };
 
@@ -178,6 +184,7 @@ public class EmailNotificationChannel : INotificationChannel
         NotificationType.ReturnRequestReceived => "Return Request Received",
         NotificationType.ReturnRequestApproved => "Return Request Approved",
         NotificationType.ReturnRequestRejected => "Return Request Rejected",
+        NotificationType.ARAdjustmentApplied => "Account Adjustment Applied",
         _ => "Notification"
     };
 

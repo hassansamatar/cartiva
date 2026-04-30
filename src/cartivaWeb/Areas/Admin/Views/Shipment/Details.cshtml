@@ -15,20 +15,6 @@
     var paymentStatus = Model.OrderHeader.PaymentStatus ?? PaymentStatus.Pending;
 }
 
-@await Component.InvokeAsync("DocumentActionBar", new cartivaWeb.Areas.Admin.ViewComponents.DocumentActionBarViewModel {
-    DocumentId = Model.Id,
-    DocumentType = "Shipment",
-    DocumentNumber = Model.TrackingNumber ?? Model.Id.ToString(),
-    ShowView = false,
-    ShowPrint = true,
-    ShowEmail = false,
-    ShowResend = true,
-    EmailSent = false,
-    EmailRecipient = Model.OrderHeader?.ApplicationUser?.Email,
-    StatusBadgeClass = shipmentStatus.GetBadgeClass(),
-    StatusText = shipmentStatus.ToString()
-})
-
 <div class="container mt-4">
     <h2>Shipment #@Model.Id</h2>
 
