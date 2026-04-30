@@ -16,19 +16,6 @@
         : $"Payment is due by {Model.DueDate.ToString("dd MMM yyyy")}.";
 }
 
-@await Component.InvokeAsync("DocumentActionBar", new cartivaWeb.Areas.Admin.ViewComponents.DocumentActionBarViewModel {
-    DocumentId = Model.Id,
-    DocumentType = "Invoice",
-    DocumentNumber = Model.InvoiceNumber,
-    ShowView = false,
-    ShowPrint = true,
-    ShowEmail = true,
-    ShowResend = false,
-    EmailSent = false,
-    EmailRecipient = Model.OrderHeader?.ApplicationUser?.Email,
-    StatusBadgeClass = isPaid ? "badge-success" : "badge-warning",
-    StatusText = Model.Status.ToString()
-})
 <div class="container-fluid py-4" style="max-width: 900px;">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-3">
