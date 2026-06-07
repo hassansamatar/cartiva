@@ -1,13 +1,11 @@
 using Cartiva.Application.Abstractions;
-using Cartiva.Domain.Interfaces;
-using Cartiva.Domain.Enums;
 using Cartiva.Domain;
 using Cartiva.Domain.Enums;
+using Cartiva.Domain.Interfaces;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
@@ -21,24 +19,15 @@ namespace cartivaWeb.Areas.Admin.Controllers
         private readonly IAccountsReceivableAdjustmentService _arAdjustmentService;
         private readonly ICompanyService _companyService;
         private readonly IInvoiceService _invoiceService;
-        private readonly INotificationService _notificationService;
-        private readonly ApplicationDbContext _db;
-        private readonly ILogger<ARAdjustmentController> _logger;
 
         public ARAdjustmentController(
             IAccountsReceivableAdjustmentService arAdjustmentService,
             ICompanyService companyService,
-            IInvoiceService invoiceService,
-            INotificationService notificationService,
-            ApplicationDbContext db,
-            ILogger<ARAdjustmentController> logger)
+            IInvoiceService invoiceService)
         {
             _arAdjustmentService = arAdjustmentService;
             _companyService = companyService;
             _invoiceService = invoiceService;
-            _notificationService = notificationService;
-            _db = db;
-            _logger = logger;
         }
 
         // GET: Admin/ARAdjustment
@@ -50,7 +39,7 @@ namespace cartivaWeb.Areas.Admin.Controllers
             string? search)
         {
             ARAdjustmentStatus? statusFilter = null;
-            if (!string.IsNullOrWhiteSpace(status) && 
+            if (!string.IsNullOrWhiteSpace(status) &&
                 Enum.TryParse<ARAdjustmentStatus>(status, true, out var parsedStatus))
             {
                 statusFilter = parsedStatus;
@@ -97,7 +86,6 @@ namespace cartivaWeb.Areas.Admin.Controllers
             return View(adjustment);
         }
 
-
         // POST: Admin/ARAdjustment/ApplyStripe/5
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -118,6 +106,27 @@ namespace cartivaWeb.Areas.Admin.Controllers
             }
 
             return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // POST: Admin/ARAdjustment/ConfigureStripeCustomer/{companyId}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfigureStripeCustomer(int companyId, string? returnUrl = null)
+        {
+            try
+            {
+                var stripeCustomerId = await _arAdjustmentService.ConfigureStripeCustomerAsync(companyId);
+                TempData["success"] = $"Stripe Customer configured successfully. ID: {stripeCustomerId}";
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = $"Failed to configure Stripe Customer: {ex.Message}";
+            }
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Admin/ARAdjustment/GetInvoicesForCompany?companyId=1
@@ -158,11 +167,11 @@ namespace cartivaWeb.Areas.Admin.Controllers
 
             if (!success)
             {
-                TempData["Error"] = "Failed to send email. AR Adjustment not found or no recipient email address.";
+                TempData["error"] = "Failed to send email. AR Adjustment not found or no recipient email address.";
                 return RedirectToAction(nameof(Index));
             }
 
-            TempData["Success"] = "AR Adjustment notification email sent successfully.";
+            TempData["success"] = "AR Adjustment notification email sent successfully.";
             return RedirectToAction(nameof(Index));
         }
     }

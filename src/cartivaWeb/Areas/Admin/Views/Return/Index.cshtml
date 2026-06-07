@@ -1,15 +1,13 @@
 @model List<ReturnRequest>
-@using Cartiva.Application.Extensions
+
 @using Cartiva.Domain.Enums
-@using Cartiva.Domain.Extensions
-@using Cartiva.Shared
 @using System.Globalization
 
 @{
     ViewData["Title"] = "Return Management";
-    var culture = CultureInfo.GetCultureInfo("nb-NO");
     var pendingCount = Model.Count(r => r.Status == ReturnStatus.Pending);
     var approvedCount = Model.Count(r => r.Status == ReturnStatus.Approved);
+    var resolvedCount = Model.Count(r => r.Status == ReturnStatus.Refunded || r.Status == ReturnStatus.Rejected);
 }
 
 <div class="container mt-4">
@@ -21,61 +19,65 @@
             <div>
                 @if (pendingCount > 0)
                 {
-                    <span class="badge bg-warning text-dark" title="Returns awaiting approval">
-                        @pendingCount pending approval
-                    </span>
+                    <span class="badge bg-warning text-dark">@pendingCount pending</span>
                 }
                 @if (approvedCount > 0)
                 {
-                    <span class="badge bg-info" title="Returns awaiting action (refund or AR adjustment)">
-                        @approvedCount awaiting action
-                    </span>
+                    <span class="badge bg-info">@approvedCount approved</span>
                 }
             </div>
         </div>
 
         <div class="card-body">
-            <ul class="nav nav-tabs mb-3" role="tablist">
+            <ul class="nav nav-tabs mb-3" id="returnTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pending" type="button">
+                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending"
+                            type="button" role="tab">
                         Pending <span class="badge bg-warning text-dark ms-1">@pendingCount</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#approved" type="button">
+                    <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved"
+                            type="button" role="tab">
                         Approved <span class="badge bg-info ms-1">@approvedCount</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#resolved" type="button">
-                        Resolved <span class="badge bg-secondary ms-1">@Model.Count(r => r.Status == ReturnStatus.Refunded || r.Status == ReturnStatus.Rejected)</span>
+                    <button class="nav-link" id="resolved-tab" data-bs-toggle="tab" data-bs-target="#resolved"
+                            type="button" role="tab">
+                        Resolved <span class="badge bg-secondary ms-1">@resolvedCount</span>
                     </button>
                 </li>
             </ul>
 
             <div class="tab-content">
-                <!-- Pending -->
+                <!-- PENDING -->
                 <div class="tab-pane fade show active" id="pending" role="tabpanel">
-                    @{ var pendingReturns = Model.Where(r => r.Status == ReturnStatus.Pending).ToList(); }
+                    @{
+                        var pendingReturns = Model.Where(r => r.Status == ReturnStatus.Pending).ToList();
+                    }
                     @if (!pendingReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">
                             <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
-                            <p class="mt-2">No pending return requests.</p>
+                            <p class="mt-2">No pending returns.</p>
                         </div>
                     }
                     else
                     {
-                        @foreach (var r in pendingReturns)
+                        @foreach (var ret in pendingReturns)
                         {
-                            @await Html.PartialAsync("_ReturnCard", r)
+                            @await Html.PartialAsync("_ReturnCard", ret)
+                            // ✅ single item
                         }
                     }
                 </div>
 
-                <!-- Approved (Credit Note/AR Adjustment created, awaiting refund if needed) -->
+                <!-- APPROVED -->
                 <div class="tab-pane fade" id="approved" role="tabpanel">
-                    @{ var approvedReturns = Model.Where(r => r.Status == ReturnStatus.Approved).ToList(); }
+                    @{
+                        var approvedReturns = Model.Where(r => r.Status == ReturnStatus.Approved).ToList();
+                    }
                     @if (!approvedReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">
@@ -85,16 +87,19 @@
                     }
                     else
                     {
-                        @foreach (var r in approvedReturns)
+                        @foreach (var ret in approvedReturns)
                         {
-                            @await Html.PartialAsync("_ReturnCard", r)
+                            @await Html.PartialAsync("_ReturnCard", ret)
+                            // ✅ single item
                         }
                     }
                 </div>
 
-                <!-- Resolved -->
+                <!-- RESOLVED -->
                 <div class="tab-pane fade" id="resolved" role="tabpanel">
-                    @{ var resolvedReturns = Model.Where(r => r.Status == ReturnStatus.Refunded || r.Status == ReturnStatus.Rejected).ToList(); }
+                    @{
+                        var resolvedReturns = Model.Where(r => r.Status == ReturnStatus.Refunded || r.Status == ReturnStatus.Rejected).ToList();
+                    }
                     @if (!resolvedReturns.Any())
                     {
                         <div class="text-center py-4 text-muted">
@@ -104,9 +109,10 @@
                     }
                     else
                     {
-                        @foreach (var r in resolvedReturns)
+                        @foreach (var ret in resolvedReturns)
                         {
-                            @await Html.PartialAsync("_ReturnCard", r)
+                            @await Html.PartialAsync("_ReturnCard", ret)
+                            // ✅ single item
                         }
                     }
                 </div>

@@ -180,12 +180,23 @@
                                         <a asp-action="Details" asp-route-id="@adjustment.Id" class="btn btn-sm btn-info" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                             <form asp-action="SendEmail" asp-route-id="@adjustment.Id" method="post" class="d-inline">
+
+                                        <!-- Apply to Stripe button -->
+                                        <form asp-action="ApplyStripe" asp-route-id="@adjustment.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Apply to Stripe"
+                                                @(adjustment.StripeCreditBalanceApplied ? "disabled" : "")>
+                                                <i class="bi bi-credit-card"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Send Email button -->
+                                        <form asp-action="SendEmail" asp-route-id="@adjustment.Id" method="post" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-primary" title="Send Email">
                                                 <i class="bi bi-envelope"></i>
                                             </button>
                                         </form>
-                                        
+
+                                        <!-- Invoice button -->
                                         <a asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@adjustment.InvoiceId" class="btn btn-sm btn-outline-secondary" title="Invoice">
                                             <i class="bi bi-receipt"></i>
                                         </a>
@@ -210,7 +221,7 @@
         $(document).ready(function () {
         $('#adjustmentsTable').DataTable({
         responsive: true,
-        order: [[1, 'desc']], // Sort by date descending
+        order: [[1, 'desc']],
         pageLength: 25,
         language: {
         search: "Search:",

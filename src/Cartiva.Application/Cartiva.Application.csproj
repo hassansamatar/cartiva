@@ -11,4 +11,8 @@
     <ProjectReference Include="..\Cartiva.Persistence\Cartiva.Persistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="ViewModels\" />
+  </ItemGroup>
+
 </Project>

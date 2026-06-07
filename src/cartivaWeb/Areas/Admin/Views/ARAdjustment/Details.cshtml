@@ -6,7 +6,6 @@
 @{
     ViewData["Title"] = $"AR Adjustment #{Model.Id}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
-    // Removed isManual variable as requested
 }
 
 @section Styles {
@@ -82,8 +81,6 @@
         }
     </style>
 }
-
-<!-- DocumentActionBar removed as requested (old print/email links) -->
 
 <div class="container-fluid py-4">
     <div class="container">
@@ -278,6 +275,16 @@
                     <div class="card-header bg-secondary text-white">Quick Actions</div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
+                            <!-- Apply Stripe Credit Balance button -->
+                            <form asp-action="ApplyStripe" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success w-100"
+                                    @(Model.StripeCreditBalanceApplied ? "disabled" : "")>
+                                    <i class="bi bi-credit-card"></i>
+                                    @(Model.StripeCreditBalanceApplied ? "Already Applied to Stripe" : "Apply to Stripe Credit Balance")
+                                </button>
+                            </form>
+
                             <a asp-controller="Invoice" asp-action="PrintInvoice" asp-route-id="@Model.InvoiceId" class="btn btn-outline-primary">
                                 <i class="bi bi-receipt"></i> View Invoice
                             </a>

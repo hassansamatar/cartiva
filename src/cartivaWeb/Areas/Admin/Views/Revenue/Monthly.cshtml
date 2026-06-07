@@ -1,0 +1,244 @@
+@model List<(string Month, decimal Revenue, decimal Tax, decimal NetRevenue, decimal Credits, decimal Adjustments)>
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Monthly Revenue Trends";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+}
+
+<div class="admin-dashboard">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-graph-up"></i> Monthly Revenue Trends</h2>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="row mb-4 g-3">
+            @{
+                var totalRevenue = Model.Sum(m => m.Revenue);
+                var totalTax = Model.Sum(m => m.Tax);
+                var totalNetRevenue = Model.Sum(m => m.NetRevenue);
+                var totalCredits = Model.Sum(m => m.Credits);
+                var totalAdjustments = Model.Sum(m => m.Adjustments);
+                var avgRevenue = Model.Count > 0 ? totalRevenue / Model.Count : 0;
+            }
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-cash-stack"></i> Total Gross Revenue</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-success">@totalRevenue.ToString("C", culture)</h4>
+                        <small class="text-muted">12 months</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-wallet2"></i> Total Net Revenue</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-info">@totalNetRevenue.ToString("C", culture)</h4>
+                        <small class="text-muted">After deductions</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-percent"></i> Total Tax</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-warning">@totalTax.ToString("C", culture)</h4>
+                        <small class="text-muted">@((totalTax / totalRevenue * 100).ToString("F1"))%</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-calendar-month"></i> Average Monthly</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4>@avgRevenue.ToString("C", culture)</h4>
+                        <small class="text-muted">Revenue</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Revenue vs Deductions</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="revenueVsDeductionsChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-line-chart"></i> Net Revenue Trend</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="netRevenueTrendChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Table -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Last 12 Months Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Month</th>
+                                        <th class="text-end">Gross Revenue</th>
+                                        <th class="text-end">Tax (-)</th>
+                                        <th class="text-end">Credits (-)</th>
+                                        <th class="text-end">Adjustments (-)</th>
+                                        <th class="text-end">Net Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@item.Month</strong>
+                                            </td>
+                                            <td class="text-end">
+                                                @item.Revenue.ToString("C", culture)
+                                            </td>
+                                            <td class="text-end text-warning">
+                                                -@item.Tax.ToString("C", culture)
+                                            </td>
+                                            <td class="text-end text-danger">
+                                                -@item.Credits.ToString("C", culture)
+                                            </td>
+                                            <td class="text-end text-purple">
+                                                -@item.Adjustments.ToString("C", culture)
+                                            </td>
+                                            <td class="text-end">
+                                                <strong class="text-info">@item.NetRevenue.ToString("C", culture)</strong>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Prepare chart data
+        const months = [@Html.Raw(string.Join(", ", Model.Select(m => $"'{m.Month}'")))]
+        const revenues = [@Html.Raw(string.Join(", ", Model.Select(m => m.Revenue)))]
+        const taxes = [@Html.Raw(string.Join(", ", Model.Select(m => m.Tax)))]
+        const credits = [@Html.Raw(string.Join(", ", Model.Select(m => m.Credits)))]
+        const adjustments = [@Html.Raw(string.Join(", ", Model.Select(m => m.Adjustments)))]
+        const netRevenues = [@Html.Raw(string.Join(", ", Model.Select(m => m.NetRevenue)))]
+
+        // Revenue vs Deductions Chart
+        new Chart(document.getElementById('revenueVsDeductionsChart'), {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Gross Revenue',
+                        data: revenues,
+                        backgroundColor: '#28a745'
+                    },
+                    {
+                        label: 'Tax',
+                        data: taxes,
+                        backgroundColor: '#ffc107'
+                    },
+                    {
+                        label: 'Credits',
+                        data: credits,
+                        backgroundColor: '#dc3545'
+                    },
+                    {
+                        label: 'Adjustments',
+                        data: adjustments,
+                        backgroundColor: '#6f42c1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                scales: {
+                    x: { stacked: false },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Net Revenue Trend Chart
+        new Chart(document.getElementById('netRevenueTrendChart'), {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Net Revenue',
+                    data: netRevenues,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0d6efd',
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}
+

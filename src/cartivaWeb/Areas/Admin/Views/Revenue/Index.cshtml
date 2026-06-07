@@ -1,0 +1,321 @@
+@model Cartiva.Domain.ViewModels.RevenueDashboardViewModel
+@using System.Globalization
+@using Cartiva.Domain.Extensions
+
+@{
+    ViewData["Title"] = "Revenue Dashboard";
+    var culture = CultureInfo.GetCultureInfo("nb-NO");
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+}
+
+<div class="admin-dashboard">
+    <div class="container-fluid">
+        <h2><i class="bi bi-graph-up"></i> Revenue Dashboard</h2>
+
+        <!-- Primary KPI Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-cash-stack"></i> Total Revenue</h5>
+                        <h3>@Model.TotalRevenue.ToString("C", culture)</h3>
+                        <small>Gross Revenue</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-wallet2"></i> Net Revenue</h5>
+                        <h3>@Model.NetRevenue.ToString("C", culture)</h3>
+                        <small>After Tax & Credits</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-warning">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-exclamation-circle"></i> Outstanding</h5>
+                        <h3>@Model.TotalInvoicesOutstanding.ToString("C", culture)</h3>
+                        <small>Awaiting Payment</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card admin-card card-danger">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-clock-history"></i> Overdue</h5>
+                        <h3>@Model.OverdueAmount.ToString("C", culture)</h3>
+                        <small>@Model.OverdueInvoicesCount invoices</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax & Deductions Row -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-percent"></i> Tax</h6>
+                        <span class="badge bg-secondary">@Model.TaxPercentage.ToString("F1")%</span>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-warning">@Model.TotalTaxCollected.ToString("C", culture)</h4>
+                        <small class="text-muted">This Month: @Model.TaxThisMonth.ToString("C", culture)</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-file-earmark-text"></i> Credit Notes</h6>
+                        <span class="badge bg-danger">@Model.TotalCreditNotes</span>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-danger">-@Model.CreditNotesAmount.ToString("C", culture)</h4>
+                        <small class="text-muted">Total Credits</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-calculator"></i> AR Adjustments</h6>
+                        <span class="badge bg-purple">@Model.TotalARAdjustments</span>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-purple">-@Model.ARAdjustmentsAmount.ToString("C", culture)</h4>
+                        <small class="text-muted">Applied</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-check-circle"></i> Paid</h6>
+                        <span class="badge bg-success">@Model.PaidPercentage.ToString("F1")%</span>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-success">@Model.PaidAmount.ToString("C", culture)</h4>
+                        <small class="text-muted">Received</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-pie-chart"></i> Revenue Breakdown</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="revenueBreakdownChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Payment Status</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="revenueByStatusChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend Chart -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> 12-Month Revenue Trend</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="monthlyTrendChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-lg-4 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-receipt"></i> Invoice Metrics</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">Total Invoices</dt>
+                            <dd class="col-sm-6 text-end"><strong>@Model.TotalInvoices</strong></dd>
+
+                            <dt class="col-sm-6">Average Value</dt>
+                            <dd class="col-sm-6 text-end"><strong>@Model.AverageInvoiceValue.ToString("C", culture)</strong></dd>
+
+                            <dt class="col-sm-6">Paid Amount</dt>
+                            <dd class="col-sm-6 text-end text-success"><strong>@Model.PaidAmount.ToString("C", culture)</strong></dd>
+
+                            <dt class="col-sm-6">Pending Amount</dt>
+                            <dd class="col-sm-6 text-end text-warning"><strong>@Model.PendingAmount.ToString("C", culture)</strong></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-bag-check"></i> Order Metrics</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">Total Orders</dt>
+                            <dd class="col-sm-6 text-end"><strong>@Model.TotalOrders</strong></dd>
+
+                            <dt class="col-sm-6">Average Order Value</dt>
+                            <dd class="col-sm-6 text-end"><strong>@Model.AverageOrderValue.ToString("C", culture)</strong></dd>
+
+                            <dt class="col-sm-6">Orders Revenue</dt>
+                            <dd class="col-sm-6 text-end text-success"><strong>@Model.TotalOrdersRevenue.ToString("C", culture)</strong></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-calendar-range"></i> Time-Based Revenue</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">This Year</dt>
+                            <dd class="col-sm-6 text-end"><strong>@Model.RevenueThisYear.ToString("C", culture)</strong></dd>
+
+                            <dt class="col-sm-6">This Month</dt>
+                            <dd class="col-sm-6 text-end"><strong>@Model.RevenueThisMonth.ToString("C", culture)</strong></dd>
+
+                            <dt class="col-sm-6">Net This Month</dt>
+                            <dd class="col-sm-6 text-end text-info"><strong>@Model.NetRevenueThisMonth.ToString("C", culture)</strong></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Links -->
+        <div class="admin-section">
+            <div class="section-header">
+                <h3><i class="bi bi-gear"></i> Revenue Analytics</h3>
+            </div>
+            <div class="btn-group" role="group">
+                <a asp-action="Index" class="btn btn-sm btn-dark">Dashboard</a>
+                <a asp-action="Monthly" class="btn btn-sm btn-outline-dark">Monthly Trends</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+
+    <script>
+        // Revenue Breakdown Chart
+        const breakdownData = @Html.Raw(Model.RevenueBreakdownJson ?? "{}");
+        new Chart(document.getElementById('revenueBreakdownChart'), {
+            type: 'doughnut',
+            data: {
+                labels: breakdownData.labels,
+                datasets: [{
+                    data: breakdownData.data,
+                    backgroundColor: breakdownData.colors,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Revenue by Status Chart
+        const statusData = @Html.Raw(Model.RevenueByStatusJson ?? "{}");
+        new Chart(document.getElementById('revenueByStatusChart'), {
+            type: 'bar',
+            data: {
+                labels: statusData.labels,
+                datasets: [{
+                    label: 'Amount',
+                    data: statusData.data,
+                    backgroundColor: statusData.colors,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Monthly Trend Chart
+        const trendData = @Html.Raw(Model.MonthlyTrendJson ?? "{}");
+        new Chart(document.getElementById('monthlyTrendChart'), {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [{
+                    label: 'Monthly Revenue',
+                    data: trendData.data,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0d6efd',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}
+

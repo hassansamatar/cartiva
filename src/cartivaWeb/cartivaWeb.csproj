@@ -9,9 +9,17 @@
 
   <ItemGroup>
     <Compile Remove="Controllers\**" />
+    <Compile Remove="docs\**" />
+    <Compile Remove="NewFolder\**" />
     <Content Remove="Controllers\**" />
+    <Content Remove="docs\**" />
+    <Content Remove="NewFolder\**" />
     <EmbeddedResource Remove="Controllers\**" />
+    <EmbeddedResource Remove="docs\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
     <None Remove="Controllers\**" />
+    <None Remove="docs\**" />
+    <None Remove="NewFolder\**" />
 	  
   </ItemGroup>
 
@@ -54,8 +62,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="docs\" />
-    <Folder Include="NewFolder\" />
+    <Folder Include="ModelBinders\" />
     <Folder Include="wwwroot\images\product\" />
     <Folder Include="wwwroot\templates\email\" />
   </ItemGroup>
