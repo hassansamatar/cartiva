@@ -7,21 +7,21 @@
 // DATATABLES CONFIGURATION
 // ==============================================
 
-// Norwegian language settings for DataTables
-var norwegianLanguage = {
-    search: "Søk:",
-    lengthMenu: "Vis _MENU_ per side",
-    info: "Viser _START_ til _END_ av _TOTAL_ rader",
-    infoEmpty: "Ingen rader funnet",
-    infoFiltered: "(filtrert fra _MAX_ totalt)",
-    zeroRecords: "Ingen matchende rader funnet",
+// English language settings for DataTables
+var englishLanguage = {
+    search: "Search:",
+    lengthMenu: "Show _MENU_ per page",
+    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+    infoEmpty: "No entries found",
+    infoFiltered: "(filtered from _MAX_ total)",
+    zeroRecords: "No matching records found",
     paginate: {
-        first: "Første",
-        last: "Siste",
-        next: "Neste",
-        previous: "Forrige"
+        first: "First",
+        last: "Last",
+        next: "Next",
+        previous: "Previous"
     },
-    emptyTable: "Ingen data tilgjengelig"
+    emptyTable: "No data available"
 };
 
 // Common DataTable settings factory
@@ -29,12 +29,12 @@ function getDataTableSettings(options) {
     var defaults = {
         paging: true,
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Alle"]],
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         searching: true,
         ordering: true,
         info: true,
         responsive: true,
-        language: norwegianLanguage,
+        language: englishLanguage,
         dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
@@ -97,12 +97,12 @@ function confirmAction(message, callback) {
 
 // Confirm delete
 function confirmDelete(itemName, callback) {
-    confirmAction('Er du sikker på at du vil slette ' + itemName + '?', callback);
+    confirmAction('Are you sure you want to delete ' + itemName + '?', callback);
 }
 
 // Confirm deactivate
 function confirmDeactivate(itemName, callback) {
-    confirmAction('Er du sikker på at du vil deaktivere ' + itemName + '?', callback);
+    confirmAction('Are you sure you want to deactivate ' + itemName + '?', callback);
 }
 
 // ==============================================
@@ -125,7 +125,7 @@ function postWithToken(url, data, callback) {
         },
         error: function(xhr, status, error) {
             console.error('Request failed:', error);
-            alert('En feil oppstod. Vennligst prøv igjen.');
+            alert('An error occurred. Please try again.');
         }
     });
 }

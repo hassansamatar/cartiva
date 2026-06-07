@@ -5,19 +5,19 @@ namespace Cartiva.Domain.ViewModels
 {
     public class ProductVariantVM
     {
-        public ProductVariant Variant { get; set; }
+        public ProductVariant Variant { get; set; } = new();
 
         [ValidateNever]
-        public List<SelectListItem> AvailableColors { get; set; }
+        public List<SelectListItem> AvailableColors { get; set; } = new();
 
         [ValidateNever]
-        public List<SelectListItem> AvailableSizes { get; set; }
+        public List<SelectListItem> AvailableSizes { get; set; } = new();
 
         [ValidateNever]
-        public string ProductName { get; set; }
+        public string? ProductName { get; set; }
 
         [ValidateNever]
-        public SizeSystem SizeSystem { get; set; }
+        public SizeSystem? SizeSystem { get; set; }
 
         // Helper properties for the view
         public string SizeDisplayInfo => SizeSystem?.Description ?? "Select a size system";
@@ -39,6 +39,6 @@ namespace Cartiva.Domain.ViewModels
 
         // For grouping sizes by system in dropdowns (if needed)
         [ValidateNever]
-        public Dictionary<string, List<SelectListItem>> GroupedSizes { get; set; }
+        public Dictionary<string, List<SelectListItem>>? GroupedSizes { get; set; }
     }
 }

@@ -77,15 +77,46 @@
                     </div>
                 }
 
-                <!-- Price -->
+                <!-- Price (Base Price Excluding VAT) -->
                 <div class="mb-3">
-                    <label asp-for="Variant.Price" class="form-label fw-bold"></label>
+                    <label asp-for="Variant.PriceExVat" class="form-label fw-bold">
+                        <i class="bi bi-tag"></i> Price
+                    </label>
                     <div class="input-group">
+                        <input type="number" 
+                               name="PriceInput" 
+                               id="priceInput"
+                               class="form-control" 
+                               step="0.01" 
+                               min="0.01" 
+                               placeholder="1000.00"
+                               required />
                         <span class="input-group-text">kr</span>
-                        <input asp-for="Variant.Price" class="form-control" type="number" step="0.01" min="0" />
                     </div>
-                    <span asp-validation-for="Variant.Price" class="text-danger"></span>
+                    <input type="hidden" asp-for="Variant.PriceExVat" id="priceExVatHidden" />
+                    <span asp-validation-for="Variant.PriceExVat" class="text-danger"></span>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Final customer price (includes 25% VAT)
+                    </small>
                 </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const priceInput = document.getElementById('priceInput');
+                        const priceExVatHidden = document.getElementById('priceExVatHidden');
+
+                        function calculatePriceExVat() {
+                            const priceIncVat = parseFloat(priceInput.value) || 0;
+                            // Correct formula: remove 25% OF THE TOTAL (not divide by 1.25)
+                            const priceExVat = priceIncVat * 0.75;  // 1000 × 0.75 = 750
+                            priceExVatHidden.value = priceExVat.toFixed(2);
+                        }
+
+                        priceInput.addEventListener('input', calculatePriceExVat);
+                        calculatePriceExVat();
+                    });
+                </script>
 
                 <!-- Stock -->
                 <div class="mb-3">

@@ -3,7 +3,7 @@
 @using Cartiva.Domain.Enums
 @using Cartiva.Shared
 @{
-    Layout = null;
+    ViewData["Title"] = $"Invoice #{Model.InvoiceNumber}";
     var culture = CultureInfo.GetCultureInfo("nb-NO");
     var contact = ViewBag.CartivaContact as dynamic;
     var isPaid = Model.Status == Cartiva.Domain.Enums.InvoiceStatus.Paid;
@@ -68,156 +68,9 @@
         </div>
     </div>
 </div>
-                    letter-spacing: 1px;
-                }
 
-                .info-box p {
-                    margin: 5px 0;
-                    line-height: 1.6;
-                }
-
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-            }
-
-            th {
-                background-color: #2c3e50;
-                color: white;
-                padding: 12px 8px;
-                text-align: left;
-                font-weight: 500;
-            }
-
-            td {
-                border-bottom: 1px solid #ddd;
-                padding: 12px 8px;
-            }
-
-            .text-right {
-                text-align: right;
-            }
-
-            .totals-section {
-                display: flex;
-                justify-content: flex-end;
-                margin-top: 20px;
-            }
-
-            .totals-table {
-                width: 300px;
-            }
-
-                .totals-table td {
-                    padding: 8px;
-                    border: none;
-                }
-
-                .totals-table .total-row {
-                    font-weight: bold;
-                    font-size: 18px;
-                    border-top: 2px solid #2c3e50;
-                }
-
-            .payment-details {
-                margin-top: 30px;
-                padding: 20px;
-                background: #f0f7ff;
-                border-left: 4px solid #3498db;
-                border-radius: 4px;
-            }
-
-                .payment-details h4 {
-                    margin: 0 0 15px 0;
-                    color: #2c3e50;
-                }
-
-            .payment-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .payment-item {
-                display: flex;
-                justify-content: space-between;
-            }
-
-                .payment-item label {
-                    font-weight: 500;
-                    color: #7f8c8d;
-                }
-
-                .payment-item span {
-                    font-weight: bold;
-                }
-
-            .kid-number {
-                font-family: 'Courier New', monospace;
-                font-size: 18px;
-                letter-spacing: 2px;
-                background: #fff;
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px dashed #3498db;
-            }
-
-            .paid-stamp {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%) rotate(-30deg);
-                font-size: 72px;
-                font-weight: bold;
-                color: rgba(39, 174, 96, 0.2);
-                text-transform: uppercase;
-                pointer-events: none;
-                z-index: 1;
-            }
-
-            .invoice-wrapper {
-                position: relative;
-            }
-
-            .footer {
-                margin-top: 40px;
-                padding-top: 20px;
-                border-top: 1px solid #ddd;
-                font-size: 12px;
-                text-align: center;
-                color: #7f8c8d;
-            }
-
-            .payments-history {
-                margin-top: 20px;
-                padding: 15px;
-                background: #e8f5e9;
-                border-radius: 8px;
-            }
-
-                .payments-history h4 {
-                    margin: 0 0 10px 0;
-                    color: #27ae60;
-                }
-
-            @@media print {
-                body {
-                    margin: 0;
-                }
-
-                .no-print {
-                    display: none;
-                }
-
-                .invoice-container {
-                    border: none;
-                    padding: 0;
-                }
-            }
-    </style>
-
-<body>
+<!-- Printable Invoice Section (Hidden by default, shown for print/PDF) -->
+<div class="d-none d-print-block">
     <div class="invoice-container invoice-wrapper">
         @if (isPaid)
         {
@@ -435,5 +288,6 @@
                 </button>
             </div>
         </div>
-    </body>
+    </div>
+</div>
 
