@@ -1,17 +1,14 @@
 ﻿using Cartiva.Persistence;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Cartiva.Domain;
 using Cartiva.Domain.ViewModels;
-using Cartiva.Infrastructure;
-using Stripe;
+using Cartiva.Domain.Interfaces;
+using Cartiva.Infrastructure.PaymentService;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
-
 using Microsoft.AspNetCore.Authorization;
-using Cartiva.Infrastructure.PaymentService;
 using Cartiva.Shared;
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain.Enums;
@@ -30,28 +27,28 @@ public class OrderController : Controller
     private readonly IOrderService _orderService;
     private readonly IShipmentService _shipmentService;
     private readonly ICartService _cartService;
-    private readonly IPaymentService _paymentService; // NEW: Payment abstraction
+    private readonly IPaymentService _paymentService;
 
-    public OrderController(ApplicationDbContext db,
-                           IOptions<StripeSettings> stripeSettings,
-                           Cartiva.Infrastructure.QrCodeServices.IQrCodeService qrCodeService,
-                           ILogger<OrderController> logger,
-                           IInvoiceService invoiceService,
-                           IOrderService orderService,
-                           IShipmentService shipmentService,
-                           ICartService cartService,
-                           IPaymentService paymentService) // NEW: Inject payment service
+    public OrderController(
+        ApplicationDbContext db,
+        IOptions<StripeSettings> stripeSettings,
+        Cartiva.Infrastructure.QrCodeServices.IQrCodeService qrCodeService,
+        ILogger<OrderController> logger,
+        IInvoiceService invoiceService,
+        IOrderService orderService,
+        IShipmentService shipmentService,
+        ICartService cartService,
+        IPaymentService paymentService)
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
-        StripeConfiguration.ApiKey = _stripeSettings.SecretKey; // TODO: Remove once fully migrated
         _qrCodeService = qrCodeService;
         _logger = logger;
         _invoiceService = invoiceService;
         _orderService = orderService;
         _shipmentService = shipmentService;
         _cartService = cartService;
-        _paymentService = paymentService; // NEW
+        _paymentService = paymentService;
     }
 
     // =============================
@@ -293,18 +290,18 @@ public class OrderController : Controller
 
         if (string.IsNullOrEmpty(paymentIntentId))
         {
-            _logger.LogWarning($"No payment_intent provided for order {orderId}");
+            _logger.LogWarning("No payment_intent provided for order {OrderId}", orderId);
             TempData["Error"] = "Payment confirmation missing. Please contact support.";
             return RedirectToAction("Details", new { id = orderId });
         }
 
         try
         {
-            var service = new PaymentIntentService();
-            var paymentIntent = await service.GetAsync(paymentIntentId);
-            _logger.LogInformation($"PaymentIntent status: {paymentIntent.Status}");
+            // Use payment service abstraction to verify payment
+            var paymentStatus = await _paymentService.GetPaymentStatusAsync(paymentIntentId);
+            _logger.LogInformation("Payment status for order {OrderId}: {Status}", orderId, paymentStatus.Status);
 
-            if (paymentIntent.Status == "succeeded")
+            if (paymentStatus.Status == PaymentIntentStatus.Succeeded)
             {
                 // Update payment status
                 order.PaymentStatus = Cartiva.Domain.Enums.PaymentStatus.Approved;
@@ -323,9 +320,9 @@ public class OrderController : Controller
                 order.OrderStatus = Cartiva.Domain.Enums.OrderStatus.AwaitingShipmentApproval;
 
                 await _db.SaveChangesAsync();
-                _logger.LogInformation($"Order {orderId} updated to AwaitingShipmentApproval with pending shipment.");
+                _logger.LogInformation("Order {OrderId} updated to AwaitingShipmentApproval", orderId);
 
-                // Record payment against the invoice (if one exists, e.g. deferred-payment company orders)
+                // Record payment against the invoice
                 try
                 {
                     var invoice = await _invoiceService.GetInvoiceByOrderIdAsync(order.Id)
@@ -342,7 +339,7 @@ public class OrderController : Controller
                             registeredBy: userId);
 
                         await _invoiceService.RefreshInvoiceStatusAsync(invoice.Id);
-                        _logger.LogInformation("Recorded payment for invoice {InvoiceId} (order {OrderId})", invoice.Id, order.Id);
+                        _logger.LogInformation("Recorded payment for invoice {InvoiceId}", invoice.Id);
                     }
                 }
                 catch (Exception invEx)
@@ -350,21 +347,20 @@ public class OrderController : Controller
                     _logger.LogError(invEx, "Failed to record invoice payment for order {OrderId}", order.Id);
                 }
 
-                // Order confirmation email is now handled by OrderService via notification system
-
                 TempData["Success"] = "Payment successful! Your order is being prepared for shipment.";
                 return RedirectToAction("ShipmentPending", new { id = order.Id });
             }
             else
             {
-                _logger.LogWarning($"Payment not succeeded: {paymentIntent.Status}");
-                TempData["Error"] = $"Payment not completed (status: {paymentIntent.Status}). Please try again.";
+                _logger.LogWarning("Payment not succeeded for order {OrderId}, Status: {Status}", 
+                    orderId, paymentStatus.Status);
+                TempData["Error"] = $"Payment not completed (status: {paymentStatus.Status}). Please try again.";
                 return RedirectToAction("Payment", new { orderId });
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error confirming payment for order {orderId}");
+            _logger.LogError(ex, "Error confirming payment for order {OrderId}", orderId);
             TempData["Error"] = "Payment confirmation failed. Please contact support.";
             return RedirectToAction("Details", new { id = orderId });
         }

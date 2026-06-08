@@ -32,19 +32,13 @@ public static class DependencyInjection
         services.AddScoped<IPromotionService, PromotionService>();
 
         // ===========================================
-        // Payment Services (Modularized)
+        // Payment Services
         // ===========================================
 
-        // Configure Stripe settings
         services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
-
-        // Register Stripe as the payment provider
         services.AddScoped<IPaymentProvider, StripePaymentProvider>();
-
-        // Legacy webhook service (still needed for Hangfire background processing)
         services.AddScoped<IStripeWebhookService, StripeWebhookService>();
 
-        // Configure Stripe API key (legacy, but kept for backward compatibility)
         var stripeSecretKey = configuration["Stripe:SecretKey"];
         if (!string.IsNullOrEmpty(stripeSecretKey))
         {
@@ -54,7 +48,12 @@ public static class DependencyInjection
         // Address lookup service (HTTP client)
         services.AddHttpClient<AddressLookupService>();
 
-        // Bring shipping service (typed HTTP client)
+        // ===========================================
+        // Shipment/Carrier Services
+        // ===========================================
+
+        services.AddScoped<IShipmentProvider, BringShipmentProvider>();
+
         services.AddHttpClient<IBringShippingService, BringShippingService>((serviceProvider, client) =>
         {
             var baseUrl = configuration["Bring:BaseUrl"] ?? "https://api.bring.com/shipping/api/v1";

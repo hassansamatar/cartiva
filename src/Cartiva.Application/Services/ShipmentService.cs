@@ -4,7 +4,6 @@ using Cartiva.Domain.Extensions;
 using Cartiva.Domain.Enums;
 using Cartiva.Domain.Interfaces;
 using Cartiva.Infrastructure.QrCodeServices;
-using Cartiva.Infrastructure.ShippingServices;
 using Cartiva.Persistence;
 using Cartiva.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -19,20 +18,20 @@ public class ShipmentService : IShipmentService
 {
     private readonly ApplicationDbContext _db;
     private readonly ILogger<ShipmentService> _logger;
-    private readonly IBringShippingService _bringShippingService;
+    private readonly IShipmentProvider _shipmentProvider;
     private readonly IQrCodeService _qrCodeService;
     private readonly INotificationService _notificationService;
 
     public ShipmentService(
         ApplicationDbContext db,
         ILogger<ShipmentService> logger,
-        IBringShippingService bringShippingService,
+        IShipmentProvider shipmentProvider,
         IQrCodeService qrCodeService,
         INotificationService notificationService)
     {
         _db = db;
         _logger = logger;
-        _bringShippingService = bringShippingService;
+        _shipmentProvider = shipmentProvider;
         _qrCodeService = qrCodeService;
         _notificationService = notificationService;
     }
@@ -82,34 +81,36 @@ public class ShipmentService : IShipmentService
         if (shipment.ShipmentStatus != Cartiva.Domain.Enums.ShipmentStatus.PendingApproval)
             return ShipmentOperationResult.Failed("This shipment is already processed.");
 
-        // Prepare request to shipping service
-        var request = new BringShipmentRequest
-        {
-            OrderNumber = shipment.OrderHeader.Id.ToString(),
-            CustomerName = shipment.OrderHeader.Name,
-            CustomerAddress = shipment.OrderHeader.StreetAddress,
-            CustomerPostalCode = shipment.OrderHeader.PostalCode,
-            CustomerCity = shipment.OrderHeader.City,
-            CustomerCountry = shipment.OrderHeader.Country ?? "NO",
-            CustomerPhone = shipment.OrderHeader.PhoneNumber,
-            Weight = 1.0m, // TODO: calculate total weight from order items
-            PackageType = "BOX"
-        };
+        // Create shipment using provider abstraction
+        var request = new ShipmentCreationRequest(
+            OrderNumber: shipment.OrderHeader.Id.ToString(),
+            CustomerName: shipment.OrderHeader.Name,
+            CustomerAddress: shipment.OrderHeader.StreetAddress,
+            CustomerPostalCode: shipment.OrderHeader.PostalCode,
+            CustomerCity: shipment.OrderHeader.City,
+            CustomerCountry: shipment.OrderHeader.Country ?? "NO",
+            CustomerPhone: shipment.OrderHeader.PhoneNumber,
+            CustomerEmail: shipment.OrderHeader.ApplicationUser?.Email ?? "",
+            Weight: 1.0m,
+            PackageType: "BOX"
+        );
 
-        _logger.LogInformation("Creating shipment for order {OrderId}", shipment.OrderHeader.Id);
-        var bringResponse = await _bringShippingService.CreateShipmentAsync(request);
+        _logger.LogInformation("Creating shipment for order {OrderId} via {Provider}",
+            shipment.OrderHeader.Id, _shipmentProvider.ProviderName);
 
-        if (!bringResponse.Success)
+        var result = await _shipmentProvider.CreateShipmentAsync(request);
+
+        if (!result.Success)
         {
-            _logger.LogError("Bring API error: {ErrorMessage}", bringResponse.ErrorMessage);
-            return ShipmentOperationResult.Failed($"Failed to create shipment: {bringResponse.ErrorMessage}");
+            _logger.LogError("[{Provider}] Shipment creation failed: {Error}",
+                _shipmentProvider.ProviderName, result.ErrorMessage);
+            return ShipmentOperationResult.Failed($"Failed to create shipment: {result.ErrorMessage}");
         }
 
         // Update shipment with carrier response
-        shipment.TrackingNumber = bringResponse.TrackingNumber;
-        shipment.Carrier = bringResponse.Carrier;
-        shipment.Service = bringResponse.Service;
-        shipment.LabelUrl = bringResponse.LabelUrl;
+        shipment.TrackingNumber = result.TrackingNumber;
+        shipment.Carrier = _shipmentProvider.ProviderName;
+        shipment.LabelUrl = result.LabelUrl;
         shipment.ShipmentStatus = Cartiva.Domain.Enums.ShipmentStatus.Shipped;
         shipment.ShippedDate = DateTime.Now;
         shipment.ShippingDate = DateTime.Now;

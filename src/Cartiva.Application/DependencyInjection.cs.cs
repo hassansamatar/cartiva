@@ -29,7 +29,7 @@ public static class DependencyInjection
         // Order services
         services.AddScoped<IOrderService, OrderService>();
 
-        // Payment services (NEW: Modularized abstraction)
+        // Payment services
         services.AddScoped<IPaymentService, PaymentService>();
 
         // Category services

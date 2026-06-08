@@ -99,6 +99,7 @@ namespace Cartiva.Infrastructure.ShippingServices
                 {
                     Success = true,
                     TrackingNumber = consignmentNumber,
+                    ShipmentId = consignmentNumber, // Bring uses same ID
                     Carrier = "Bring",
                     Service = "Pakke i postkassen", // adjust as needed
                     LabelUrl = labelUrl
@@ -172,9 +173,45 @@ namespace Cartiva.Infrastructure.ShippingServices
             {
                 Success = true,
                 TrackingNumber = "BRING-" + Guid.NewGuid().ToString().Substring(0, 8),
+                ShipmentId = "BRING-" + Guid.NewGuid().ToString().Substring(0, 8),
                 Carrier = "Bring",
                 Service = "Pakke i postkassen",
                 LabelUrl = "https://bring.no/labels/mock.pdf"
+            };
+        }
+
+        public async Task<BringTrackingResponse> GetTrackingInfoAsync(string trackingNumber)
+        {
+            // Mock implementation - in production, call Bring Tracking API
+            // GET https://tracking.bring.com/api/v1/tracking?q={trackingNumber}
+
+            _logger.LogInformation("Getting tracking info for {TrackingNumber} (mock)", trackingNumber);
+
+            await Task.Delay(100); // Simulate API call
+
+            return new BringTrackingResponse
+            {
+                Success = true,
+                Status = "in_transit",
+                StatusDescription = "Pakken er underveis",
+                EstimatedDeliveryDate = DateTime.Now.AddDays(2),
+                Events = new List<BringTrackingEvent>
+                {
+                    new BringTrackingEvent
+                    {
+                        Timestamp = DateTime.Now.AddDays(-1),
+                        Status = "registered",
+                        Description = "Pakken er registrert",
+                        Location = "Oslo"
+                    },
+                    new BringTrackingEvent
+                    {
+                        Timestamp = DateTime.Now,
+                        Status = "in_transit",
+                        Description = "Pakken er på vei",
+                        Location = "Bergen"
+                    }
+                }
             };
         }
     }
