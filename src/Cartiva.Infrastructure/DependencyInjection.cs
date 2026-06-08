@@ -1,3 +1,4 @@
+using Cartiva.Domain.Interfaces;
 using Cartiva.Infrastructure.AddressService;
 using Cartiva.Infrastructure.ImageServices;
 using Cartiva.Infrastructure.Notifications;
@@ -30,11 +31,20 @@ public static class DependencyInjection
         // Promotion services
         services.AddScoped<IPromotionService, PromotionService>();
 
-        // Payment services (Stripe)
+        // ===========================================
+        // Payment Services (Modularized)
+        // ===========================================
+
+        // Configure Stripe settings
         services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
+
+        // Register Stripe as the payment provider
+        services.AddScoped<IPaymentProvider, StripePaymentProvider>();
+
+        // Legacy webhook service (still needed for Hangfire background processing)
         services.AddScoped<IStripeWebhookService, StripeWebhookService>();
 
-        // Configure Stripe API key
+        // Configure Stripe API key (legacy, but kept for backward compatibility)
         var stripeSecretKey = configuration["Stripe:SecretKey"];
         if (!string.IsNullOrEmpty(stripeSecretKey))
         {

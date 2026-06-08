@@ -16,6 +16,7 @@ using Cartiva.Shared;
 using Cartiva.Application.Abstractions;
 using Cartiva.Domain.Enums;
 using Cartiva.Domain.Extensions;
+using Cartiva.Application.Services;
 
 [Area("Customer")]
 [Authorize]
@@ -29,6 +30,7 @@ public class OrderController : Controller
     private readonly IOrderService _orderService;
     private readonly IShipmentService _shipmentService;
     private readonly ICartService _cartService;
+    private readonly IPaymentService _paymentService; // NEW: Payment abstraction
 
     public OrderController(ApplicationDbContext db,
                            IOptions<StripeSettings> stripeSettings,
@@ -37,17 +39,19 @@ public class OrderController : Controller
                            IInvoiceService invoiceService,
                            IOrderService orderService,
                            IShipmentService shipmentService,
-                           ICartService cartService)
+                           ICartService cartService,
+                           IPaymentService paymentService) // NEW: Inject payment service
     {
         _db = db;
         _stripeSettings = stripeSettings.Value;
-        StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
+        StripeConfiguration.ApiKey = _stripeSettings.SecretKey; // TODO: Remove once fully migrated
         _qrCodeService = qrCodeService;
         _logger = logger;
         _invoiceService = invoiceService;
         _orderService = orderService;
         _shipmentService = shipmentService;
         _cartService = cartService;
+        _paymentService = paymentService; // NEW
     }
 
     // =============================
@@ -217,29 +221,37 @@ public class OrderController : Controller
             }
         }
 
-        // Create Stripe PaymentIntent
-        var options = new PaymentIntentCreateOptions
-        {
-            Amount = (long)(order.OrderTotal * 100),
-            Currency = "nok",
-            PaymentMethodTypes = new List<string> { "card" },
-            Metadata = new Dictionary<string, string>
-            {
-                { "orderId", order.Id.ToString() },
-                { "userId", userId }
-            }
-        };
+        // Create payment intent using abstraction layer
+        var paymentResult = await _paymentService.CreatePaymentIntentAsync(
+            orderId: order.Id,
+            amount: order.OrderTotal,
+            currency: "NOK",
+            userId: userId,
+            description: $"Order #{order.Id}"
+        );
 
-        var service = new PaymentIntentService();
-        var paymentIntent = await service.CreateAsync(options);
+        if (!paymentResult.Success)
+        {
+            _logger.LogError("Failed to create payment intent for order {OrderId}: {Error}",
+                order.Id, paymentResult.ErrorMessage);
+            TempData["Error"] = "Failed to initialize payment. Please try again.";
+            return RedirectToAction("Details", new { orderId = order.Id });
+        }
+
+        // Store PaymentIntent ID on order for reconciliation
+        order.PaymentIntentId = paymentResult.PaymentIntentId;
+        await _db.SaveChangesAsync();
 
         var vm = new PaymentVM
         {
             Order = order,
-            ClientSecret = paymentIntent.ClientSecret,
+            ClientSecret = paymentResult.ClientSecret!,
             PublishableKey = _stripeSettings.PublishableKey,
-            PaymentIntentId = paymentIntent.Id
+            PaymentIntentId = paymentResult.PaymentIntentId!
         };
+
+        _logger.LogInformation("Payment intent {PaymentIntentId} created for order {OrderId} via {Provider}",
+            paymentResult.PaymentIntentId, order.Id, _paymentService.GetProviderName());
 
         return View(vm);
     }
